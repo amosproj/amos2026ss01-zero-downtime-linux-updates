@@ -16,13 +16,23 @@ jobs:
         run: |
           if echo "$PR_BODY" | grep -qiE '(fix(es|ed)?|clos(e[sd]?)|resolv(e[sd]?)|refs?)\s*#[0-9]+'; then
             echo "PR references an issue."
+            echo "## ✅ Issue Reference Found" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::warning::This PR does not reference a GitHub issue."
-            echo ""
-            echo "Consider adding one of the following to the PR description:"
-            echo "  Fixes #123    (closes the issue when PR is merged)"
-            echo "  Closes #123   (closes the issue when PR is merged)"
-            echo "  Refs #123     (links without closing)"
-            echo ""
-            echo "This is a WARNING — the PR is not blocked."
+            echo "::warning::This PR does not reference a GitHub issue. Add: Fixes #N, Closes #N, or Refs #N"
+            {
+              echo "## ⚠️ No Issue Reference Found"
+              echo ""
+              echo "> [!WARNING]"
+              echo "> This PR does not reference a GitHub issue."
+              echo ""
+              echo "Consider adding one of the following to the PR description:"
+              echo ""
+              echo "| Keyword | Effect |"
+              echo "|---------|--------|"
+              echo "| \`Fixes #123\` | Closes the issue when PR is merged |"
+              echo "| \`Closes #123\` | Closes the issue when PR is merged |"
+              echo "| \`Refs #123\` | Links without closing |"
+              echo ""
+              echo "_This is a warning — the PR is not blocked._"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi

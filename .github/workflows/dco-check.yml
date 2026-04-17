@@ -42,7 +42,6 @@ jobs:
             echo "  Always use:   git commit -s"
             echo "  Or run:       make setup  (installs a hook that auto-signs)"
             echo ""
-            echo "Learn more: https://developercertificate.org/"
             exit 1
           fi
 
