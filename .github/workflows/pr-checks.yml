@@ -1,0 +1,28 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize]
+
+jobs:
+  issue-reference:
+    name: Issue Reference
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for issue reference in PR body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if echo "$PR_BODY" | grep -qiE '(fix(es|ed)?|clos(e[sd]?)|resolv(e[sd]?)|refs?)\s*#[0-9]+'; then
+            echo "PR references an issue."
+          else
+            echo "::warning::This PR does not reference a GitHub issue."
+            echo ""
+            echo "Consider adding one of the following to the PR description:"
+            echo "  Fixes #123    (closes the issue when PR is merged)"
+            echo "  Closes #123   (closes the issue when PR is merged)"
+            echo "  Refs #123     (links without closing)"
+            echo ""
+            echo "This is a WARNING — the PR is not blocked."
+          fi

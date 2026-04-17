@@ -1,0 +1,49 @@
+name: DCO Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  dco:
+    name: DCO Sign-off
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check DCO sign-off on all commits
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          failed=0
+
+          for sha in $(git rev-list "$base".."$head"); do
+            if ! git log -1 --format='%B' "$sha" | grep -qE '^Signed-off-by: .+ <.+>'; then
+              echo "::error::Commit $sha is missing DCO sign-off."
+              echo "  Subject: $(git log -1 --format='%s' "$sha")"
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -eq 1 ]; then
+            echo ""
+            echo "=========================================="
+            echo "  One or more commits are missing the"
+            echo "  'Signed-off-by' line required by the DCO."
+            echo "=========================================="
+            echo ""
+            echo "How to fix:"
+            echo "  Last commit:  git commit --amend -s"
+            echo "  Last N commits: git rebase HEAD~N --exec 'git commit --amend --no-edit -s'"
+            echo ""
+            echo "To avoid this in the future:"
+            echo "  Always use:   git commit -s"
+            echo "  Or run:       make setup  (installs a hook that auto-signs)"
+            echo ""
+            echo "Learn more: https://developercertificate.org/"
+            exit 1
+          fi
+
+          echo "All commits have DCO sign-off."
