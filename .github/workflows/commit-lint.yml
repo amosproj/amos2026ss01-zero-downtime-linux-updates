@@ -1,0 +1,55 @@
+name: Commit Message Lint
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  commit-lint:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check commit message format
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          pattern='^(feat|fix|docs|style|refactor|test|chore|ci|build)(\(.+\))?(!)?: .{1,72}$'
+          warnings=0
+          warning_details=""
+
+          for sha in $(git rev-list "$base".."$head"); do
+            subject=$(git log -1 --format='%s' "$sha")
+            if ! echo "$subject" | grep -qE "$pattern"; then
+              echo "::warning::Commit $sha has non-conventional message: '$subject'"
+              warning_details="${warning_details}| \`${sha:0:7}\` | $subject |"$'\n'
+              warnings=$((warnings + 1))
+            fi
+          done
+
+          if [ "$warnings" -gt 0 ]; then
+            echo "$warnings commit(s) don't follow conventional commit format."
+            {
+              echo "## ⚠️ Non-Conventional Commits ($warnings)"
+              echo ""
+              echo "> [!WARNING]"
+              echo "> $warnings commit(s) don't follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format."
+              echo ""
+              echo "| Commit | Subject |"
+              echo "|--------|---------|"
+              echo "$warning_details"
+              echo "**Expected format:** \`<type>(<scope>): <description>\`"
+              echo ""
+              echo "**Types:** \`feat\`, \`fix\`, \`docs\`, \`style\`, \`refactor\`, \`test\`, \`chore\`, \`ci\`, \`build\`"
+              echo ""
+              echo "_This is a warning — the PR is not blocked._"
+            } >> "$GITHUB_STEP_SUMMARY"
+            # To make this check blocking, uncomment the next line:
+            # exit 1
+          else
+            echo "All commits follow conventional commit format."
+            echo "## ✅ All Commits Follow Conventional Format" >> "$GITHUB_STEP_SUMMARY"
+          fi

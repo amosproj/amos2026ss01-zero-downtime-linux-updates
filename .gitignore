@@ -32,5 +32,13 @@ out/
 .project
 bin/
 
+# Rust
+target/
+*.rs.bk
+
+# Docker
+*.tar
+docker-compose.override.yml
+
 # MacOS
 .DS_Store
