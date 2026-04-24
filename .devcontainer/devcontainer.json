@@ -1,0 +1,23 @@
+{
+    "name": "AMOS Project 1 Dev Environment",
+
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+    "features": {
+        "ghcr.io/devcontainers/features/rust:1": {
+            "version": "1.95.0"
+        },
+        "./custom-setup": {
+            // Update this when changing custom-setup/install.sh
+            "lastChanged": "2026-04-24 22:55"
+        }
+    },
+
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "git.alwaysSignOff": true
+            }
+        }
+    }
+}
