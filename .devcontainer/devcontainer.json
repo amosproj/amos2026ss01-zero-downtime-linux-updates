@@ -6,10 +6,6 @@
     "features": {
         "ghcr.io/devcontainers/features/rust:1": {
             "version": "1.95.0"
-        },
-        "./custom-setup": {
-            // Update this when changing custom-setup/install.sh
-            "lastChanged": "2026-04-24 22:55"
         }
     },
 
@@ -19,5 +15,8 @@
                 "git.alwaysSignOff": true
             }
         }
-    }
+    },
+
+    "onCreateCommand": ["/bin/sudo", "/bin/bash", ".devcontainer/install.sh"],
+    "_installScriptVersion": "2026-04-27 14:21" // Marker property only
 }
