@@ -1,0 +1,14 @@
+Title	URL	Assignees	Status	Estimated size	Real size
+API Protocoll & Mock Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/15		Product Backlog		
+Edge IPC Orchestrator	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/16		Product Backlog		
+Setup DCO & CI/CD	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/14		Product Backlog		
+HTTPS Download Manager	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/18		Product Backlog		
+Signature Verification	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/19		Product Backlog		
+A/B Partitioned VM	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/22		Product Backlog		
+Blue-Green Application Controller	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/21		Product Backlog		
+Review Backup options	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/4	uzantome	Sprint Backlog	2	
+Review different Linux Distros	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/1	Jerry1098, moritz-reinel	In Progress	3	
+Initialize SBOM and Software Architecture	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/9	KathiAurina	In Progress	1	
+Review how a TPM can be used	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/3	Beambamacrys, uzantome	In Progress	2	
+Review options for zero downtime update	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/2	IFrey	Awaiting Review	2	2
+Setup shared dev environment	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/10	patridu	Awaiting Review	2	
