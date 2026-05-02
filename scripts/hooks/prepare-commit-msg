@@ -1,0 +1,27 @@
+#!/bin/sh
+# prepare-commit-msg hook: auto-add DCO sign-off if missing.
+# Installed by 'make setup'. Not mandatory — CI also checks.
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+
+# Don't modify merge or squash commits
+case "$COMMIT_SOURCE" in
+    merge|squash) exit 0 ;;
+esac
+
+# Get user identity from git config
+NAME=$(git config user.name)
+EMAIL=$(git config user.email)
+
+if [ -z "$NAME" ] || [ -z "$EMAIL" ]; then
+    exit 0
+fi
+
+SIGNOFF="Signed-off-by: $NAME <$EMAIL>"
+
+# Only add if not already present
+if ! grep -qF "$SIGNOFF" "$COMMIT_MSG_FILE"; then
+    echo "" >> "$COMMIT_MSG_FILE"
+    echo "$SIGNOFF" >> "$COMMIT_MSG_FILE"
+fi

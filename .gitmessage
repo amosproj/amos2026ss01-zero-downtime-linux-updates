@@ -1,0 +1,21 @@
+
+# <type>(<scope>): <subject>
+#
+# Types: feat, fix, docs, style, refactor, test, chore, ci, build
+# Scope: optional, e.g. (agent), (scheduler), (api), (docker)
+# Subject: imperative mood ("add feature" not "added feature"), max 72 chars
+#
+# Example:
+#   feat(agent): add rolling update strategy
+#   fix(scheduler): correct timezone handling in cron parser
+#   docs: add architecture diagram
+#
+# Body: explain WHAT and WHY, not HOW. Wrap at 72 chars.
+
+
+# Footer: reference issues, breaking changes
+# Refs: #123
+# Fixes: #456
+# BREAKING CHANGE: description
+
+Signed-off-by:
