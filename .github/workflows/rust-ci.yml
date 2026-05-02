@@ -38,7 +38,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo test --all-features
 
-# Optional: Release Build if a Tag is pushed 
+# Release Build if a Tag is pushed 
   release_build:
     name: Release Build
     # only run when it has a release tag
@@ -57,4 +57,4 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: ${{ github.ref_name }}-binary
-          path: target/x86_64-unknown-linux-gnu/release/MY_PROJECT # TODO insert name from Cargo.toml!
+          path: target/x86_64-unknown-linux-gnu/release/amos2026ss01-zero-downtime-linux-updates
