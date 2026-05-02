@@ -1,4 +1,5 @@
 fn main() {
+    let _x = 1.0 / 1.0;
     println!("Hello, world!");
 }
 
