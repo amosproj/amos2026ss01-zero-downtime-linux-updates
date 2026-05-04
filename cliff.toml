@@ -49,5 +49,5 @@ commit_parsers = [
   { message = "^build", group = "Build" },
 ]
 filter_commits = false
-tag_pattern = "v[0-9].*"
+tag_pattern = "sprint-\\d+-release.*"
 sort_commits = "newest"
