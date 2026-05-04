@@ -1,20 +1,31 @@
+mod config_loader;
+use config_loader::get_config;
 mod state;
 use state::orchestrator_state;
-use std::sync::Arc;
+use std::{process::exit, sync::Arc};
 use tokio::{sync::Mutex, time::{Duration, sleep}};
 
 #[tokio::main]
 async fn main() {
     println!("Started app...");
-    let sm = Arc::new(Mutex::new(orchestrator_state::StateMachine::new()));
 
+    let cfg = match get_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to load config: {}", e);
+            exit(1);
+        }
+    };
+    println!("Loaded config...");
+    println!("Got config: {:?}", cfg);
+
+    let sm = Arc::new(Mutex::new(orchestrator_state::StateMachine::new()));
     let sm_clone = sm.clone();
     tokio::spawn(async move {
         // Emulate periodic checker timer
         loop {
-            println!("tick: sleeping 5s");
-            sleep(Duration::from_secs(5)).await;
-            println!("tick: awake, acquiring lock");
+            println!("tick: sleeping {} secs", cfg.poll_interval_secs);
+            sleep(Duration::from_secs(cfg.poll_interval_secs.into())).await;
             let mut guard = sm_clone.lock().await;
             println!("tick: got lock, state = {:?}", guard.state());
 
