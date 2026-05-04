@@ -28,7 +28,7 @@ jobs:
         uses: actions-rust-lang/rustfmt@v1
       - name: Clippy Check
         run: cargo clippy -- -D warnings
-      
+
   test:
     name: cargo test
     needs: lints
@@ -38,7 +38,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo test --all-features
 
-# Release Build if a Tag is pushed 
+# Release Build if a Tag is pushed
   release_build:
     name: Release Build
     # only run when a tag is pushed
@@ -75,7 +75,7 @@ jobs:
 
       - name: Attach Binary to GitHub Release
         if: startsWith(github.ref_name, 'sprint-') && contains(github.ref_name, '-release')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.6.2
         with:
           files: target/x86_64-unknown-linux-gnu/release/amos2026ss01-zero-downtime-linux-updates
           body_path: RELEASE_NOTES.md
