@@ -41,8 +41,8 @@ jobs:
 # Release Build if a Tag is pushed 
   release_build:
     name: Release Build
-    # only run when it has a release tag
-    if: startsWith(github.ref, 'refs/tags/sprint-')
+    # only run when a tag is pushed
+    if: github.ref_type == 'tag'
     needs: test 
     runs-on: ubuntu-latest
     steps:
