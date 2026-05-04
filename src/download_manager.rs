@@ -85,6 +85,7 @@ pub async fn check_for_update(client: &Client, config: &Config) -> Result<Option
 // - Err(anyhow::Error) if there was an error during the download or file writing process, with a context message indicating the failure reason
 pub async fn download_update(client: &Client, update_info: &UpdateStruct, config: &Config) -> Result<PathBuf> {
 
+    // Creates download directory according to config, which currently ONLY EXISTS IN THIS TEMPORARY CONFIG STRUCT
     tokio::fs::create_dir_all(&config.download_dir)
         .await
         .with_context(|| format!("Failed to create download directory at {:?}", &config.download_dir))?;
@@ -93,6 +94,7 @@ pub async fn download_update(client: &Client, update_info: &UpdateStruct, config
     let filename = format!("update_{}.bin", update_info.os_version);
     let file_path = config.download_dir.join(&filename);
 
+    // Await server download response with hard coded (long) timeout. Could be added to config in the future.
     let resp = client.get(&update_info.download_url)
         .timeout(std::time::Duration::from_secs(3600)) // Potentially long download, timeout set to 1 hour for now
         .send()
@@ -103,12 +105,15 @@ pub async fn download_update(client: &Client, update_info: &UpdateStruct, config
         anyhow::bail!("Failed to download update, server responded with status code: {}", resp.status());
     }
 
+    // Create the file to write the downloaded update into
     let mut file = tokio::fs::File::create(&file_path)
         .await
         .with_context(|| format!("Failed to create file at {:?}", &file_path))?;
 
+    // Get the response body as a stream of bytes to write it in chunks, which is more efficient for large files
     let mut stream = resp.bytes_stream();
 
+    // Write the download in chunks
     while let Some(chunk) = stream.next().await {
         let dl_chunk = chunk.with_context(|| "Failed to read chunk from download stream")?;
         file.write_all(&dl_chunk).await.with_context(|| "Failed to write chunk to file")?;
