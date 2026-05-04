@@ -1,18 +1,14 @@
-use rust_fsm::*;
+pub struct OsState {
+    running_ostree_commit: String,
+}
 
-state_machine! {
-	#[derive(Debug, PartialEq, Eq)]
-    #[repr(C)]
-    /// The State machine
-    pub orchestrator_state(Idle)
+pub struct AppState {
+    app_id: String,
+    running_version: String,
+}
 
-	// Idle, Checking, Downloading, Verifying, Installing
-	Idle(TimerTriggered) => Checking,
-    Checking => {
-		UpToDate => Idle,
-		UpdateAvailable => Downloading,
-	},
-    Downloading(Done) => Verifying,
-    Verifying(Done) => Installing,
-    Installing(Done) => Idle,
+pub struct AgentState {
+    self_version: String,
+    os_state: OsState,
+    apps: Vec<AgentState>,
 }

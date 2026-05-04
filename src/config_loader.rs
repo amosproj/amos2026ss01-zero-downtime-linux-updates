@@ -4,12 +4,14 @@ use serde_derive::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub(crate) poll_interval_secs: u32,
+    cloud_url: String,
+    poll_interval_secs: u32,
 }
 
 impl ::std::default::Default for Config {
     fn default() -> Self {
         Self {
+            cloud_url: String::from("https://weber.cloud/api/bla"),
             poll_interval_secs: 3,
         }
     }

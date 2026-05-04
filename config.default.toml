@@ -1,1 +1,2 @@
+cloud_url = "https://weber.cloud/api"
 poll_interval_secs = 5
