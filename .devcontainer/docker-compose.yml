@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  dev-container:
+    image: mcr.microsoft.com/devcontainers/base:ubuntu-24.04
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+
+  mock-api-container:
+    build: 
+      context: ..
+      dockerfile: .devcontainer/mock-api.Dockerfile
+    restart: unless-stopped
