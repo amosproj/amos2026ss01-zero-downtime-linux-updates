@@ -28,11 +28,6 @@ pub fn get_config() -> Result<Settings, config::ConfigError> {
     settings.try_deserialize()
 }
 
-fn get_default() -> Result<Settings, config::ConfigError> {
-    let config = Config::builder().build()?;
-    config.try_deserialize()
-}
-
 pub fn validate_config(config: &Settings) -> Result<(), String> {
     if !config.cloud_url.starts_with("https://") {
         return Err("Cloud url must begin with `https://`".into());
@@ -48,6 +43,11 @@ pub fn validate_config(config: &Settings) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn get_default() -> Result<Settings, config::ConfigError> {
+        let config = Config::builder().build()?;
+        config.try_deserialize()
+    }
 
     #[test]
     fn url_without_https_fails() {
