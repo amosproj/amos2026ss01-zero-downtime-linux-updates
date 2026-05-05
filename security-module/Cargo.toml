@@ -1,0 +1,11 @@
+[package]
+name = "security-module"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
+tokio = { version = "1.52.2", features = ["full"] }
+
+[dev-dependencies]
+rand = "0.8"
