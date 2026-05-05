@@ -60,7 +60,7 @@ pub mod api {
             assert!(catalog.0[0].name == "test");
             assert!(catalog.0[0].version == "1.0.0");
             assert!(catalog.0[0].url == "https://hallo.welt/");
-            assert!(*catalog.0[0].signature.0 == [5u8; 3]);
+            assert!(*catalog.0[0].signature == [5u8; 3]);
         }
     }
 }

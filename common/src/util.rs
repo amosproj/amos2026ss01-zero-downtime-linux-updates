@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Deref};
 
 use base64::prelude::*;
 
@@ -17,6 +17,14 @@ impl<'a> Base64<'a> {
 impl<'a> From<Vec<u8>> for Base64<'a> {
     fn from(value: Vec<u8>) -> Self {
         Self(std::borrow::Cow::Owned(value))
+    }
+}
+
+impl<'a> Deref for Base64<'a> {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
