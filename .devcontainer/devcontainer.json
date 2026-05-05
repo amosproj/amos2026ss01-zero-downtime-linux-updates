@@ -1,7 +1,9 @@
 {
     "name": "AMOS Project 1 Dev Environment",
 
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "dev-container",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
     "features": {
         "ghcr.io/devcontainers/features/rust:1": {

@@ -1,0 +1,11 @@
+[package]
+name = "amos-api-mock-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+amos-common.workspace = true
+
+axum = { version = "0.8.9", default-features = false, features = ["http1", "http2", "json", "tokio"] }
+tokio = { version = "*", features = ["macros"] }
+tower-http = { version = "0.6", features = ["fs"] }
