@@ -1,10 +1,9 @@
-use config::Config;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::config_loader::Settings;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OsState {
     pub update_pending: bool, // when an update is pending (updated but not yet rebooted)
     pub running_ostree_commit: String, // the current version and tag of the running image

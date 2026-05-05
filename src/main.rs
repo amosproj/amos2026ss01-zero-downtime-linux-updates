@@ -15,6 +15,8 @@ const VERSION: &str = "0.0.1";
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+
     println!("Started app...");
 
     let config = get_config().unwrap_or_else(|err| {
@@ -38,8 +40,13 @@ async fn main() {
     debug!("Creating AgentState");
     let agent_state = AgentState::new(VERSION, config, os_state, apps_state);
 
+    info!(
+        "Running amos-zero-downtime with version: {}",
+        agent_state.self_version
+    );
+
     // TODO: start os and apps loop, give them a copy of agent state each
-    let apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
-    let os_tree_handle = tokio::spawn(run_os_tree_main_loop(agent_state));
+    let _apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
+    let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(agent_state.clone()));
     tokio::signal::ctrl_c().await.unwrap();
 }

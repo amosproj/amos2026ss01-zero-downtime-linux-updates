@@ -38,9 +38,9 @@ pub fn validate_config(config: &Settings) -> Result<(), String> {
         return Err("Cloud url must begin with `https://`".into());
     }
 
-    // if config.poll_interval_secs <= 0 {
-    //     return Err("Poll interval must be >= 1 seconds".into());
-    // }
+    if config.poll_interval_secs == 0 {
+        return Err("Poll interval must be >= 1 seconds".into());
+    }
 
     Ok(())
 }

@@ -29,7 +29,7 @@ pub async fn run_os_tree_main_loop(agent_state: AgentState) {
             *current_state = host_os_state;
         }
 
-        handle_os_tree(host_os_state, target_os_state).await;
+        handle_os_tree(agent_state.os_state.lock().await.clone(), target_os_state).await;
     }
 }
 
