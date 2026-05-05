@@ -36,7 +36,7 @@ pub async fn run_os_tree_main_loop(agent_state: AgentState) {
 async fn get_target_os_state() -> OsState {
     OsState {
         update_pending: false,
-        running_ostree_commit: String::from("current_latest"),
+        running_ostree_commit: String::from("current_latest_new"),
         update_ostree_commit: Some(String::from("next_latest")),
     }
 }
