@@ -9,14 +9,17 @@
         }
     },
 
+    "onCreateCommand": ["/bin/sudo", "/bin/bash", ".devcontainer/install.sh"],
+
     "customizations": {
         "vscode": {
             "settings": {
                 "git.alwaysSignOff": true
             }
+        },
+        "amos": {
+            // Update this marker when changing ./install.sh
+            "installScriptVersion": "2026-05-05 09:20"
         }
-    },
-
-    "onCreateCommand": ["/bin/sudo", "/bin/bash", ".devcontainer/install.sh"],
-    "_installScriptVersion": "2026-04-27 14:21" // Marker property only
+    }
 }

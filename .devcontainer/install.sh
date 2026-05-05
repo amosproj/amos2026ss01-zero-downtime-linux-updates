@@ -2,7 +2,7 @@
 
 # !!! IMPORTANT !!!
 #
-# Please update _installScriptVersion at the end of devcontainer.json when
+# Please update installScriptVersion at the end of devcontainer.json when
 # changing this file so everyone gets prompted to rebuild the container
 
 set -e
