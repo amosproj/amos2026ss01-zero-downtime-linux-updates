@@ -1,5 +1,8 @@
+use config::Config;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+
+use crate::config_loader::Settings;
 
 #[derive(Debug)]
 pub struct OsState {
@@ -8,31 +11,35 @@ pub struct OsState {
     pub update_ostree_commit: Option<String>, // if update available -> the image tag for the update
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppState {
-    pub app_id: String,                 // the podman/docker image name
-    pub running_version: String,        // the podman/docker image tag
-    pub update_version: Option<String>, // the image tag if an update is available
+    pub app_id: String,  // the podman/docker image name
+    pub version: String, // the podman/docker image tag
+    pub updating: bool,
+    // TODO: add more app info as needed (e.g. run args, compose file)
 }
 
 #[derive(Debug, Clone)]
 pub struct AgentState {
-    self_version: String,
+    pub self_version: String,
+    pub config: Settings,
 
-    os_state: Arc<Mutex<OsState>>,
-    apps: Arc<Mutex<Vec<AppState>>>,
+    pub os_state: Arc<Mutex<OsState>>,
+    pub apps_state: Arc<Mutex<Vec<AppState>>>,
 }
 
 impl AgentState {
     pub fn new(
         version: impl Into<String>,
+        config: Settings,
         initial_os_state: OsState,
         inital_apps_state: Vec<AppState>,
     ) -> Self {
         Self {
             self_version: version.into(),
+            config,
             os_state: Arc::new(Mutex::new(initial_os_state)),
-            apps: Arc::new(Mutex::new(inital_apps_state)),
+            apps_state: Arc::new(Mutex::new(inital_apps_state)),
         }
     }
 }

@@ -4,17 +4,17 @@ use serde::Deserialize;
 fn default_cloud() -> String {
     "https://cloud.weber.de/api/v1".into()
 }
-fn default_interval() -> i32 {
+fn default_interval() -> u32 {
     5
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
     #[serde(default = "default_cloud")]
-    cloud_url: String,
+    pub cloud_url: String,
 
     #[serde(default = "default_interval")]
-    poll_interval_secs: i32,
+    pub poll_interval_secs: u32,
 }
 
 pub fn get_config() -> Result<Settings, config::ConfigError> {
@@ -38,9 +38,9 @@ pub fn validate_config(config: &Settings) -> Result<(), String> {
         return Err("Cloud url must begin with `https://`".into());
     }
 
-    if config.poll_interval_secs <= 0 {
-        return Err("Poll interval must be >= 1 seconds".into());
-    }
+    // if config.poll_interval_secs <= 0 {
+    //     return Err("Poll interval must be >= 1 seconds".into());
+    // }
 
     Ok(())
 }
