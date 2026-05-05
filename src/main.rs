@@ -1,6 +1,6 @@
 mod config_loader;
 use config_loader::{get_config, validate_config};
-use log::{debug, info};
+use log::{debug, error, info};
 
 use crate::{
     apps::{get_initial_apps_state, run_apps_main_loop},
@@ -11,25 +11,25 @@ mod apps;
 mod os_tree;
 mod state;
 
-const VERSION: &str = "0.0.1";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
 
-    println!("Started app...");
+    info!("Started app...");
 
     let config = get_config().unwrap_or_else(|err| {
-        eprintln!("Failed to load config: {}", err);
+        error!("Failed to load config: {}", err);
         std::process::exit(1);
     });
 
     validate_config(&config).unwrap_or_else(|err| {
-        eprintln!("Failed during config validation: {}", err);
+        error!("Failed during config validation: {}", err);
         std::process::exit(1);
     });
 
-    println!("Loaded config: {:?}", config);
+    debug!("Loaded config: {:?}", config);
 
     info!("Reading inital OS State");
     let os_state = get_inital_os_state();
