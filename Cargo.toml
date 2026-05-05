@@ -1,11 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["api-mock-server", "common"]
+members = ["api-mock-server", "common", "orchestrator", "security-module"]
 
 [workspace.dependencies]
 amos-api-mock-server = { path = "api-mock-server" }
 amos-common = { path = "common" }
+amos-orchestrator = { path = "orchestrator" }
+amos-security-module = { path = "security-module" }
 
 serde_json = "1.0"
 serde = { version = "*", features = ["derive"] }
-=======
