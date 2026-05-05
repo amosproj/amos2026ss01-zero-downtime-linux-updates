@@ -26,7 +26,7 @@ pub async fn run_os_tree_main_loop(agent_state: AgentState) {
 
         {
             let mut current_state = agent_state.os_state.lock().await;
-            *current_state = host_os_state;
+            *current_state = host_os_state.clone();
         }
 
         handle_os_tree(agent_state.os_state.lock().await.clone(), target_os_state).await;
