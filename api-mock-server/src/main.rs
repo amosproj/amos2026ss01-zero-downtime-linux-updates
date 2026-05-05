@@ -25,14 +25,14 @@ async fn main() {
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
         .nest_service("/download", ServeDir::new("assets"));
 
-    let app = Router::new()
-        .nest("/v1", api_v1)
-        .layer(middleware::from_fn(async |req: Request, next: middleware::Next| {
+    let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(
+        async |req: Request, next: middleware::Next| {
             let uri = req.uri().to_string();
             let res = next.run(req).await;
             println!("{} -> {}", uri, res.status());
             res
-        }));
+        },
+    ));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:80").await.unwrap();
     axum::serve(listener, app).await.unwrap();

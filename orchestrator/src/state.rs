@@ -5,8 +5,10 @@ use crate::config_loader::Settings;
 
 #[derive(Debug, Clone)]
 pub struct OsState {
+    #[expect(unused)]
     pub update_pending: bool, // when an update is pending (updated but not yet rebooted)
     pub running_ostree_commit: String, // the current version and tag of the running image
+    #[expect(unused)]
     pub update_ostree_commit: Option<String>, // if update available -> the image tag for the update
 }
 
@@ -14,6 +16,7 @@ pub struct OsState {
 pub struct AppState {
     pub app_id: String,  // the podman/docker image name
     pub version: String, // the podman/docker image tag
+    #[expect(unused)]
     pub updating: bool,
     // TODO: add more app info as needed (e.g. run args, compose file)
 }

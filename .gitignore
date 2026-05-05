@@ -45,3 +45,6 @@ docker-compose.override.yml
 
 # App specific
 config.toml
+
+# Added by cargo
+/target

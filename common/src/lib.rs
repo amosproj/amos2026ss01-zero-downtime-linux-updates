@@ -32,18 +32,17 @@ pub mod api {
     mod tests {
         use super::*;
 
-        static CATALOG_TEST: &str = r#"[{"name":"test","version":"1.0.0","url":"https://hallo.welt/","signature":"BQUF"}]"#;
+        static CATALOG_TEST: &str =
+            r#"[{"name":"test","version":"1.0.0","url":"https://hallo.welt/","signature":"BQUF"}]"#;
 
         #[test]
         fn test_catalog_serialization() {
-            let catalog = CatalogResponse::from_owned(vec![
-                CatalogResponseEntry {
-                    name: "test",
-                    version: "1.0.0",
-                    url: "https://hallo.welt/",
-                    signature: Base64::from_slice(&[5u8; 3])
-                }
-            ]);
+            let catalog = CatalogResponse::from_owned(vec![CatalogResponseEntry {
+                name: "test",
+                version: "1.0.0",
+                url: "https://hallo.welt/",
+                signature: Base64::from_slice(&[5u8; 3]),
+            }]);
 
             let result = serde_json::to_string(&catalog).unwrap();
 
