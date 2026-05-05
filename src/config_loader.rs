@@ -25,7 +25,6 @@ pub fn get_config() -> Result<Settings, config::ConfigError> {
         .add_source(file_config)
         .add_source(env_config)
         .build()?;
-
     settings.try_deserialize()
 }
 
