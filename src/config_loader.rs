@@ -25,6 +25,11 @@ pub fn get_config() -> Result<Settings, config::ConfigError> {
     return settings.try_deserialize()
 }
 
+fn get_default() -> Result<Settings, config::ConfigError> {
+    let config = Config::builder().build()?;
+    return config.try_deserialize()
+}
+
 pub fn validate_config(config: &Settings) -> Result<(), String> {
     if !config.cloud_url.starts_with("https://") {
         return Err("Cloud url must begin with `https://`".into());
@@ -35,4 +40,27 @@ pub fn validate_config(config: &Settings) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn url_without_https_fails() {
+        let mut config = get_default().unwrap();
+        config.cloud_url = "http://weber.cloud/foo".into();
+
+        let validation = validate_config(&config);
+        assert!(validation.is_err());
+    }
+
+    #[test]
+    fn poll_interval_zero_fails() {
+        let mut config = get_default().unwrap();
+        config.poll_interval_secs = 0;
+
+        let validation = validate_config(&config);
+        assert!(validation.is_err());
+    }
 }
