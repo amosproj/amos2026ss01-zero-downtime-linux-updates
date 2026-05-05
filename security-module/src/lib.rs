@@ -19,7 +19,7 @@ pub async fn verify_signature(
         return false;
     };
 
-    return public_key.verify(&file_content, &signature).is_ok();
+    public_key.verify(&file_content, &signature).is_ok()
 }
 
 #[cfg(test)]
