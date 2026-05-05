@@ -1,0 +1,2 @@
+cloud_url = "https://cloud.weber.de/api/v1"
+poll_interval_secs = 60

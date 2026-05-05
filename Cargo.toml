@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-confy = "2.0.0"
-rust-fsm = "0.8.0"
-serde = "1.0.228"
-serde_derive = "1.0.228"
+config = { version = "0.15.22", features = ["toml"] }
+serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.1", features = ["full"] }
