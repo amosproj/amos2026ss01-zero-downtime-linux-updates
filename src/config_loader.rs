@@ -1,8 +1,12 @@
 use config::{Config, Environment, File};
 use serde::Deserialize;
 
-fn default_cloud() -> String { "https://cloud.weber.de/api/v1".into() }
-fn default_interval() -> u32 { 5 }
+fn default_cloud() -> String {
+    "https://cloud.weber.de/api/v1".into()
+}
+fn default_interval() -> i32 {
+    5
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -10,7 +14,7 @@ pub struct Settings {
     cloud_url: String,
 
     #[serde(default = "default_interval")]
-    poll_interval_secs: u32,
+    poll_interval_secs: i32,
 }
 
 pub fn get_config() -> Result<Settings, config::ConfigError> {
@@ -22,12 +26,12 @@ pub fn get_config() -> Result<Settings, config::ConfigError> {
         .add_source(env_config)
         .build()?;
 
-    return settings.try_deserialize()
+    settings.try_deserialize()
 }
 
 fn get_default() -> Result<Settings, config::ConfigError> {
     let config = Config::builder().build()?;
-    return config.try_deserialize()
+    config.try_deserialize()
 }
 
 pub fn validate_config(config: &Settings) -> Result<(), String> {
