@@ -2,18 +2,22 @@ use amos_common::{api, util};
 use axum::{Json, Router, routing::get};
 use tower_http::services::ServeDir;
 
-static CATALOG_RES: api::CatalogResponse = api::CatalogResponse {
-    os: api::CatalogResponseEntry {
+static CATALOG: [api::CatalogResponseEntry; 2] = [
+    api::CatalogResponseEntry {
+        name: "os",
         version: "1.2.3",
         url: "/v1/download/os1.2.3",
         signature: util::Base64::from_slice(&[0u8; 16]),
     },
-    app: api::CatalogResponseEntry {
+    api::CatalogResponseEntry {
+        name: "app",
         version: "4.5.6",
         url: "/v1/download/app4.5.6",
         signature: util::Base64::from_slice(&[0u8; 16]),
     },
-};
+];
+
+static CATALOG_RES: api::CatalogResponse = api::CatalogResponse::from_slice(&CATALOG);
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {

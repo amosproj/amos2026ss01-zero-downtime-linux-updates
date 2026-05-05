@@ -10,13 +10,13 @@ pub struct Base64<'a>(pub std::borrow::Cow<'a, [u8]>);
 
 impl<'a> Base64<'a> {
     pub const fn from_slice(slice: &'a [u8]) -> Self {
-        Base64(std::borrow::Cow::Borrowed(slice))
+        Self(std::borrow::Cow::Borrowed(slice))
     }
 }
 
 impl<'a> From<Vec<u8>> for Base64<'a> {
     fn from(value: Vec<u8>) -> Self {
-        Base64(std::borrow::Cow::Owned(value))
+        Self(std::borrow::Cow::Owned(value))
     }
 }
 
