@@ -1,7 +1,7 @@
 use std::time::Duration;
 use std::process::Command;
 
-use log::info;
+use log::{error, info};
 use tokio::time::interval;
 
 use crate::state::{AgentState, OsState};

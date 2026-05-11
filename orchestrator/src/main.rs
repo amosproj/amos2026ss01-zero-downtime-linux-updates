@@ -4,7 +4,7 @@ use log::{debug, error, info};
 
 use crate::{
     apps::{get_initial_apps_state, run_apps_main_loop},
-    os_tree::{get_inital_os_state, run_os_tree_main_loop},
+    os_tree::{get_initial_os_state, run_os_tree_main_loop},
     state::AgentState,
 };
 mod apps;
@@ -32,7 +32,7 @@ async fn main() {
     debug!("Loaded config: {:?}", config);
 
     info!("Reading inital OS State");
-    let os_state = get_inital_os_state();
+    let os_state = get_initial_os_state();
 
     info!("Reading inital application state");
     let apps_state = get_initial_apps_state();
