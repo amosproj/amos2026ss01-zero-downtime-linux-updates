@@ -1,5 +1,5 @@
-use log::{info, warn};
 use anyhow::{Context, Result};
+use log::{info, warn};
 use serde::Serialize;
 
 // Full device inventory serializable to JSON.
@@ -52,13 +52,12 @@ pub struct ApplicationInfo {
     pub app_version: String,
 }
 
-
 // Collects the inventory and saves it to the given path in JSON format.
 // System info is required and if it fails, the entire function returns an error.
 // If collection of deployments or applications fails, the error is logged but the function still returns successfully
 // with the relevant field in the inventory marked as unavailable with the error message as reason.
 // Arguments:
-// - inventory_path: the file path where the collected inventory should be saved as JSON (should come from config). The function will create parent directories 
+// - inventory_path: the file path where the collected inventory should be saved as JSON (should come from config). The function will create parent directories
 //   if they do not exist, and will write atomically to avoid leaving a corrupted inventory file in case of interruption during writing.
 // Returns:
 // - Ok(()) if the inventory was collected and saved successfully (even if some fields are unavailable due to collection errors)
@@ -69,26 +68,40 @@ pub fn collect_and_save_inventory(inventory_path: &std::path::Path) -> Result<()
 
     let json = serde_json::to_string_pretty(&inventory)
         .with_context(|| "Failed to serialize inventory to JSON")?;
-    
+
     if let Some(parent) = inventory_path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("Failed to create directories for inventory path: {}", inventory_path.display()))?;
+        std::fs::create_dir_all(parent).with_context(|| {
+            format!(
+                "Failed to create directories for inventory path: {}",
+                inventory_path.display()
+            )
+        })?;
     }
 
     // Atomic write: write to a temporary file first and then rename it to the final path,
     // to avoid leaving a corrupted inventory file if the process is interrupted during writing.
     let tmp_path = inventory_path.with_extension("tmp");
-    std::fs::write(&tmp_path, &json)
-        .with_context(|| format!("Failed to write inventory to temporary path: {}", tmp_path.display()))?;
-    
-    // std::fs::rename is atomic
-    std::fs::rename(&tmp_path, inventory_path)
-        .with_context(|| format!("Failed to move temporary inventory file to final path: {}", inventory_path.display()))?;
+    std::fs::write(&tmp_path, &json).with_context(|| {
+        format!(
+            "Failed to write inventory to temporary path: {}",
+            tmp_path.display()
+        )
+    })?;
 
-    info!("Successfully collected and saved inventory to {}", inventory_path.display());
+    // std::fs::rename is atomic
+    std::fs::rename(&tmp_path, inventory_path).with_context(|| {
+        format!(
+            "Failed to move temporary inventory file to final path: {}",
+            inventory_path.display()
+        )
+    })?;
+
+    info!(
+        "Successfully collected and saved inventory to {}",
+        inventory_path.display()
+    );
     Ok(())
 }
-
 
 fn collect_inventory() -> Result<Inventory> {
     Ok(Inventory {
@@ -98,14 +111,18 @@ fn collect_inventory() -> Result<Inventory> {
             Ok(d) => CollectionResult::Ok(d),
             Err(e) => {
                 warn!("Could not collect rpm deployments: {}", e);
-                CollectionResult::Unavailable { reason: e.to_string() }
+                CollectionResult::Unavailable {
+                    reason: e.to_string(),
+                }
             }
         },
         applications: match collect_applications() {
             Ok(a) => CollectionResult::Ok(a),
             Err(e) => {
                 warn!("Could not collect applications: {}", e);
-                CollectionResult::Unavailable { reason: e.to_string() }
+                CollectionResult::Unavailable {
+                    reason: e.to_string(),
+                }
             }
         },
     })
@@ -148,12 +165,7 @@ fn read_kernel_version() -> Result<String> {
     // We want to extract the 6.x.y part, which is the third whitespace-separated token.
     std::fs::read_to_string("/proc/version")
         .with_context(|| "Failed to read kernel version")
-        .map(|s| {
-            s.split_whitespace()
-                .nth(2)
-                .unwrap_or("unknown")
-                .to_string()
-        })
+        .map(|s| s.split_whitespace().nth(2).unwrap_or("unknown").to_string())
 }
 
 // --Rpm-ostree deployments collection-------------
@@ -165,18 +177,18 @@ fn collect_deployments() -> Result<Vec<RpmOstreeDeployment>> {
         .args(["status", "--json"])
         .output()
         .with_context(|| "Failed to run rpm-ostree command")?;
-    
+
     if !out.status.success() {
         anyhow::bail!("rpm-ostree command failed with status: {}", out.status);
     }
 
     let json: serde_json::Value = serde_json::from_slice(&out.stdout)
         .with_context(|| "Failed to parse rpm-ostree output as JSON")?;
-    
+
     let deployments = json["deployments"]
         .as_array()
         .with_context(|| "rpm-ostree output JSON does not contain deployments array")?;
-    
+
     let result = deployments
         .iter()
         .map(|d| RpmOstreeDeployment {
@@ -187,7 +199,7 @@ fn collect_deployments() -> Result<Vec<RpmOstreeDeployment>> {
             origin: d["origin"].as_str().unwrap_or("").to_string(),
         })
         .collect();
-    
+
     Ok(result)
 }
 
@@ -212,32 +224,35 @@ fn collect_applications() -> Result<Vec<ApplicationInfo>> {
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn test_ok_result_serializes_correctly() {
-        let result: CollectionResult<Vec<ApplicationInfo>> = CollectionResult::Ok(vec![
-            ApplicationInfo { app_name: "mock-app".to_string(), app_version: "0.1.0".to_string() },
-        ]);
- 
+        let result: CollectionResult<Vec<ApplicationInfo>> =
+            CollectionResult::Ok(vec![ApplicationInfo {
+                app_name: "mock-app".to_string(),
+                app_version: "0.1.0".to_string(),
+            }]);
+
         let json = serde_json::to_string(&result).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
- 
+
         assert_eq!(parsed["status"], "ok");
         assert_eq!(parsed["data"][0]["app_name"], "mock-app");
     }
- 
+
     #[test]
     fn test_unavailable_result_serializes_correctly() {
-        let result: CollectionResult<Vec<RpmOstreeDeployment>> =
-            CollectionResult::Unavailable { reason: "rpm-ostree not found".to_string() };
- 
+        let result: CollectionResult<Vec<RpmOstreeDeployment>> = CollectionResult::Unavailable {
+            reason: "rpm-ostree not found".to_string(),
+        };
+
         let json = serde_json::to_string(&result).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
- 
+
         assert_eq!(parsed["status"], "unavailable");
         assert_eq!(parsed["data"]["reason"], "rpm-ostree not found");
     }
- 
+
     #[test]
     fn test_full_inventory_with_unavailable_deployments() {
         let inventory = Inventory {
@@ -250,24 +265,25 @@ mod tests {
             deployments: CollectionResult::Unavailable {
                 reason: "rpm-ostree not found".to_string(),
             },
-            applications: CollectionResult::Ok(vec![
-                ApplicationInfo { app_name: "mock-app".to_string(), app_version: "0.1.0".to_string() },
-            ]),
+            applications: CollectionResult::Ok(vec![ApplicationInfo {
+                app_name: "mock-app".to_string(),
+                app_version: "0.1.0".to_string(),
+            }]),
         };
- 
+
         let json = serde_json::to_string_pretty(&inventory).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
- 
+
         assert_eq!(parsed["system"]["hostname"], "test-host");
         assert_eq!(parsed["deployments"]["status"], "unavailable");
         assert_eq!(parsed["applications"]["status"], "ok");
     }
- 
+
     #[test]
     fn test_collect_and_save_writes_file() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("inventory.json");
- 
+
         // Write a minimal inventory manually to test the save logic
         let inventory = Inventory {
             system: SystemInfo {
@@ -281,12 +297,12 @@ mod tests {
             },
             applications: CollectionResult::Ok(vec![]),
         };
- 
+
         let json = serde_json::to_string_pretty(&inventory).unwrap();
         let tmp = path.with_extension("tmp");
         std::fs::write(&tmp, &json).unwrap();
         std::fs::rename(&tmp, &path).unwrap();
- 
+
         let content = std::fs::read_to_string(&path).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
         assert_eq!(parsed["system"]["hostname"], "test-host");
@@ -343,7 +359,6 @@ mod tests {
             "update-driver" : null
         }"#;
 
-
         let json: serde_json::Value = serde_json::from_str(raw).unwrap();
         let deployments = json["deployments"].as_array().unwrap();
 
@@ -364,15 +379,26 @@ mod tests {
         assert_eq!(result[0].is_booted, true);
         assert_eq!(result[0].is_staged, false);
         assert_eq!(result[0].version, "44.20260511.0".to_string());
-        assert_eq!(result[0].checksum, "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443");
-        assert_eq!(result[0].origin, "fedora-iot:fedora/stable/x86_64/iot".to_string());
+        assert_eq!(
+            result[0].checksum,
+            "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443"
+        );
+        assert_eq!(
+            result[0].origin,
+            "fedora-iot:fedora/stable/x86_64/iot".to_string()
+        );
 
         // Second entry is the rollback deployment
         assert_eq!(result[1].is_booted, false);
         assert_eq!(result[1].is_staged, false);
         assert_eq!(result[1].version, "44.20260427.0".to_string());
-        assert_eq!(result[1].checksum, "35a2e036cdcf8f3067effe5a7a7415993481e9beaaca7eed7eabf53381852192");
-        assert_eq!(result[1].origin, "fedora-iot:fedora/stable/x86_64/iot".to_string());
-
+        assert_eq!(
+            result[1].checksum,
+            "35a2e036cdcf8f3067effe5a7a7415993481e9beaaca7eed7eabf53381852192"
+        );
+        assert_eq!(
+            result[1].origin,
+            "fedora-iot:fedora/stable/x86_64/iot".to_string()
+        );
     }
 }
