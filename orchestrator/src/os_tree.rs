@@ -9,7 +9,7 @@ use crate::state::{AgentState, OsState};
 pub fn get_initial_os_state() -> OsState {
     OsState {
         update_pending: false,
-        running_ostree_commit: String::from("current_latest"),
+        booted_image: String::from("current_latest"),
         update_ostree_commit: Option::None,
     }
 }
@@ -37,7 +37,7 @@ pub async fn run_os_tree_main_loop(agent_state: AgentState) {
 async fn get_target_os_state() -> OsState {
     OsState {
         update_pending: false,
-        running_ostree_commit: String::from("current_latest_new"),
+        booted_image: String::from("current_latest_new"),
         update_ostree_commit: Some(String::from("next_latest")),
     }
 }
@@ -45,7 +45,7 @@ async fn get_target_os_state() -> OsState {
 async fn get_host_os_state() -> OsState {
     OsState {
         update_pending: false,
-        running_ostree_commit: String::from("current_latest"),
+        booted_image: String::from("current_latest"),
         update_ostree_commit: Option::None,
     }
 }
@@ -53,14 +53,14 @@ async fn get_host_os_state() -> OsState {
 async fn handle_os_tree(current_state: OsState, target_state: OsState) {
     info!("Checking for OS update");
 
-    if current_state.running_ostree_commit != target_state.running_ostree_commit {
+    if current_state.booted_image != target_state.booted_image {
         run_update_command(&current_state, &target_state).await;
     }
 }
 
 // requires root privileges
 async fn run_update_command(current_state: &OsState, target_state: &OsState) {
-    info!("Triggering OS update to commit: {:?}", target_state.running_ostree_commit);
+    info!("Triggering OS update to commit: {:?}", target_state.booted_image);
 
     let status = Command::new("sudo")
         .args(["bootc", "upgrade"])
