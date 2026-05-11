@@ -7,6 +7,7 @@ use serde::Serialize;
 pub struct Inventory {
     pub system: SystemInfo,
     pub deployments: CollectionResult<Vec<RpmOstreeDeployment>>,
+    pub bootc_status: CollectionResult<BootcStatus>,
     pub applications: CollectionResult<Vec<ApplicationInfo>>,
 }
 
@@ -50,6 +51,29 @@ pub struct RpmOstreeDeployment {
 pub struct ApplicationInfo {
     pub app_name: String,
     pub app_version: String,
+}
+
+// Rudimentary representation of bootc status, collected via 'sudo bootc status --json'.
+#[derive(Debug, Serialize)]
+pub struct BootcStatus {
+    pub booted: BootcDeploymentInfo,
+    pub staged: Option<BootcDeploymentInfo>,
+    pub rollback: Option<BootcDeploymentInfo>,
+    pub rollback_queued: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BootcDeploymentInfo {
+    pub checksum: String,
+    pub image: Option<BootcImageInfo>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BootcImageInfo {
+    pub image_ref: String,
+    pub transport: String,
+    pub image_digest: Option<String>,
+    pub version: Option<String>,
 }
 
 // Collects the inventory and saves it to the given path in JSON format.
@@ -111,6 +135,15 @@ fn collect_inventory() -> Result<Inventory> {
             Ok(d) => CollectionResult::Ok(d),
             Err(e) => {
                 warn!("Could not collect rpm deployments: {}", e);
+                CollectionResult::Unavailable {
+                    reason: e.to_string(),
+                }
+            }
+        },
+        bootc_status: match collect_bootc_status() {
+            Ok(s) => CollectionResult::Ok(s),
+            Err(e) => {
+                warn!("Could not collect bootc status: {}", e);
                 CollectionResult::Unavailable {
                     reason: e.to_string(),
                 }
@@ -203,6 +236,94 @@ fn collect_deployments() -> Result<Vec<RpmOstreeDeployment>> {
     Ok(result)
 }
 
+// --Bootc status collection-------------
+
+// Collects information about bootc status by running 'sudo bootc status --json' and parsing the output
+// into a BootcStatus struct.
+fn collect_bootc_status() -> Result<BootcStatus> {
+    let out = std::process::Command::new("sudo")
+        .args(["bootc", "status", "--json"])
+        .output()
+        .with_context(|| "Failed to run bootc command")?;
+
+    if !out.status.success() {
+        anyhow::bail!("bootc command failed with status: {}", out.status);
+    }
+
+    parse_bootc_status(&out.stdout)
+}
+
+// Parses the JSON output of 'bootc status --json' into a BootcStatus struct.
+// Extracted from collect_bootc_status for testability.
+fn parse_bootc_status(output: &[u8]) -> Result<BootcStatus> {
+    let json: serde_json::Value =
+        serde_json::from_slice(output).with_context(|| "Failed to parse bootc output as JSON")?;
+
+    let status = &json["status"];
+
+    let booted = parse_bootc_deployment(&status["booted"])
+        .with_context(|| "Failed to parse bootc booted deployment")?;
+
+    // Staged deployment is optional in bootc status output
+    let staged = if status["staged"].is_null() {
+        None
+    } else {
+        Some(
+            parse_bootc_deployment(&status["staged"])
+                .with_context(|| "Failed to parse bootc staged deployment")?,
+        )
+    };
+
+    // Rollback deployment is optional in bootc status output
+    let rollback = if status["rollback"].is_null() {
+        None
+    } else {
+        Some(
+            parse_bootc_deployment(&status["rollback"])
+                .with_context(|| "Failed to parse bootc rollback deployment")?,
+        )
+    };
+
+    let rollback_queued = status["rollbackQueued"].as_bool().unwrap_or(false);
+    Ok(BootcStatus {
+        booted,
+        staged,
+        rollback,
+        rollback_queued,
+    })
+}
+
+// Parses the relevant fields from a bootc deployment JSON object (e.g. booted, staged, rollback) into a BootcDeploymentInfo struct.
+fn parse_bootc_deployment(deployment: &serde_json::Value) -> Result<BootcDeploymentInfo> {
+    let checksum = deployment["ostree"]["checksum"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
+
+    let image = if deployment["image"].is_null() {
+        None
+    } else {
+        Some(BootcImageInfo {
+            image_ref: deployment["image"]["image"]["image"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
+            transport: deployment["image"]["image"]["transport"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
+            image_digest: deployment["image"]["imageDigest"]
+                .as_str()
+                .map(|s| s.to_string()),
+            version: deployment["image"]["version"]
+                .as_str()
+                .map(|s| s.to_string()),
+        })
+    };
+
+    Ok(BootcDeploymentInfo { checksum, image })
+}
+
 // --Applications collection-------------
 
 // Collects information about applications. Placeholder for now, in the future this will run e.g. 'podman ps' and parse the output.
@@ -265,6 +386,9 @@ mod tests {
             deployments: CollectionResult::Unavailable {
                 reason: "rpm-ostree not found".to_string(),
             },
+            bootc_status: CollectionResult::Unavailable {
+                reason: "bootc not found".to_string(),
+            },
             applications: CollectionResult::Ok(vec![ApplicationInfo {
                 app_name: "mock-app".to_string(),
                 app_version: "0.1.0".to_string(),
@@ -276,6 +400,7 @@ mod tests {
 
         assert_eq!(parsed["system"]["hostname"], "test-host");
         assert_eq!(parsed["deployments"]["status"], "unavailable");
+        assert_eq!(parsed["bootc_status"]["status"], "unavailable");
         assert_eq!(parsed["applications"]["status"], "ok");
     }
 
@@ -295,6 +420,9 @@ mod tests {
             deployments: CollectionResult::Unavailable {
                 reason: "not an ostree system".to_string(),
             },
+            bootc_status: CollectionResult::Unavailable {
+                reason: "bootc not found".to_string(),
+            },
             applications: CollectionResult::Ok(vec![]),
         };
 
@@ -307,6 +435,7 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
         assert_eq!(parsed["system"]["hostname"], "test-host");
         assert_eq!(parsed["deployments"]["status"], "unavailable");
+        assert_eq!(parsed["bootc_status"]["status"], "unavailable");
         assert_eq!(parsed["applications"]["status"], "ok");
     }
 
@@ -400,5 +529,75 @@ mod tests {
             result[1].origin,
             "fedora-iot:fedora/stable/x86_64/iot".to_string()
         );
+    }
+
+    #[test]
+    fn test_parse_bootc_output_with_null_image() {
+        // Output captured from a basic Fedora IoT VM where image is null
+        // since the system was not booted from a container registry
+        let raw = r#"{
+            "apiVersion": "org.containers.bootc/v1",
+            "kind": "BootcHost",
+            "metadata": { "name": "host" },
+            "spec": { "bootOrder": "default", "image": null },
+            "status": {
+                "booted": {
+                    "cachedUpdate": null,
+                    "composefs": null,
+                    "downloadOnly": false,
+                    "image": null,
+                    "incompatible": false,
+                    "ostree": {
+                        "checksum": "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443",
+                        "deploySerial": 0,
+                        "stateroot": "fedora-iot"
+                    },
+                    "pinned": false,
+                    "softRebootCapable": true,
+                    "store": "ostreeContainer"
+                },
+                "rollback": {
+                    "cachedUpdate": null,
+                    "composefs": null,
+                    "downloadOnly": false,
+                    "image": null,
+                    "incompatible": false,
+                    "ostree": {
+                        "checksum": "35a2e036cdcf8f3067effe5a7a7415993481e9beaaca7eed7eabf53381852192",
+                        "deploySerial": 0,
+                        "stateroot": "fedora-iot"
+                    },
+                    "pinned": false,
+                    "softRebootCapable": false,
+                    "store": "ostreeContainer"
+                },
+                "rollbackQueued": false,
+                "staged": null,
+                "type": null,
+                "usrOverlay": null
+            }
+        }"#;
+
+        let result = parse_bootc_status(raw.as_bytes()).unwrap();
+
+        // Booted deployment
+        assert_eq!(
+            result.booted.checksum,
+            "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443"
+        );
+        assert!(result.booted.image.is_none()); // null on basic VM
+
+        // No staged deployment
+        assert!(result.staged.is_none());
+
+        // Rollback deployment
+        let rollback = result.rollback.unwrap();
+        assert_eq!(
+            rollback.checksum,
+            "35a2e036cdcf8f3067effe5a7a7415993481e9beaaca7eed7eabf53381852192"
+        );
+        assert!(rollback.image.is_none());
+
+        assert!(!result.rollback_queued);
     }
 }
