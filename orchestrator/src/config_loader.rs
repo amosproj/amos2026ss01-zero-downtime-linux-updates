@@ -7,6 +7,9 @@ fn default_cloud() -> String {
 fn default_interval() -> u32 {
     5
 }
+fn default_inventory_path() -> String {
+    "./inventory/inventory.json".into()
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
@@ -15,6 +18,9 @@ pub struct Settings {
 
     #[serde(default = "default_interval")]
     pub poll_interval_secs: u32,
+
+    #[serde(default = "default_inventory_path")]
+    pub inventory_path: String,
 }
 
 pub fn get_config() -> Result<Settings, config::ConfigError> {
