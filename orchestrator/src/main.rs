@@ -1,5 +1,6 @@
 mod config_loader;
-use config_loader::{get_config, validate_config};
+use clap::Parser;
+use config_loader::{get_config, get_config_from_path, validate_config};
 use log::{debug, error, info};
 
 use crate::{
@@ -8,18 +9,50 @@ use crate::{
     state::AgentState,
 };
 mod apps;
+mod healthcheck;
 mod os_tree;
 mod state;
+use std::env;
+use std::path::PathBuf;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Parser, Debug)]
+#[command(name = "Orchestrator")]
+#[command(version = VERSION)]
+#[command(about = "Orchestrates bootc/os-tree and application container updates", long_about = None)]
+struct Cli {
+    /// If the self check should be run instead of the main programm loop
+    #[arg(short, long)]
+    pub self_check: bool,
+
+    /// Sets a custom config file path
+    #[arg(short, long, value_name = "FILE")]
+    pub config: Option<PathBuf>,
+
+    /// Turn debugging information on
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub debug: u8,
+}
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
 
+    let cli = Cli::parse();
+
+    if cli.self_check {
+        if let Err(err) = crate::healthcheck::healthcheck::healthcheck() {
+            error!("Self check failed: {}", err);
+            std::process::exit(1);
+        }
+        info!("Self check passed");
+        std::process::exit(0);
+    }
+
     info!("Started app...");
 
-    let config = get_config().unwrap_or_else(|err| {
+    let config = get_config(cli.config).unwrap_or_else(|err| {
         error!("Failed to load config: {}", err);
         std::process::exit(1);
     });
@@ -45,7 +78,6 @@ async fn main() {
         agent_state.self_version
     );
 
-    // TODO: start os and apps loop, give them a copy of agent state each
     let _apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(agent_state.clone()));
     tokio::signal::ctrl_c().await.unwrap();
