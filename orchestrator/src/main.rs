@@ -39,9 +39,17 @@ struct Cli {
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
-
     let cli = Cli::parse();
+
+    // Adjust log level according to verbosity specified via CLI
+    let mut log_level = log::LevelFilter::Warn;
+    for _ in 0..cli.debug {
+        log_level = log_level.increment_severity();
+    }
+
+    env_logger::builder()
+        .filter_level(log_level)
+        .init();
 
     if cli.self_check {
         if let Err(err) = crate::healthcheck::healthcheck(cli.config.clone()) {
