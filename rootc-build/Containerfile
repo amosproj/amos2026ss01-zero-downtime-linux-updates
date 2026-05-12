@@ -1,0 +1,19 @@
+# Compile the orchestrator binary
+FROM rust:1.95-slim AS builder
+COPY . /workspace
+WORKDIR /workspace
+RUN cargo build --package amos-orchestrator --release
+
+# Bootable OS image (fedora-bootc)
+FROM quay.io/fedora/fedora-bootc:latest
+
+# Copy the compiled binary from the build stage
+COPY --from=builder /workspace/target/release/amos-orchestrator /usr/local/bin/amos-orchestrator
+
+# Install the systemd unit and enable it
+COPY rootc-build/orchestrator.service /etc/systemd/system/orchestrator.service
+RUN systemctl enable orchestrator.service
+
+# Install Greenboot health checks
+RUN dnf -y install greenboot greenboot-default-health-checks && \
+    dnf clean all

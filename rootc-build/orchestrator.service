@@ -11,9 +11,6 @@ Restart=on-failure
 RestartSec=5s
 Environment=RUST_LOG=info
 
-# Run as root for now; replace with a dedicated system user once tested
-# User=amos
-
 [Install]
 WantedBy=multi-user.target
 
