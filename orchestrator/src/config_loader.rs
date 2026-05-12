@@ -1,5 +1,6 @@
 use config::{Config, Environment, File};
 use serde::Deserialize;
+use std::path::PathBuf;
 
 fn default_cloud() -> String {
     "https://cloud.weber.de/api/v1".into()
@@ -23,15 +24,22 @@ pub struct Settings {
     pub inventory_path: String,
 }
 
-pub fn get_config() -> Result<Settings, config::ConfigError> {
-    let file_config = File::with_name("config").required(false);
+pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::ConfigError> {
+    let file_config = match config_path {
+        Some(path) => File::from(path).required(true),
+        None => File::with_name("config").required(false),
+    };
     let env_config = Environment::with_prefix("APP");
 
     let settings = Config::builder()
         .add_source(file_config)
         .add_source(env_config)
         .build()?;
-    settings.try_deserialize()
+    let settings: Settings = settings.try_deserialize()?;
+    if let Err(err) = validate_config(&settings) {
+        return Err(config::ConfigError::Message(err));
+    }
+    Ok(settings)
 }
 
 pub fn validate_config(config: &Settings) -> Result<(), String> {
