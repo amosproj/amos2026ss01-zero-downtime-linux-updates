@@ -35,7 +35,11 @@ pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::Conf
         .add_source(file_config)
         .add_source(env_config)
         .build()?;
-    settings.try_deserialize()
+    let settings: Settings = settings.try_deserialize()?;
+    if let Err(err) = validate_config(&settings) {
+        return Err(config::ConfigError::Message(err));
+    }
+    Ok(settings)
 }
 
 pub fn validate_config(config: &Settings) -> Result<(), String> {

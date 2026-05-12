@@ -1,6 +1,6 @@
 mod config_loader;
 use clap::Parser;
-use config_loader::{get_config, validate_config};
+use config_loader::get_config;
 use log::{debug, error, info};
 
 use crate::{
@@ -44,7 +44,7 @@ async fn main() {
     let cli = Cli::parse();
 
     if cli.self_check {
-        if let Err(err) = crate::healthcheck::healthcheck::healthcheck() {
+        if let Err(err) = crate::healthcheck::healthcheck::healthcheck(cli.config.clone()) {
             error!("Self check failed: {}", err);
             std::process::exit(1);
         }
@@ -56,11 +56,6 @@ async fn main() {
 
     let config = get_config(cli.config).unwrap_or_else(|err| {
         error!("Failed to load config: {}", err);
-        std::process::exit(1);
-    });
-
-    validate_config(&config).unwrap_or_else(|err| {
-        error!("Failed during config validation: {}", err);
         std::process::exit(1);
     });
 
@@ -91,4 +86,29 @@ async fn main() {
     let _apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(agent_state.clone()));
     tokio::signal::ctrl_c().await.unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cli;
+    use clap::Parser;
+    use std::path::PathBuf;
+
+    #[test]
+    fn parse_self_check_flag() {
+        let cli = Cli::parse_from(["orchestrator", "--self-check"]);
+        assert!(cli.self_check);
+    }
+
+    #[test]
+    fn parse_config_path() {
+        let cli = Cli::parse_from(["orchestrator", "--config", "/tmp/config.toml"]);
+        assert_eq!(cli.config, Some(PathBuf::from("/tmp/config.toml")));
+    }
+
+    #[test]
+    fn parse_debug_count() {
+        let cli = Cli::parse_from(["orchestrator", "-dd"]);
+        assert_eq!(cli.debug, 2);
+    }
 }

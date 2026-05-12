@@ -161,6 +161,11 @@ fn collect_inventory() -> Result<Inventory> {
     })
 }
 
+pub fn healthcheck_inventory() -> Result<()> {
+    let _inventory = collect_inventory()?;
+    Ok(())
+}
+
 // --System info collection-------------
 
 fn collect_system_info() -> Result<SystemInfo> {
