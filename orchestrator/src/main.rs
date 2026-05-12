@@ -4,10 +4,12 @@ use log::{debug, error, info};
 
 use crate::{
     apps::{get_initial_apps_state, run_apps_main_loop},
+    inventory::collect_and_save_inventory,
     os_tree::{get_inital_os_state, run_os_tree_main_loop},
     state::AgentState,
 };
 mod apps;
+mod inventory;
 mod os_tree;
 mod state;
 
@@ -30,6 +32,14 @@ async fn main() {
     });
 
     debug!("Loaded config: {:?}", config);
+
+    info!("Collecting initial inventory");
+    if let Err(err) =
+        collect_and_save_inventory(std::path::Path::new(config.inventory_path.as_str()))
+    {
+        error!("Failed to collect and save inventory: {}", err);
+        std::process::exit(1);
+    }
 
     info!("Reading inital OS State");
     let os_state = get_inital_os_state();

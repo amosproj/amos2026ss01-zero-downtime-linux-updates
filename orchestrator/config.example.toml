@@ -1,2 +1,3 @@
 cloud_url = "https://cloud.weber.de/api/v1"
 poll_interval_secs = 60
+inventory_path = "./inventory/inventory.json"
