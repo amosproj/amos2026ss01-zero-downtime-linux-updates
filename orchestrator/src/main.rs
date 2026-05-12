@@ -44,7 +44,7 @@ async fn main() {
     let cli = Cli::parse();
 
     if cli.self_check {
-        if let Err(err) = crate::healthcheck::healthcheck::healthcheck(cli.config.clone()) {
+        if let Err(err) = crate::healthcheck::healthcheck(cli.config.clone()) {
             error!("Self check failed: {}", err);
             std::process::exit(1);
         }
