@@ -2,7 +2,9 @@ name: "Orchestrator Container Image"
 
 on:
   push:
+    tags: ['**']
   pull_request:
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
