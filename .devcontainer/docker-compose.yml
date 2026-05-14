@@ -5,6 +5,8 @@ services:
     image: mcr.microsoft.com/devcontainers/base:ubuntu-24.04
     volumes:
       - ../..:/workspaces:cached
+      - podman-containers:/home/vscode/.local/share/containers
+    privileged: true # Needed for podman
     command: sleep infinity
 
   mock-api-container:
@@ -12,3 +14,6 @@ services:
       context: ..
       dockerfile: .devcontainer/mock-api.Dockerfile
     restart: unless-stopped
+
+volumes:
+  podman-containers:

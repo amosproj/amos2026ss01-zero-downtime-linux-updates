@@ -1,1 +1,5 @@
+.devcontainer/
+.github/
+Deliverables/
+Documentation/
 target/

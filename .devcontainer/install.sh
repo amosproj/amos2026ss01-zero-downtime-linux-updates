@@ -25,6 +25,9 @@ export DEBIAN_FRONTEND=noninteractive
 # This script runs when the container gets built
 # Use it e.g. to install additional packages from apt:
 #
-# apt-get update -y
-# apt-get install -y --no-install-recommends htop
-# rm -rf /var/lib/apt/lists/*
+apt-get update -y
+apt-get install -y --no-install-recommends podman fuse-overlayfs uidmap slirp4netns
+rm -rf /var/lib/apt/lists/*
+
+# Needed for podman to start rootless containers
+chown vscode /home/vscode/.local/share/containers
