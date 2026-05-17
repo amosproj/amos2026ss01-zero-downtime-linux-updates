@@ -7,5 +7,11 @@ edition = "2024"
 amos-common.workspace = true
 
 axum = { version = "0.8.9", default-features = false, features = ["http1", "http2", "json", "tokio"] }
+clap = { workspace = true }
+config = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
+sea-orm = { version = "2.0.0-rc", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-json"] }
+serde = { workspace = true }
 tokio = { version = "*", features = ["macros"] }
 tower-http = { version = "0.6", features = ["fs"] }
