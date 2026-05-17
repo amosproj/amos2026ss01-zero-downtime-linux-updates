@@ -1,5 +1,12 @@
+use clap::Parser;
+mod config;
+use config::get_config;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware, routing::get};
+use log::{debug, error, info};
+use sea_orm::{Database, DatabaseConnection};
+use std::path::PathBuf;
+use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
 
 static CATALOG: [api::CatalogResponseEntry; 2] = [
@@ -19,8 +26,61 @@ static CATALOG: [api::CatalogResponseEntry; 2] = [
 
 static CATALOG_RES: api::CatalogResponse = api::CatalogResponse::from_slice(&CATALOG);
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Parser, Debug)]
+#[command(name = "Server")]
+#[command(version = VERSION)]
+#[command(about = "Provides an API for Orchestrators to query the desired OS and application state", long_about = None)]
+struct Cli {
+    /// Sets a custom config file path
+    #[arg(short, long, value_name = "FILE")]
+    pub config: Option<PathBuf>,
+
+    /// Turn debugging information on
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub debug: u8,
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
+    let cli = Cli::parse();
+
+    // Adjust log level according to verbosity specified via CLI
+    let mut log_level = log::LevelFilter::Warn;
+    for _ in 0..cli.debug {
+        log_level = log_level.increment_severity();
+    }
+
+    env_logger::builder().filter_level(log_level).init();
+
+    info!("Started not-so-mock-server...");
+
+    let config = get_config(cli.config).unwrap_or_else(|err| {
+        error!("Failed to load config: {}", err);
+        std::process::exit(1);
+    });
+
+    let db: DatabaseConnection = Database::connect(&config.database_url)
+        .await
+        .unwrap_or_else(|err| {
+            error!(
+                "Failed to connect to database at {}: {}",
+                config.database_url, err
+            );
+            std::process::exit(1);
+        });
+
+    match db.ping().await {
+        Ok(()) => {
+            info!("Connected to database");
+        }
+        Err(err) => {
+            error!("Failed to ping database: {}", err);
+            std::process::exit(1);
+        }
+    };
+
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
         .nest_service("/download", ServeDir::new("assets"));
@@ -29,11 +89,19 @@ async fn main() {
         async |req: Request, next: middleware::Next| {
             let uri = req.uri().to_string();
             let res = next.run(req).await;
-            println!("{} -> {}", uri, res.status());
+            debug!("{} -> {}", uri, res.status());
             res
         },
     ));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:80").await.unwrap();
+    let bind_address = format!("0.0.0.0:{}", config.http_port);
+    let listener = TcpListener::bind(&bind_address)
+        .await
+        .unwrap_or_else(|err| {
+            error!("Could not start server: {}", err);
+            std::process::exit(1);
+        });
+    info!("Serving API on {}", bind_address);
+
     axum::serve(listener, app).await.unwrap();
 }

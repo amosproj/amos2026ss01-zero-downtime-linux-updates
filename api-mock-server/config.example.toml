@@ -1,0 +1,2 @@
+database_url = "postgres://foo:bar@127.0.0.1/amos_db"
+http_port = 8080
