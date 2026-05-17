@@ -45,7 +45,7 @@ pub fn validate_config(config: &Settings) -> Result<(), String> {
         return Err("HTTP port must be > 0".into());
     }
 
-	Ok(())
+    Ok(())
 }
 
 #[cfg(test)]

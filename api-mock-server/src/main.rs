@@ -1,8 +1,8 @@
 use clap::Parser;
 mod config;
-use config::get_config;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware, routing::get};
+use config::get_config;
 use log::{debug, error, info};
 use sea_orm::{Database, DatabaseConnection};
 use std::path::PathBuf;
