@@ -1,3 +1,22 @@
-cloud_url = "https://cloud.weber.de/api/v1"
+# Orchestrator Configuration
+# Copy this file to config.toml and adjust values for your environment.
+# All keys can also be set via environment variables prefixed APP_
+# (e.g. APP_CLOUD_URL). Environment variables take precedence over this file.
+
+# Base URL of the Cloud API.
+# Accepts http:// or https:// schema.
+# Env: APP_CLOUD_URL
+# Default: https://cloud.weber.de/api/v1
+cloud_url = "https://your-cloud-api.example.com/api/v1"
+
+# How often the Orchestrator polls the Cloud API, in seconds.
+# Must be >= 1.
+# Env: APP_POLL_INTERVAL_SECS
+# Default: 5
 poll_interval_secs = 60
+
+# Path where the device inventory JSON file is written on startup.
+# Parent directories are created automatically if they do not exist.
+# Env: APP_INVENTORY_PATH
+# Default: ./inventory/inventory.json
 inventory_path = "./inventory/inventory.json"

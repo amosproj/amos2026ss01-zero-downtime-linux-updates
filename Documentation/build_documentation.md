@@ -32,9 +32,7 @@ amos2026ss01-zero-downtime-linux-updates/
 │   ├── config.example.toml
 │   └── src/
 ├── common/                 — Shared library crate (amos-common)
-│   ├── Cargo.toml
-│   └── src/
-├── security-module/        — Signature verification library
+│   │                         includes download manager module and security verification
 │   ├── Cargo.toml
 │   └── src/
 ├── api-mock-server/        — Development mock server binary
@@ -273,10 +271,4 @@ Changelogs are auto-generated from conventional commits using [`git-cliff`](http
 
 ## Environment Variables Reference
 
-| Variable | Equivalent config key | Description |
-|----------|-----------------------|-------------|
-| `APP_CLOUD_URL` | `cloud_url` | Cloud API base URL |
-| `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | Poll frequency in seconds |
-| `APP_INVENTORY_PATH` | `inventory_path` | Inventory output file path |
-| `https_proxy` | — | HTTPS proxy URL (reqwest default; overridable via code config) |
-| `RUST_LOG` | — | Standard `env_logger` log filter (overridden by `-d` flags) |
+> See [User Documentation — Configuration](user_documentation.md#configuration) for the full environment variable reference.

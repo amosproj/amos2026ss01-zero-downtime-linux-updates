@@ -288,11 +288,7 @@ TOML config file (--config or config.toml)
 Built-in defaults
 ```
 
-| Key | Default | Constraint |
-|-----|---------|------------|
-| `cloud_url` | `https://cloud.weber.de/api/v1` | Must start with `https://` |
-| `poll_interval_secs` | `5` | Must be ≥ 1 |
-| `inventory_path` | `./inventory/inventory.json` | Valid filesystem path |
+> See [User Documentation — Configuration](user_documentation.md#configuration) for all available keys, defaults, and constraints.
 
 ---
 

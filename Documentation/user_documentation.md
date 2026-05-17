@@ -69,34 +69,26 @@ See the [Build & Deploy Documentation](build_documentation.md) for full build in
 
 The Orchestrator reads its configuration from a TOML file. By default it looks for `config.toml` in the working directory. A custom path can be passed via `--config`.
 
-### Example config file
+A ready-to-use template with inline documentation for all available options is provided at [`orchestrator/config.example.toml`](../orchestrator/config.example.toml). Copy it and adjust the values for your environment:
 
-```toml
-# URL of the Cloud API (must start with https://)
-cloud_url = "https://your-cloud-api.example.com/api/v1"
-
-# How often to poll the Cloud API, in seconds (must be >= 1)
-poll_interval_secs = 60
-
-# Where to write the device inventory JSON file
-inventory_path = "./inventory/inventory.json"
+```bash
+cp orchestrator/config.example.toml config.toml
 ```
-
-A ready-to-use template is provided at [`orchestrator/config.example.toml`](../orchestrator/config.example.toml).
 
 ### Environment variable overrides
 
 All config values can be overridden with environment variables prefixed `APP_`:
 
-| Environment variable | Config key |
-|----------------------|------------|
-| `APP_CLOUD_URL` | `cloud_url` |
-| `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` |
-| `APP_INVENTORY_PATH` | `inventory_path` |
+| Environment variable | Config key | Description |
+|----------------------|------------|-------------|
+| `APP_CLOUD_URL` | `cloud_url` | Cloud API base URL |
+| `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | Poll frequency in seconds |
+| `APP_INVENTORY_PATH` | `inventory_path` | Inventory output file path |
+| `https_proxy` | — | HTTPS proxy URL (reqwest default) |
 
 ### Validation rules
 
-- `cloud_url` **must** begin with `https://`.
+- `cloud_url` **must** begin with `http://` or `https://`.
 - `poll_interval_secs` **must** be ≥ 1.
 
 ---
@@ -200,7 +192,7 @@ sudo journalctl -u amos-orchestrator -f
 
 During development or testing, a local mock server (`amos-api-mock-server`) can stand in for a real Cloud API. It serves a static catalog at `GET /v1/catalog` and static download assets from a local `assets/` directory.
 
-> **Note:** The mock server runs on plain HTTP (port 80). The Orchestrator config validates that `cloud_url` starts with `https://`, so pointing it at `http://localhost` will fail validation. For local testing, use a TLS-terminating reverse proxy (e.g. `nginx` or `caddy`) in front of the mock server, or temporarily relax the validation in a development branch.
+> **Note:** The mock server runs on plain HTTP (port 80). The Orchestrator config accepts both `http://` and `https://` URLs, so you can point it directly at `http://localhost` for local testing without a reverse proxy.
 
 ```bash
 # Start mock server on port 80
