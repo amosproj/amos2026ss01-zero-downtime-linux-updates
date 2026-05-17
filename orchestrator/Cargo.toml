@@ -12,6 +12,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.1", features = ["full"] }
 anyhow = "1.0.102"
 serde_json.workspace = true
+util = { path = "../util"}
 
 [dev-dependencies]
 tempfile = "3"

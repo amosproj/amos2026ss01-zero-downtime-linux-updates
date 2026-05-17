@@ -2,6 +2,9 @@ use anyhow::{Context, Result};
 use log::{info, warn};
 use serde::Serialize;
 
+use util::bootc_wrapper::{Bootc, BootcStatus};
+use util::executer::Executer;
+
 // Full device inventory serializable to JSON.
 #[derive(Debug, Serialize)]
 pub struct Inventory {
@@ -53,29 +56,6 @@ pub struct ApplicationInfo {
     pub app_version: String,
 }
 
-// Rudimentary representation of bootc status, collected via 'sudo bootc status --json'.
-#[derive(Debug, Serialize)]
-pub struct BootcStatus {
-    pub booted: BootcDeploymentInfo,
-    pub staged: Option<BootcDeploymentInfo>,
-    pub rollback: Option<BootcDeploymentInfo>,
-    pub rollback_queued: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub struct BootcDeploymentInfo {
-    pub checksum: String,
-    pub image: Option<BootcImageInfo>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct BootcImageInfo {
-    pub image_ref: String,
-    pub transport: String,
-    pub image_digest: Option<String>,
-    pub version: Option<String>,
-}
-
 // Collects the inventory and saves it to the given path in JSON format.
 // System info is required and if it fails, the entire function returns an error.
 // If collection of deployments or applications fails, the error is logged but the function still returns successfully
@@ -87,8 +67,12 @@ pub struct BootcImageInfo {
 // - Ok(()) if the inventory was collected and saved successfully (even if some fields are unavailable due to collection errors)
 // - Err(anyhow::Error) if there was an error during system info collection or saving the inventory,
 //   with a context message indicating the failure reason.
-pub fn collect_and_save_inventory(inventory_path: &std::path::Path) -> Result<()> {
-    let inventory = collect_inventory()?;
+pub async fn collect_and_save_inventory(
+    bootc: &Bootc,
+    exec: &dyn Executer,
+    inventory_path: &std::path::Path,
+) -> Result<()> {
+    let inventory = collect_inventory(bootc, exec).await?;
 
     let json = serde_json::to_string_pretty(&inventory)
         .with_context(|| "Failed to serialize inventory to JSON")?;
@@ -127,11 +111,11 @@ pub fn collect_and_save_inventory(inventory_path: &std::path::Path) -> Result<()
     Ok(())
 }
 
-fn collect_inventory() -> Result<Inventory> {
+async fn collect_inventory(bootc: &Bootc, exec: &dyn Executer) -> Result<Inventory> {
     Ok(Inventory {
         // System info collection is required, if it fails, we return an error for the entire inventory collection process
         system: collect_system_info()?,
-        deployments: match collect_deployments() {
+        deployments: match collect_deployments(exec).await {
             Ok(d) => CollectionResult::Ok(d),
             Err(e) => {
                 warn!("Could not collect rpm deployments: {}", e);
@@ -140,7 +124,7 @@ fn collect_inventory() -> Result<Inventory> {
                 }
             }
         },
-        bootc_status: match collect_bootc_status() {
+        bootc_status: match bootc.status().await {
             Ok(s) => CollectionResult::Ok(s),
             Err(e) => {
                 warn!("Could not collect bootc status: {}", e);
@@ -161,8 +145,8 @@ fn collect_inventory() -> Result<Inventory> {
     })
 }
 
-pub fn healthcheck_inventory() -> Result<()> {
-    let _inventory = collect_inventory()?;
+pub async fn healthcheck_inventory(bootc: &Bootc, exec: &dyn Executer) -> Result<()> {
+    let _inventory = collect_inventory(bootc, exec).await?;
     Ok(())
 }
 
@@ -210,17 +194,22 @@ fn read_kernel_version() -> Result<String> {
 
 // Collects information about rpm-ostree deployments by running 'rpm-ostree status --json' and parsing the output
 // into a vector of RpmOstreeDeployment structs.
-fn collect_deployments() -> Result<Vec<RpmOstreeDeployment>> {
-    let out = std::process::Command::new("rpm-ostree")
-        .args(["status", "--json"])
-        .output()
-        .with_context(|| "Failed to run rpm-ostree command")?;
+async fn collect_deployments(exec: &dyn Executer) -> Result<Vec<RpmOstreeDeployment>> {
+    let res = exec
+        .execute(
+            "rpm-ostree".to_string(),
+            vec!["status".to_string(), "--json".to_string()],
+        )
+        .await?;
 
-    if !out.status.success() {
-        anyhow::bail!("rpm-ostree command failed with status: {}", out.status);
+    if res.exit_code != Some(0) {
+        anyhow::bail!(
+            "rpm-ostree command failed with exit code: {:?}",
+            res.exit_code
+        );
     }
 
-    let json: serde_json::Value = serde_json::from_slice(&out.stdout)
+    let json: serde_json::Value = serde_json::from_str(&res.stdout)
         .with_context(|| "Failed to parse rpm-ostree output as JSON")?;
 
     let deployments = json["deployments"]
@@ -241,94 +230,6 @@ fn collect_deployments() -> Result<Vec<RpmOstreeDeployment>> {
     Ok(result)
 }
 
-// --Bootc status collection-------------
-
-// Collects information about bootc status by running 'sudo bootc status --json' and parsing the output
-// into a BootcStatus struct.
-fn collect_bootc_status() -> Result<BootcStatus> {
-    let out = std::process::Command::new("sudo")
-        .args(["bootc", "status", "--json"])
-        .output()
-        .with_context(|| "Failed to run bootc command")?;
-
-    if !out.status.success() {
-        anyhow::bail!("bootc command failed with status: {}", out.status);
-    }
-
-    parse_bootc_status(&out.stdout)
-}
-
-// Parses the JSON output of 'bootc status --json' into a BootcStatus struct.
-// Extracted from collect_bootc_status for testability.
-fn parse_bootc_status(output: &[u8]) -> Result<BootcStatus> {
-    let json: serde_json::Value =
-        serde_json::from_slice(output).with_context(|| "Failed to parse bootc output as JSON")?;
-
-    let status = &json["status"];
-
-    let booted = parse_bootc_deployment(&status["booted"])
-        .with_context(|| "Failed to parse bootc booted deployment")?;
-
-    // Staged deployment is optional in bootc status output
-    let staged = if status["staged"].is_null() {
-        None
-    } else {
-        Some(
-            parse_bootc_deployment(&status["staged"])
-                .with_context(|| "Failed to parse bootc staged deployment")?,
-        )
-    };
-
-    // Rollback deployment is optional in bootc status output
-    let rollback = if status["rollback"].is_null() {
-        None
-    } else {
-        Some(
-            parse_bootc_deployment(&status["rollback"])
-                .with_context(|| "Failed to parse bootc rollback deployment")?,
-        )
-    };
-
-    let rollback_queued = status["rollbackQueued"].as_bool().unwrap_or(false);
-    Ok(BootcStatus {
-        booted,
-        staged,
-        rollback,
-        rollback_queued,
-    })
-}
-
-// Parses the relevant fields from a bootc deployment JSON object (e.g. booted, staged, rollback) into a BootcDeploymentInfo struct.
-fn parse_bootc_deployment(deployment: &serde_json::Value) -> Result<BootcDeploymentInfo> {
-    let checksum = deployment["ostree"]["checksum"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
-
-    let image = if deployment["image"].is_null() {
-        None
-    } else {
-        Some(BootcImageInfo {
-            image_ref: deployment["image"]["image"]["image"]
-                .as_str()
-                .unwrap_or("")
-                .to_string(),
-            transport: deployment["image"]["image"]["transport"]
-                .as_str()
-                .unwrap_or("")
-                .to_string(),
-            image_digest: deployment["image"]["imageDigest"]
-                .as_str()
-                .map(|s| s.to_string()),
-            version: deployment["image"]["version"]
-                .as_str()
-                .map(|s| s.to_string()),
-        })
-    };
-
-    Ok(BootcDeploymentInfo { checksum, image })
-}
-
 // --Applications collection-------------
 
 // Collects information about applications. Placeholder for now, in the future this will run e.g. 'podman ps' and parse the output.
@@ -344,8 +245,6 @@ fn collect_applications() -> Result<Vec<ApplicationInfo>> {
         },
     ])
 }
-
-// --Tests-------------
 
 #[cfg(test)]
 mod tests {
@@ -583,7 +482,10 @@ mod tests {
             }
         }"#;
 
-        let result = parse_bootc_status(raw.as_bytes()).unwrap();
+        let json: serde_json::Value = serde_json::from_str(raw).unwrap();
+        let status_block = json["status"].to_string();
+
+        let result: BootcStatus = serde_json::from_str(&status_block).unwrap();
 
         // Booted deployment
         assert_eq!(
