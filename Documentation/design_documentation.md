@@ -213,7 +213,7 @@ The loop:
 
 ## Security Module
 
-> **Current status:** The security module is a standalone library crate. It is **not yet called** by the Orchestrator or Download Manager.
+> **Current status:** The security module currently lives in a standalone library crate (`security-module`). It is **not yet called** by the Orchestrator or Download Manager. The standalone crate is **planned to be merged into `amos-common`** in a future sprint once it is wired into the update loops.
 
 The `security-module` crate provides one public async function:
 
@@ -228,6 +228,18 @@ pub async fn verify_signature(
 - Algorithm: **Ed25519** (via `ed25519-dalek` crate)
 - Reads the file from disk asynchronously and verifies the provided signature against the provided public key.
 - Returns `false` (never panics) if the file cannot be read, the key bytes are malformed, or the signature does not match.
+
+---
+
+## Rollback & Error Recovery
+
+> **Future sprint:** Rollback and error recovery logic is not yet implemented in the Orchestrator.
+
+The OS inventory already tracks rollback availability (`bootc_status.rollback`, `bootc_status.rollback_queued`), providing a data foundation for future rollback triggers. Planned behaviour:
+
+- **OS rollback:** If a `bootc upgrade` or `rpm-ostree rebase` fails, the Orchestrator will call `bootc rollback` / `rpm-ostree rollback` and report the failure to the Cloud API.
+- **App rollback:** If a container update fails, the previous image will be re-pulled.
+- **Retry logic:** Failed updates will be retried with exponential backoff before a rollback is triggered.
 
 ---
 

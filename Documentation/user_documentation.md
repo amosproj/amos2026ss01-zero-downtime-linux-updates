@@ -18,7 +18,8 @@ This document explains how to install, configure, and operate the **Orchestrator
 8. [Inventory](#inventory)
 9. [Logging & Verbosity](#logging--verbosity)
 10. [Running as a systemd Service](#running-as-a-systemd-service)
-11. [API Mock Server](#api-mock-server)
+11. [Rollback & Error Recovery](#rollback--error-recovery)
+12. [API Mock Server](#api-mock-server)
 
 ---
 
@@ -167,6 +168,8 @@ Log output is written to **stderr**. Default level is `WARN`. Use `-d` / `-dd` f
 | `-dd` | `DEBUG` |
 | `-ddd` | `TRACE` |
 
+> **Advanced:** The standard `RUST_LOG` environment variable can be used for granular per-module filtering (e.g. `RUST_LOG=amos_orchestrator=debug`). When `-d` flags are provided on the command line they take precedence over `RUST_LOG`.
+
 ---
 
 ## Running as a systemd Service
@@ -188,6 +191,24 @@ sudo journalctl -u amos-orchestrator -f
 
 ---
 
+## Rollback & Error Recovery
+
+> **Future release:** Automated rollback and error recovery are not yet implemented.
+
+If an update causes a problem you can manually trigger a rollback using the standard OS tooling:
+
+```bash
+# OS rollback via bootc
+sudo bootc rollback
+
+# OS rollback via rpm-ostree
+sudo rpm-ostree rollback
+```
+
+For application containers, use `podman` to switch back to the previous image tag manually. Automated rollback support will be added in a future sprint.
+
+---
+
 ## API Mock Server
 
 During development or testing, a local mock server (`amos-api-mock-server`) can stand in for a real Cloud API. It serves a static catalog at `GET /v1/catalog` and static download assets from a local `assets/` directory.
@@ -195,9 +216,11 @@ During development or testing, a local mock server (`amos-api-mock-server`) can 
 > **Note:** The mock server runs on plain HTTP (port 80). The Orchestrator config accepts both `http://` and `https://` URLs, so you can point it directly at `http://localhost` for local testing without a reverse proxy.
 
 ```bash
-# Start mock server on port 80
+# Start mock server on port 80 (requires root)
 sudo ./amos-api-mock-server
 ```
+
+> **Tip:** To avoid `sudo`, edit `api-mock-server/src/main.rs` to bind to a high port (e.g. `8080`) and rebuild. Then set `cloud_url = "http://localhost:8080/api/v1"` in your config.
 
 The catalog response from the mock server looks like:
 

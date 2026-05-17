@@ -157,6 +157,8 @@ The mock server simulates the Cloud API on `localhost:80`:
 sudo ./target/debug/amos-api-mock-server
 ```
 
+> **Note:** Port 80 requires root privileges. If you do not want to use `sudo`, edit `api-mock-server/src/main.rs` to bind to a high port (e.g. `8080`) and rebuild.
+
 Place any binary update artifacts you want to serve in an `assets/` directory next to the binary.
 
 ### 2. Create a config file
@@ -168,12 +170,12 @@ cp orchestrator/config.example.toml config.toml
 Edit `config.toml` to point at the mock server:
 
 ```toml
-cloud_url = "https://localhost/api/v1"
+cloud_url = "http://localhost/api/v1"
 poll_interval_secs = 10
 inventory_path = "./inventory/inventory.json"
 ```
 
-> **Note:** `cloud_url` must begin with `https://` — the config validator enforces this. The mock server runs on plain HTTP, so for local testing you need a TLS-terminating reverse proxy (e.g. `caddy reverse-proxy --from https://localhost --to http://localhost:8080`) or relax the check in a development branch.
+> **Note:** `cloud_url` accepts both `http://` and `https://` schemas. For local development, pointing directly at the plain-HTTP mock server with `http://localhost` is the simplest setup.
 
 ### 3. Run the Orchestrator
 
@@ -263,8 +265,9 @@ The project uses GitHub Actions. Workflows are defined under `.github/workflows/
 2. **Lint** — `cargo clippy -- -D warnings`
 3. **Format check** — `cargo fmt --check`
 4. **Test** — `cargo test` on all crates
+5. **Release build** — `cargo build --release` on tagged push
+
 Changelogs are auto-generated from conventional commits using [`git-cliff`](https://github.com/orhun/git-cliff) (configured in `cliff.toml`).
-5. **Release build** `cargo build --release` on tagged push
 
 
 ---
