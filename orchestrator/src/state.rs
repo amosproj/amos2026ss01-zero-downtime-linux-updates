@@ -1,9 +1,10 @@
+use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::config_loader::Settings;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OsState {
     #[expect(unused)]
     pub update_pending: bool, // when an update is pending (updated but not yet rebooted)
