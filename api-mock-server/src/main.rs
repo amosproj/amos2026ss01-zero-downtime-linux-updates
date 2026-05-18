@@ -6,7 +6,7 @@ static CATALOG: [api::CatalogResponseEntry; 2] = [
     api::CatalogResponseEntry {
         name: "os",
         version: "1.2.3",
-        url: "/v1/download/os1.2.3",
+        url: "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system",
         signature: util::Base64::from_slice(&[0u8; 16]),
     },
     api::CatalogResponseEntry {

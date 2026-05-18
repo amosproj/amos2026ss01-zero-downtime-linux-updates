@@ -1,0 +1,16 @@
+[Unit]
+Description=Zero-Downtime Linux Update Orchestrator
+Documentation=https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/amos-orchestrator
+Restart=on-failure
+RestartSec=5s
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
+
