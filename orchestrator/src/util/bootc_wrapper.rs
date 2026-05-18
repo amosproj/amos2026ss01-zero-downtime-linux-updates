@@ -1,4 +1,4 @@
-use crate::executer::Executer;
+use crate::util::executer::*;
 use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
@@ -89,6 +89,7 @@ impl Bootc {
     }
 
     // Helper fn
+    #[allow(dead_code)]
     fn handle_exit_code(&self, code: Option<i32>) -> Result<()> {
         match code {
             Some(0) | Some(137) => Ok(()),
@@ -103,7 +104,7 @@ impl Bootc {
     }
 
     /// Helper to route all commands through 'sudo'
-    async fn run_bootc_root(&self, sub_args: Vec<String>) -> Result<crate::executer::ExecResult> {
+    async fn run_bootc_root(&self, sub_args: Vec<String>) -> Result<crate::util::executer::ExecResult> {
         let mut final_args = vec!["bootc".to_string()];
         final_args.extend(sub_args);
 
@@ -129,6 +130,7 @@ impl Bootc {
     }
 
     /// Pulls the image and stages it for the next boot.
+    #[allow(dead_code)]
     pub async fn switch(&self, image: &str) -> Result<()> {
         let target = self.image_to_bootc_target(image)?;
 
@@ -156,6 +158,7 @@ impl Bootc {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn rollback(&self) -> Result<()> {
         let args = vec!["rollback".to_string(), "--apply".to_string()];
         let res = self.run_bootc_root(args).await?;
@@ -164,6 +167,7 @@ impl Bootc {
         self.handle_exit_code(res.exit_code)
     }
 
+    #[allow(dead_code)]
     pub async fn apply(&self) -> Result<()> {
         let args = vec!["upgrade".to_string(), "--apply".to_string()];
         let res = self.run_bootc_root(args).await?;
@@ -175,7 +179,7 @@ impl Bootc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::executer::{ExecResult, MockExecuter};
+    use crate::util::executer::{ExecResult, MockExecuter};
     use mockall::predicate::*;
 
     #[tokio::test]

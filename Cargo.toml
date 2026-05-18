@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["api-mock-server", "common", "orchestrator", "security-module", "util"]
+members = ["api-mock-server", "common", "orchestrator", "security-module"]
 
 [workspace.dependencies]
 amos-api-mock-server = { path = "api-mock-server" }

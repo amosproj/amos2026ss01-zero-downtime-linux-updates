@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use log::{info, warn};
 use serde::Serialize;
 
-use util::bootc_wrapper::{Bootc, BootcStatus};
-use util::executer::Executer;
+use crate::util::bootc_wrapper::{Bootc, BootcStatus};
+use crate::util::executer::Executer;
 
 // Full device inventory serializable to JSON.
 #[derive(Debug, Serialize)]

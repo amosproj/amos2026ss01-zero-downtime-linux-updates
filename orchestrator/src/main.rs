@@ -3,8 +3,8 @@ use clap::Parser;
 use config_loader::get_config;
 use log::{debug, error, info};
 
-use util::bootc_wrapper::Bootc;
-use util::executer::RealExecuter;
+use crate::util::bootc_wrapper::Bootc;
+use crate::util::executer::RealExecuter;
 
 use crate::{
     apps::{get_initial_apps_state, run_apps_main_loop},
@@ -17,6 +17,7 @@ mod healthcheck;
 mod inventory;
 mod os_tree;
 mod state;
+mod util;
 use std::env;
 use std::path::PathBuf;
 

@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
 
-use util::bootc_wrapper::Bootc;
-use util::executer::Executer;
+use crate::util::bootc_wrapper::Bootc;
+use crate::util::executer::Executer;
 
 use crate::{config_loader::get_config, inventory::healthcheck_inventory};
 
