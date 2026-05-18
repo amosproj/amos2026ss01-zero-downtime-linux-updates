@@ -18,9 +18,18 @@ assignees: ''
 * ...
 
 ## Definition of done (DoD)
-* Added only after week 5
-* The same for all features
-* Here goes the project specific part
+* All Acceptance criterias defined in the backlog item are met and verified
+* Work done is pushed to the Github repository
+* For each backlog item a branch is created
+* Pull requests are created for each branch
+* Pull requests are reviewed
+* Corresponding branches are merged
+* Software Bill of Materials in the planning document is updated if new dependencies were added
+* The Wiki Section/Documentation corresponding to the work done is updated
+* Unit tests are written for all new logic
+* All unit tests must pass successfully in the CI pipeline
+* Code passes cargo fmt (style) and cargo clippy (linting)
+* All Developers assigned to a backlog item must communicate and coordinate with each other to complete the task
 
 ## DoD general criteria
 * Feature has been fully implemented
