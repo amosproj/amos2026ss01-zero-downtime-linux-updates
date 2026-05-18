@@ -1,0 +1,14 @@
+[package]
+name         = "amos-db-migration"
+version      = "0.1.0"
+edition      = "2024"
+
+# [lib]
+# name = "migration"
+# path = "src/lib.rs"
+
+[dependencies]
+amos-common.workspace = true
+
+sea-orm-migration = { version = "2.0.0-rc", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
+tokio = { workspace = true }
