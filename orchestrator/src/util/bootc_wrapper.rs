@@ -104,7 +104,10 @@ impl Bootc {
     }
 
     /// Helper to route all commands through 'sudo'
-    async fn run_bootc_root(&self, sub_args: Vec<String>) -> Result<crate::util::executer::ExecResult> {
+    async fn run_bootc_root(
+        &self,
+        sub_args: Vec<String>,
+    ) -> Result<crate::util::executer::ExecResult> {
         let mut final_args = vec!["bootc".to_string()];
         final_args.extend(sub_args);
 
