@@ -2,10 +2,17 @@ use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
 
+use crate::util::bootc_wrapper::Bootc;
+use crate::util::executer::Executer;
+
 use crate::{config_loader::get_config, inventory::healthcheck_inventory};
 
-pub fn healthcheck(config_path: Option<PathBuf>) -> Result<()> {
-    let inventory_result = healthcheck_inventory();
+pub async fn healthcheck(
+    bootc: &Bootc,
+    exec: &dyn Executer,
+    config_path: Option<PathBuf>,
+) -> Result<()> {
+    let inventory_result = healthcheck_inventory(bootc, exec).await;
     let config_result = get_config(config_path).map(|_| ());
 
     match (inventory_result, config_result) {

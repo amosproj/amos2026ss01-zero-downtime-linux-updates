@@ -3,6 +3,9 @@ use clap::Parser;
 use config_loader::get_config;
 use log::{debug, error, info};
 
+use crate::util::bootc_wrapper::Bootc;
+use crate::util::executer::RealExecuter;
+
 use crate::{
     apps::{get_initial_apps_state, run_apps_main_loop},
     inventory::collect_and_save_inventory,
@@ -14,6 +17,7 @@ mod healthcheck;
 mod inventory;
 mod os_tree;
 mod state;
+mod util;
 use std::env;
 use std::path::PathBuf;
 
@@ -49,8 +53,13 @@ async fn main() {
 
     env_logger::builder().filter_level(log_level).init();
 
+    let executer = RealExecuter;
+    let bootc_client = Bootc::new(Box::new(executer));
+
     if cli.self_check {
-        if let Err(err) = crate::healthcheck::healthcheck(cli.config.clone()) {
+        if let Err(err) =
+            crate::healthcheck::healthcheck(&bootc_client, &RealExecuter, cli.config.clone()).await
+        {
             error!("Self check failed: {}", err);
             std::process::exit(1);
         }
@@ -68,8 +77,12 @@ async fn main() {
     debug!("Loaded config: {:?}", config);
 
     info!("Collecting initial inventory");
-    if let Err(err) =
-        collect_and_save_inventory(std::path::Path::new(config.inventory_path.as_str()))
+    if let Err(err) = collect_and_save_inventory(
+        &bootc_client,
+        &RealExecuter,
+        std::path::Path::new(config.inventory_path.as_str()),
+    )
+    .await
     {
         error!("Failed to collect and save inventory: {}", err);
         std::process::exit(1);
