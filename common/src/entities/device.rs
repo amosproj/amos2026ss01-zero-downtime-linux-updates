@@ -1,6 +1,6 @@
 pub mod device {
-    use sea_orm::entity::prelude::*;
     use crate::entities::Group;
+    use sea_orm::entity::prelude::*;
 
     #[sea_orm::model]
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]

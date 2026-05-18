@@ -1,6 +1,6 @@
 pub mod group {
-    use sea_orm::entity::prelude::*;
 	use crate::entities::Device;
+    use sea_orm::entity::prelude::*;
 
     #[sea_orm::model]
     #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -9,7 +9,7 @@ pub mod group {
         #[sea_orm(primary_key, auto_increment = true)]
         pub id: i32,
 
-		pub name: String,
+        pub name: String,
 
 		#[sea_orm(has_many)]
     	pub device: HasMany<Device::Entity>,
