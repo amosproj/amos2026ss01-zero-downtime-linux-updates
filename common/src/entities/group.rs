@@ -1,5 +1,5 @@
 pub mod group {
-	use crate::entities::Device;
+    use crate::entities::Device;
     use sea_orm::entity::prelude::*;
 
     #[sea_orm::model]
@@ -11,8 +11,8 @@ pub mod group {
 
         pub name: String,
 
-		#[sea_orm(has_many)]
-    	pub device: HasMany<Device::Entity>,
+        #[sea_orm(has_many)]
+        pub device: HasMany<Device::Entity>,
     }
 
     impl ActiveModelBehavior for ActiveModel {}
