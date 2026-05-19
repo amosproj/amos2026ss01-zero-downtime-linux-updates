@@ -2,7 +2,7 @@ use sea_orm_migration::prelude::*;
 use sea_orm::Schema;
 use amos_common::entities;
 
-use crate::create_table;
+use super::create_table;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
