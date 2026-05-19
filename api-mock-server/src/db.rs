@@ -2,8 +2,6 @@ use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, ConnectOptions, Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
-#[cfg(test)]
-use serial_test::serial;
 use tokio::sync::RwLock;
 
 use crate::db_migration::Migrator;
@@ -71,44 +69,49 @@ pub async fn add_device(
 }
 
 #[cfg(test)]
-async fn test_initialize_empty_inmem_db() {
-    initialialize_db("sqlite::memory:".into()).await.unwrap();
-}
+mod tests {
+    use serial_test::serial;
 
-#[tokio::test]
-#[serial]
-async fn test_initialize_db_succeeds() {
-    test_initialize_empty_inmem_db().await;
-}
+    #[cfg(test)]
+    async fn test_initialize_empty_inmem_db() {
+        super::initialialize_db("sqlite::memory:".into()).await.unwrap();
+    }
 
-#[tokio::test]
-#[serial]
-async fn test_insert_device_with_existing_group() {
-    test_initialize_empty_inmem_db().await;
+    #[tokio::test]
+    #[serial]
+    async fn test_initialize_db_succeeds() {
+        test_initialize_empty_inmem_db().await;
+    }
 
-    let gid = add_group("Wurschtwerk Erlangen #5".into())
+    #[tokio::test]
+    #[serial]
+    async fn test_insert_device_with_existing_group() {
+        test_initialize_empty_inmem_db().await;
+
+        let gid = super::add_group("Wurschtwerk Erlangen #5".into())
+            .await
+            .unwrap();
+        super::add_device(
+            "c0ffee-xdxdxd-129874".to_owned(),
+            "host-01.er5.weber.group".to_owned(),
+            Some(gid),
+        )
         .await
         .unwrap();
-    add_device(
-        "c0ffee-xdxdxd-129874".to_owned(),
-        "host-01.er5.weber.group".to_owned(),
-        Some(gid),
-    )
-    .await
-    .unwrap();
-}
+    }
 
-#[tokio::test]
-#[serial]
-async fn test_insert_device_with_not_existing_group_fails() {
-    test_initialize_empty_inmem_db().await;
+    #[tokio::test]
+    #[serial]
+    async fn test_insert_device_with_not_existing_group_fails() {
+        test_initialize_empty_inmem_db().await;
 
-    let result = add_device(
-        "c0ffee-xdxdxd-129874".to_owned(),
-        "host-01.er5.weber.group".to_owned(),
-        Some(0),
-    )
-    .await;
+        let result = super::add_device(
+            "c0ffee-xdxdxd-129874".to_owned(),
+            "host-01.er5.weber.group".to_owned(),
+            Some(0),
+        )
+        .await;
 
-    assert!(result.is_err());
+        assert!(result.is_err());
+    }
 }
