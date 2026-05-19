@@ -43,8 +43,8 @@ pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::Conf
 }
 
 pub fn validate_config(config: &Settings) -> Result<(), String> {
-    if !config.cloud_url.starts_with("https://") {
-        return Err("Cloud url must begin with `https://`".into());
+    if !config.cloud_url.starts_with("https://") && !config.cloud_url.starts_with("http://") {
+        return Err("Cloud url must begin with `https://` or `http://`".into());
     }
 
     if config.poll_interval_secs == 0 {
@@ -64,9 +64,27 @@ mod tests {
     }
 
     #[test]
-    fn url_without_https_fails() {
+    fn url_with_http_succeeds() {
         let mut config = get_default().unwrap();
         config.cloud_url = "http://weber.cloud/foo".into();
+
+        let validation = validate_config(&config);
+        assert!(validation.is_ok());
+    }
+
+    #[test]
+    fn url_with_https_succeeds() {
+        let mut config = get_default().unwrap();
+        config.cloud_url = "https://weber.cloud/foo".into();
+
+        let validation = validate_config(&config);
+        assert!(validation.is_ok());
+    }
+
+    #[test]
+    fn url_without_http_or_https_fails() {
+        let mut config = get_default().unwrap();
+        config.cloud_url = "ftp://weber.cloud/foo".into();
 
         let validation = validate_config(&config);
         assert!(validation.is_err());
