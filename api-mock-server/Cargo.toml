@@ -16,3 +16,6 @@ sea-orm-migration = { version = "2.0.0-rc", features = ["sqlx-postgres", "runtim
 serde = { workspace = true }
 tokio = { workspace = true }
 tower-http = { version = "0.6", features = ["fs"] }
+
+[dev-dependencies]
+serial_test = "3.4.0"
