@@ -74,7 +74,9 @@ mod tests {
 
     #[cfg(test)]
     async fn test_initialize_empty_inmem_db() {
-        super::initialialize_db("sqlite::memory:".into()).await.unwrap();
+        super::initialialize_db("sqlite::memory:".into())
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
