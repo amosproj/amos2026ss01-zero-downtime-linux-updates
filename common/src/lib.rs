@@ -1,3 +1,5 @@
+pub mod entities;
+
 pub mod util;
 
 pub mod api {
