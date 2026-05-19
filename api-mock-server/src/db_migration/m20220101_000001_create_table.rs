@@ -1,5 +1,5 @@
-use sea_orm_migration::prelude::*;
 use sea_orm::Schema;
+use sea_orm_migration::prelude::*;
 
 use amos_common::entities;
 

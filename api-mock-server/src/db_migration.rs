@@ -15,7 +15,7 @@ impl MigratorTrait for Migrator {
 async fn create_table<E>(
     manager: &SchemaManager<'_>,
     schema: &Schema,
-    entity: E
+    entity: E,
 ) -> Result<(), DbErr>
 where
     E: EntityTrait,

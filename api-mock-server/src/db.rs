@@ -46,7 +46,7 @@ pub async fn add_group(name: String) -> Result<i32, DbErr> {
 pub async fn add_device(
     uuid: String,
     hostname: String,
-    group_id: Option<i32>
+    group_id: Option<i32>,
 ) -> Result<i32, DbErr> {
     let device = Device::ActiveModel {
         id: NotSet,
