@@ -12,6 +12,7 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let schema = Schema::new(manager.get_database_backend());
 
+        // Don't switch table creation order randomly, it depends on foreign key presence
         create_table(manager, &schema, entities::Group::Entity).await?;
         create_table(manager, &schema, entities::Device::Entity).await?;
 

@@ -1,10 +1,11 @@
 use clap::Parser;
 mod config;
+mod db;
+pub(crate) mod db_migration;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware, routing::get};
 use config::get_config;
 use log::{debug, error, info};
-use sea_orm::{Database, DatabaseConnection};
 use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
@@ -61,25 +62,11 @@ async fn main() {
         std::process::exit(1);
     });
 
-    let db: DatabaseConnection = Database::connect(&config.database_url)
-        .await
-        .unwrap_or_else(|err| {
-            error!(
-                "Failed to connect to database at {}: {}",
-                config.database_url, err
-            );
-            std::process::exit(1);
-        });
-
-    match db.ping().await {
-        Ok(()) => {
-            info!("Connected to database");
-        }
-        Err(err) => {
-            error!("Failed to ping database: {}", err);
-            std::process::exit(1);
-        }
-    };
+    // Initialize database
+    db::initalialize_db(config.database_url).await.unwrap_or_else(|err| {
+        error!("Failed to initialize database connection: {}", err);
+        std::process::exit(1);
+    });
 
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
