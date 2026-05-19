@@ -1,11 +1,11 @@
 use log::debug;
-use sea_orm::{ActiveModelTrait, ConnectOptions, Database, DatabaseConnection, DbErr};
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::{ActiveModelTrait, ConnectOptions, Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
 use std::sync::OnceLock;
 
-use amos_common::entities::{Device, Group};
 use crate::db_migration::Migrator;
+use amos_common::entities::{Device, Group};
 
 static DB: OnceLock<DatabaseConnection> = OnceLock::new();
 
@@ -24,7 +24,8 @@ pub async fn initalialize_db(database_url: String) -> Result<(), DbErr> {
 
     Migrator::up(&conn, None).await?;
 
-    DB.set(conn).map_err(|_| DbErr::Custom("DB already initialized".into()))?;
+    DB.set(conn)
+        .map_err(|_| DbErr::Custom("DB already initialized".into()))?;
 
     Ok(())
 }
@@ -42,12 +43,16 @@ pub async fn add_group(name: String) -> Result<i32, DbErr> {
     return Ok(new_group.id);
 }
 
-pub async fn add_device(uuid: String, hostname: String, group_id: Option<i32>) -> Result<i32, DbErr> {
+pub async fn add_device(
+    uuid: String,
+    hostname: String,
+    group_id: Option<i32>
+) -> Result<i32, DbErr> {
     let device = Device::ActiveModel {
         id: NotSet,
         uuid: Set(uuid),
         hostname: Set(hostname),
-        group_id: Set(group_id)
+        group_id: Set(group_id),
     };
 
     let new_device = device.insert(db()).await?;

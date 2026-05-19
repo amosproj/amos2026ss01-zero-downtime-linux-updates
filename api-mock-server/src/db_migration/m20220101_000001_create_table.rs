@@ -1,5 +1,6 @@
 use sea_orm_migration::prelude::*;
 use sea_orm::Schema;
+
 use amos_common::entities;
 
 use super::create_table;

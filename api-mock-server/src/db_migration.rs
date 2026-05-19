@@ -12,8 +12,14 @@ impl MigratorTrait for Migrator {
     }
 }
 
-async fn create_table<E>(manager: &SchemaManager<'_>, schema: &Schema, entity: E) -> Result<(), DbErr>
-where E: EntityTrait {
+async fn create_table<E>(
+    manager: &SchemaManager<'_>,
+    schema: &Schema,
+    entity: E
+) -> Result<(), DbErr>
+where
+    E: EntityTrait,
+{
     let stmt = schema.create_table_from_entity(entity);
     manager.create_table(stmt).await
 }
