@@ -14,7 +14,7 @@ fn db() -> &'static DatabaseConnection {
 }
 
 pub async fn initalialize_db(database_url: String) -> Result<(), DbErr> {
-    let mut opt = ConnectOptions::new(&database_url.to_owned());
+    let mut opt = ConnectOptions::new(database_url.to_owned());
     // SQL queries should be the last resort when debugging...
     opt.sqlx_logging_level(log::LevelFilter::Trace);
 
@@ -40,7 +40,7 @@ pub async fn add_group(name: String) -> Result<i32, DbErr> {
     let new_group = group.insert(db()).await?;
     debug!("Inserted group: {:?}", new_group);
 
-    return Ok(new_group.id);
+    Ok(new_group.id)
 }
 
 pub async fn add_device(
@@ -58,5 +58,5 @@ pub async fn add_device(
     let new_device = device.insert(db()).await?;
     debug!("Inserted device: {:?}", new_device);
 
-    return Ok(new_device.id);
+    Ok(new_device.id)
 }
