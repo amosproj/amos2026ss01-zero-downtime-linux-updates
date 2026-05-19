@@ -63,7 +63,7 @@ async fn main() {
     });
 
     // Initialize database
-    db::initalialize_db(config.database_url)
+    db::initialialize_db(config.database_url)
         .await
         .unwrap_or_else(|err| {
             error!("Failed to initialize database connection: {}", err);

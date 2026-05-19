@@ -17,7 +17,7 @@ macro_rules! db {
     };
 }
 
-pub async fn initalialize_db(database_url: String) -> Result<(), DbErr> {
+pub async fn initialialize_db(database_url: String) -> Result<(), DbErr> {
     let mut opt = ConnectOptions::new(database_url.to_owned());
     // SQL queries should be the last resort when debugging...
     opt.sqlx_logging_level(log::LevelFilter::Trace);
@@ -72,7 +72,7 @@ pub async fn add_device(
 
 #[cfg(test)]
 async fn test_initialize_empty_inmem_db() {
-    initalialize_db("sqlite::memory:".into()).await.unwrap();
+    initialialize_db("sqlite::memory:".into()).await.unwrap();
 }
 
 #[tokio::test]
