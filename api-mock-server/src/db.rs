@@ -2,15 +2,19 @@ use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, ConnectOptions, Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
-use std::sync::OnceLock;
+#[cfg(test)]
+use serial_test::serial;
+use tokio::sync::RwLock;
 
 use crate::db_migration::Migrator;
 use amos_common::entities::{Device, Group};
 
-static DB: OnceLock<DatabaseConnection> = OnceLock::new();
+static DB: RwLock<Option<DatabaseConnection>> = RwLock::const_new(None);
 
-fn db() -> &'static DatabaseConnection {
-    DB.get().expect("Database not initialized")
+macro_rules! db {
+    () => {
+        DB.read().await.clone().unwrap()
+    };
 }
 
 pub async fn initalialize_db(database_url: String) -> Result<(), DbErr> {
@@ -24,12 +28,12 @@ pub async fn initalialize_db(database_url: String) -> Result<(), DbErr> {
 
     Migrator::up(&conn, None).await?;
 
-    DB.set(conn)
-        .map_err(|_| DbErr::Custom("DB already initialized".into()))?;
+    DB.write().await.replace(conn);
 
     Ok(())
 }
 
+#[allow(dead_code)]
 pub async fn add_group(name: String) -> Result<i32, DbErr> {
     let group = Group::ActiveModel {
         id: NotSet,
@@ -37,12 +41,15 @@ pub async fn add_group(name: String) -> Result<i32, DbErr> {
         // ..Default::default()
     };
 
-    let new_group = group.insert(db()).await?;
+    let db = db!();
+
+    let new_group = group.insert(&db).await?;
     debug!("Inserted group: {:?}", new_group);
 
     Ok(new_group.id)
 }
 
+#[allow(dead_code)]
 pub async fn add_device(
     uuid: String,
     hostname: String,
@@ -55,8 +62,53 @@ pub async fn add_device(
         group_id: Set(group_id),
     };
 
-    let new_device = device.insert(db()).await?;
+    let db = db!();
+
+    let new_device = device.insert(&db).await?;
     debug!("Inserted device: {:?}", new_device);
 
     Ok(new_device.id)
+}
+
+#[cfg(test)]
+async fn test_initialize_empty_inmem_db() {
+    initalialize_db("sqlite::memory:".into()).await.unwrap();
+}
+
+#[tokio::test]
+#[serial]
+async fn test_initialize_db_succeeds() {
+    test_initialize_empty_inmem_db().await;
+}
+
+#[tokio::test]
+#[serial]
+async fn test_insert_device_with_existing_group() {
+    test_initialize_empty_inmem_db().await;
+
+    let gid = add_group("Wurschtwerk Erlangen #5".into())
+        .await
+        .unwrap();
+    add_device(
+        "c0ffee-xdxdxd-129874".to_owned(),
+        "host-01.er5.weber.group".to_owned(),
+        Some(gid),
+    )
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+#[serial]
+async fn test_insert_device_with_not_existing_group_fails() {
+    test_initialize_empty_inmem_db().await;
+
+    let result = add_device(
+        "c0ffee-xdxdxd-129874".to_owned(),
+        "host-01.er5.weber.group".to_owned(),
+        Some(0),
+    )
+    .await;
+
+    assert!(result.is_err());
 }

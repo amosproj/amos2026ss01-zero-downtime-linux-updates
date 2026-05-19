@@ -70,18 +70,6 @@ async fn main() {
             std::process::exit(1);
         });
 
-    // TODO: Remove after testing - also panics!
-    let gid = db::add_group("Wurschtwerk Erlangen #5".into())
-        .await
-        .unwrap();
-    db::add_device(
-        "c0ffee-xdxdxd-129874".to_owned(),
-        "host-01.er5.weber.group".to_owned(),
-        Some(gid),
-    )
-    .await
-    .unwrap();
-
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
         .nest_service("/download", ServeDir::new("assets"));

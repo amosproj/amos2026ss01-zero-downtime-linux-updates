@@ -37,7 +37,7 @@ pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::Conf
 }
 
 pub fn validate_config(config: &Settings) -> Result<(), String> {
-    if !config.database_url.starts_with("postgres://") {
+    if !config.database_url.starts_with("postgres://") || !(config.database_url.starts_with("sqlite::memory:")) {
         return Err("Database connection url must begin with `postgres://`".into());
     }
 
