@@ -63,10 +63,12 @@ async fn main() {
     });
 
     // Initialize database
-    db::initalialize_db(config.database_url).await.unwrap_or_else(|err| {
-        error!("Failed to initialize database connection: {}", err);
-        std::process::exit(1);
-    });
+    db::initalialize_db(config.database_url)
+        .await
+        .unwrap_or_else(|err| {
+            error!("Failed to initialize database connection: {}", err);
+            std::process::exit(1);
+        });
 
     // TODO: Remove after testing - also panics!
     let gid = db::add_group("Wurschtwerk Erlangen #5".into()).await.unwrap();
