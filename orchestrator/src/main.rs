@@ -3,10 +3,13 @@ use clap::Parser;
 use config_loader::get_config;
 use log::{debug, error, info};
 
+use crate::util::bootc_wrapper::Bootc;
+use crate::util::executer::RealExecuter;
+
 use crate::{
     apps::{get_initial_apps_state, run_apps_main_loop},
     inventory::collect_and_save_inventory,
-    os_tree::{get_inital_os_state, run_os_tree_main_loop},
+    os_tree::{RpmOstreeClient, run_os_tree_main_loop},
     state::AgentState,
 };
 mod apps;
@@ -14,8 +17,10 @@ mod healthcheck;
 mod inventory;
 mod os_tree;
 mod state;
+mod util;
 use std::env;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -49,8 +54,15 @@ async fn main() {
 
     env_logger::builder().filter_level(log_level).init();
 
+    let executer = RealExecuter;
+    let bootc_client = Bootc::new(Box::new(executer));
+
+    let ostree_client = Arc::new(RpmOstreeClient::new(Arc::new(RealExecuter)));
+
     if cli.self_check {
-        if let Err(err) = crate::healthcheck::healthcheck(cli.config.clone()) {
+        if let Err(err) =
+            crate::healthcheck::healthcheck(&bootc_client, &RealExecuter, cli.config.clone()).await
+        {
             error!("Self check failed: {}", err);
             std::process::exit(1);
         }
@@ -68,15 +80,22 @@ async fn main() {
     debug!("Loaded config: {:?}", config);
 
     info!("Collecting initial inventory");
-    if let Err(err) =
-        collect_and_save_inventory(std::path::Path::new(config.inventory_path.as_str()))
+    if let Err(err) = collect_and_save_inventory(
+        &bootc_client,
+        &RealExecuter,
+        std::path::Path::new(config.inventory_path.as_str()),
+    )
+    .await
     {
         error!("Failed to collect and save inventory: {}", err);
         std::process::exit(1);
     }
 
     info!("Reading inital OS State");
-    let os_state = get_inital_os_state();
+    let os_state = ostree_client.status().await.unwrap_or_else(|err| {
+        error!("Failed to fetch initial rpm-ostree status: {}", err);
+        std::process::exit(1);
+    });
 
     info!("Reading inital application state");
     let apps_state = get_initial_apps_state();
@@ -90,7 +109,10 @@ async fn main() {
     );
 
     let _apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
-    let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(agent_state.clone()));
+    let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
+        agent_state.clone(),
+        ostree_client.clone(),
+    ));
     tokio::signal::ctrl_c().await.unwrap();
 }
 
