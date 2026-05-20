@@ -1,3 +1,4 @@
+use sea_orm::ActiveValue;
 use sea_orm::entity::prelude::*;
 
 use super::{Device, Group, OsVersion};
@@ -32,8 +33,8 @@ impl ActiveModelBehavior for ActiveModel {
     where
         C: ConnectionTrait,
     {
-        let has_device = self.device_id.clone().into_value().is_some();
-        let has_group = self.group_id.clone().into_value().is_some();
+        let has_device = matches!(self.device_id.clone(), ActiveValue::Set(Some(_)));
+        let has_group  = matches!(self.group_id.clone(), ActiveValue::Set(Some(_)));
 
         if !has_device && !has_group {
             return Err(DbErr::Custom("Either device_id or group_id must be set".into()));
