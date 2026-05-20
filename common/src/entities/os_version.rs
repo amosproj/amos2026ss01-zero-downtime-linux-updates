@@ -1,21 +1,17 @@
 use sea_orm::entity::prelude::*;
 
-use super::Group;
-
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "devices")]
+#[sea_orm(table_name = "os_versions")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: i32,
 
-    pub uuid: String,
+    pub commit_hash: String,
 
-    pub hostname: String,
+    pub orchestrator_version: String,
 
-    pub group_id: Option<i32>,
-    #[sea_orm(belongs_to, from = "group_id", to = "id")]
-    pub group: HasOne<Group::Entity>,
+    pub description: Option<String>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

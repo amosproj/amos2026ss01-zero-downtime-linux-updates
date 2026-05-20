@@ -1,5 +1,6 @@
-use crate::entities::Device;
 use sea_orm::entity::prelude::*;
+
+use super::Device;
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -11,7 +12,7 @@ pub struct Model {
     pub name: String,
 
     #[sea_orm(has_many)]
-    pub device: HasMany<Device::Entity>,
+    pub devices: HasMany<Device::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
