@@ -10,7 +10,9 @@ use anyhow::Result;
 use log::{debug, warn};
 use reqwest::Client as HttpClient;
 
-use amos_common::download_manager::{Config as DownloadManagerConfig, build_http_client, get_system_requirements};
+use amos_common::download_manager::{
+    Config as DownloadManagerConfig, build_http_client, get_system_requirements,
+};
 use amos_common::inventory_model::SystemRequirements;
 
 use crate::inventory::{CollectionResult, Inventory, collect_inventory};

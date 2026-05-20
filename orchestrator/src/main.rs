@@ -62,9 +62,12 @@ async fn main() {
     let ostree_client = Arc::new(RpmOstreeClient::new(exec.clone()));
 
     if cli.self_check {
-        if let Err(err) =
-            crate::healthcheck::healthcheck(bootc_client.as_ref(), exec.as_ref(), cli.config.clone())
-                .await
+        if let Err(err) = crate::healthcheck::healthcheck(
+            bootc_client.as_ref(),
+            exec.as_ref(),
+            cli.config.clone(),
+        )
+        .await
         {
             error!("Self check failed: {}", err);
             std::process::exit(1);

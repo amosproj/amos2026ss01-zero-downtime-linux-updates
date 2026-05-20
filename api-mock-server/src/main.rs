@@ -44,13 +44,10 @@ fn mock_system_requirements() -> SystemRequirements {
         },
         bootc_status: BootcStatus {
             booted: BootcDeploymentInfo {
-                checksum:
-                    "0000000000000000000000000000000000000000000000000000000000000000"
-                        .into(),
+                checksum: "0000000000000000000000000000000000000000000000000000000000000000".into(),
                 image: Some(BootcImageInfo {
-                    image_ref:
-                        "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system"
-                            .into(),
+                    image_ref: "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system"
+                        .into(),
                     transport: "registry".into(),
                     image_digest: None,
                     version: Some("1.2.3".into()),
