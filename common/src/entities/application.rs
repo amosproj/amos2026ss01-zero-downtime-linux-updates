@@ -1,9 +1,10 @@
 use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use super::ApplicationConfig;
 
 #[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "applications")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
@@ -14,6 +15,7 @@ pub struct Model {
     pub description: String,
 
     #[sea_orm(has_many)]
+    #[serde(skip)]
     pub applications: HasMany<ApplicationConfig::Entity>,
 }
 

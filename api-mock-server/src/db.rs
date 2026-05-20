@@ -149,6 +149,7 @@ pub async fn add_application_assignment_to_group(
 
 #[cfg(test)]
 mod tests {
+    use sea_orm::sea_query::prelude::serde_json;
     use serial_test::serial;
 
     #[cfg(test)]
@@ -231,5 +232,28 @@ mod tests {
         println!("Created application assignment: {:?}", result);
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn generated_application_model_json_matches_expected() {
+        test_initialize_empty_inmem_db().await;
+
+        let app = super::add_application("app-a".to_owned(), "cool app".to_owned()).await.unwrap();
+        let app_json = serde_json::to_string(&app).unwrap();
+
+        let expected = r#"{"id":1,"name":"app-a","description":"cool app"}"#;
+        assert_eq!(app_json, expected);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn given_application_model_json_unmarshalls() {
+        test_initialize_empty_inmem_db().await;
+
+        let app_json = r#"{"id":5,"name":"app-b","description":"mediocre app"}"#;
+        let app: Result<super::Application::Model, _> = serde_json::from_str(app_json);
+
+        assert!(app.is_ok());
     }
 }
