@@ -1,4 +1,6 @@
+pub mod download_manager;
 pub mod entities;
+pub mod inventory_model;
 
 pub mod util;
 

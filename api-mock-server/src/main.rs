@@ -2,6 +2,10 @@ use clap::Parser;
 mod config;
 mod db;
 pub(crate) mod db_migration;
+use amos_common::inventory_model::{
+    ApplicationInfo, BootcDeploymentInfo, BootcImageInfo, BootcStatus, SystemInfo,
+    SystemRequirements,
+};
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware, routing::get};
 use config::get_config;
@@ -26,6 +30,42 @@ static CATALOG: [api::CatalogResponseEntry; 2] = [
 ];
 
 static CATALOG_RES: api::CatalogResponse = api::CatalogResponse::from_slice(&CATALOG);
+
+// Mocked cloud-side target state. The shape mirrors the orchestrator's Device
+// Inventory MVP JSON (see orchestrator/src/inventory.rs) so the orchestrator's
+// update-check can compare local vs. target field-by-field.
+fn mock_system_requirements() -> SystemRequirements {
+    SystemRequirements {
+        system: SystemInfo {
+            hostname: "any".into(),
+            os_name: "Fedora Linux".into(),
+            os_version: "41".into(),
+            kernel_version: "6.11.0".into(),
+        },
+        bootc_status: BootcStatus {
+            booted: BootcDeploymentInfo {
+                checksum:
+                    "0000000000000000000000000000000000000000000000000000000000000000"
+                        .into(),
+                image: Some(BootcImageInfo {
+                    image_ref:
+                        "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system"
+                            .into(),
+                    transport: "registry".into(),
+                    image_digest: None,
+                    version: Some("1.2.3".into()),
+                }),
+            },
+            staged: None,
+            rollback: None,
+            rollback_queued: false,
+        },
+        applications: vec![ApplicationInfo {
+            app_name: "data_collector".into(),
+            app_version: "v1.0.2".into(),
+        }],
+    }
+}
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -72,6 +112,10 @@ async fn main() {
 
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
+        .route(
+            "/system-requirements",
+            get(|| async { Json(mock_system_requirements()) }),
+        )
         .nest_service("/download", ServeDir::new("assets"));
 
     let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(

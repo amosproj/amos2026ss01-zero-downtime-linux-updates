@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 use futures_util::StreamExt;
 use crate::api::{CatalogResponse, CatalogResponseEntry};
+use crate::inventory_model::SystemRequirements;
 use crate::util::Base64;
 
 // Temporary config struct containing server URL https_proxy, and a path to which updates will be downloaded.
@@ -89,6 +90,34 @@ pub async fn check_for_update(client: &Client, config: &Config) -> Result<Catalo
     Ok(owned_update_info)
 }
 
+
+
+// Fetches the cloud-side target system requirements (Device Inventory MVP shape).
+// Returns:
+// - Ok(SystemRequirements) if the server responded with a valid requirements payload
+// - Err(anyhow::Error) on transport, status, or deserialization failures, with context.
+pub async fn get_system_requirements(client: &Client, config: &Config) -> Result<SystemRequirements> {
+    let url = format!("{}/v1/system-requirements", config.server_url);
+
+    let resp = client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .with_context(|| format!("Failed to reach server at {}", url))?;
+
+    if !resp.status().is_success() {
+        anyhow::bail!(
+            "Server at {} responded with status code: {}",
+            url,
+            resp.status()
+        );
+    }
+
+    resp.json::<SystemRequirements>()
+        .await
+        .with_context(|| "Failed to parse server response as SystemRequirements")
+}
 
 
 // Downloads the update from a given CatalogResponseEntry and saves it as "update_<name>_<version>.bin" to the directory specified in config.download_dir.

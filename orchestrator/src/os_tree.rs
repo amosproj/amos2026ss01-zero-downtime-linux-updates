@@ -1,7 +1,8 @@
 use crate::state::{AgentState, OsState};
+use crate::update_check::{UpdateChecker, UpdateDecision};
 use anyhow::{Context, Result, anyhow};
 
-use log::{error, info};
+use log::{error, info, warn};
 use std::sync::Arc;
 
 use std::time::Duration;
@@ -117,7 +118,11 @@ impl RpmOstreeClient {
     }
 }
 
-pub async fn run_os_tree_main_loop(agent_state: AgentState, client: Arc<RpmOstreeClient>) {
+pub async fn run_os_tree_main_loop(
+    agent_state: AgentState,
+    client: Arc<RpmOstreeClient>,
+    update_checker: Arc<UpdateChecker>,
+) {
     let mut update_interval = interval(Duration::from_secs(
         agent_state.config.poll_interval_secs.into(),
     ));
@@ -125,9 +130,8 @@ pub async fn run_os_tree_main_loop(agent_state: AgentState, client: Arc<RpmOstre
     loop {
         update_interval.tick().await;
 
-        let target_os_state = get_target_os_state().await;
-        let host_os_state = match client.status().await {
-            Ok(_status) => get_host_os_state().await,
+        let host_status = match client.status().await {
+            Ok(status) => status,
             Err(e) => {
                 error!("Failed to fetch live rpm-ostree status: {:?}", e);
                 continue;
@@ -136,59 +140,42 @@ pub async fn run_os_tree_main_loop(agent_state: AgentState, client: Arc<RpmOstre
 
         {
             let mut current_state = agent_state.os_state.lock().await;
-            *current_state = host_os_state.clone();
+            *current_state = host_status;
         }
 
-        handle_os_tree(
-            &client,
-            agent_state.os_state.lock().await.clone(),
-            target_os_state,
-        )
-        .await;
-    }
-}
+        info!("Checking for OS update");
+        match update_checker.check().await {
+            Ok(UpdateDecision::UpToDate) => {
+                info!("System is up to date.");
+            }
+            Ok(UpdateDecision::UpdateRequired { reasons }) => {
+                info!(
+                    "Update required ({} reason(s)): {}",
+                    reasons.len(),
+                    reasons.join("; ")
+                );
 
-async fn get_target_os_state() -> OsState {
-    OsState {
-        update_pending: false,
-        booted_image: String::from("current_latest_new"),
-        update_ostree_commit: Some(String::from("next_latest")),
-    }
-}
+                match client.upgrade().await {
+                    Ok(()) => {
+                        info!(
+                            "rpm-ostree upgrade staged successfully. Initiating system reboot..."
+                        );
 
-async fn get_host_os_state() -> OsState {
-    OsState {
-        update_pending: false,
-        booted_image: String::from("current_latest"),
-        update_ostree_commit: Option::None,
-    }
-}
-
-async fn handle_os_tree(client: &RpmOstreeClient, current_state: OsState, target_state: OsState) {
-    info!("Checking for OS update");
-
-    if current_state.booted_image != target_state.booted_image {
-        info!(
-            "New deployment detected! Current: {} -> Target: {}",
-            current_state.booted_image, target_state.booted_image
-        );
-
-        match client.upgrade().await {
-            Ok(()) => {
-                info!("rpm-ostree upgrade staged successfully. Initiating system reboot...");
-
-                if let Err(e) = client.apply_reboot().await {
-                    error!(
-                        "Critical: Upgrade succeeded but system reboot invocation failed: {:?}",
-                        e
-                    );
+                        if let Err(e) = client.apply_reboot().await {
+                            error!(
+                                "Critical: Upgrade succeeded but system reboot invocation failed: {:?}",
+                                e
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        error!("OS upgrade failed execution: {:?}", e);
+                    }
                 }
             }
             Err(e) => {
-                error!("OS upgrade failed execution: {:?}", e);
+                warn!("Update check failed, will retry next tick: {:?}", e);
             }
         }
-    } else {
-        info!("System is up to date.");
     }
 }

@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   dev-container:
@@ -16,7 +16,7 @@ services:
   postgres:
     image: registry.access.redhat.com/hi/postgresql:18.3
     environment:
-      POSTGRES_PASSWORD: dummy
+      POSTGRES_PASSWORD: dummy # FIXME: sensible secrets handling
     volumes:
       - "./10_setup_app_db.sh:/docker-entrypoint-initdb.d/10_setup_amos.sh:ro,Z"
       - "postgres_data:/var/lib/postgresql/data:rw"

@@ -84,6 +84,7 @@ dependencies = [
 name = "amos-orchestrator"
 version = "0.1.0"
 dependencies = [
+ "amos-common",
  "anyhow",
  "async-trait",
  "clap",
@@ -91,6 +92,7 @@ dependencies = [
  "env_logger",
  "log",
  "mockall",
+ "reqwest",
  "serde",
  "serde_json",
  "tempfile",
