@@ -1,10 +1,11 @@
 use sea_orm::ActiveValue;
 use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use super::{ApplicationConfig, Device, Group};
 
 #[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "application_assignments")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]

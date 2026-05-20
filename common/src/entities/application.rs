@@ -15,7 +15,6 @@ pub struct Model {
     pub description: String,
 
     #[sea_orm(has_many)]
-    #[serde(skip)]
     pub applications: HasMany<ApplicationConfig::Entity>,
 }
 
