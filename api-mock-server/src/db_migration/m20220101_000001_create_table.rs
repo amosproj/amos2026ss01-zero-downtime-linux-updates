@@ -15,6 +15,7 @@ impl MigrationTrait for Migration {
 
         // Don't switch table creation order randomly, it depends on foreign key presence
         // EDIT: ...in Postgres at least, it seems
+        create_table(manager, &schema, entities::Tenant::Entity).await?;
         create_table(manager, &schema, entities::Group::Entity).await?;
         create_table(manager, &schema, entities::Device::Entity).await?;
         create_table(manager, &schema, entities::Application::Entity).await?;

@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use super::Group;
+use super::{Group, Tenant};
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
@@ -13,6 +13,10 @@ pub struct Model {
     pub uuid: String,
 
     pub hostname: String,
+
+    pub tenant_id: i32,
+    #[sea_orm(belongs_to, from = "tenant_id", to = "id")]
+    pub tenant: HasOne<Tenant::Entity>,
 
     pub group_id: Option<i32>,
     #[sea_orm(belongs_to, from = "group_id", to = "id")]

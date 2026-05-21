@@ -5,7 +5,7 @@ use sea_orm_migration::MigratorTrait;
 use tokio::sync::RwLock;
 
 use crate::db_migration::Migrator;
-use amos_common::entities::{Application, ApplicationAssignment, ApplicationConfig, Device, Group};
+use amos_common::entities::{Application, ApplicationAssignment, ApplicationConfig, Device, Group, Tenant};
 
 static DB: RwLock<Option<DatabaseConnection>> = RwLock::const_new(None);
 
@@ -32,6 +32,25 @@ pub async fn initialialize_db(database_url: String) -> Result<(), DbErr> {
 }
 
 #[allow(dead_code)]
+pub async fn add_tenant(
+    name: String,
+    description: Option<String>,
+) -> Result<Tenant::Model, DbErr> {
+    let tenant = Tenant::ActiveModel {
+        id: NotSet,
+        name: Set(name),
+        description: Set(description),
+    };
+
+    let db = db!();
+
+    let new_tenant = tenant.insert(&db).await?;
+    debug!("Inserted new tenant: {:?}", new_tenant);
+
+    Ok(new_tenant)
+}
+
+#[allow(dead_code)]
 pub async fn add_group(name: String) -> Result<Group::Model, DbErr> {
     let group = Group::ActiveModel {
         id: NotSet,
@@ -51,12 +70,14 @@ pub async fn add_group(name: String) -> Result<Group::Model, DbErr> {
 pub async fn add_device(
     uuid: String,
     hostname: String,
+    tenant_id: i32,
     group_id: Option<i32>,
 ) -> Result<Device::Model, DbErr> {
     let device = Device::ActiveModel {
         id: NotSet,
         uuid: Set(uuid),
         hostname: Set(hostname),
+        tenant_id: Set(tenant_id),
         group_id: Set(group_id),
     };
 
@@ -170,15 +191,20 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_insert_device_with_existing_group() {
+    async fn test_insert_device_with_existing_group_and_tenant_works() {
         test_initialize_empty_inmem_db().await;
 
-        let group = super::add_group("Wurschtwerk Erlangen #5".into())
+        let tenant =
+            super::add_tenant("Kathis Käjsewelt".to_owned(), Some("Sitz: Nürnberg".to_owned()))
+                .await
+                .unwrap();
+        let group = super::add_group("Werk Erlangen #5".into())
             .await
             .unwrap();
         super::add_device(
             "c0ffee-xdxdxd-129874".to_owned(),
             "host-01.er5.weber.group".to_owned(),
+            tenant.id,
             Some(group.id),
         )
         .await
@@ -190,9 +216,12 @@ mod tests {
     async fn test_insert_device_with_not_existing_group_fails() {
         test_initialize_empty_inmem_db().await;
 
+        let tenant = super::add_tenant("X".to_owned(), None).await.unwrap();
+
         let result = super::add_device(
             "c0ffee-xdxdxd-129874".to_owned(),
             "host-01.er5.weber.group".to_owned(),
+            tenant.id,
             Some(0),
         )
         .await;
@@ -205,7 +234,9 @@ mod tests {
     async fn test_insert_app_assignement_for_device_works() {
         test_initialize_empty_inmem_db().await;
 
-        let device = super::add_device("".to_owned(), "".to_owned(), None)
+        let tenant = super::add_tenant("X".to_owned(), None).await.unwrap();
+
+        let device = super::add_device("".to_owned(), "".to_owned(), tenant.id, None)
             .await
             .unwrap();
         println!("Created device: {:?}", device);

@@ -18,3 +18,6 @@ pub use crate::entities::os_assignment as OsAssignment;
 
 pub mod os_version;
 pub use crate::entities::os_version as OsVersion;
+
+pub mod tenant;
+pub use crate::entities::tenant as Tenant;
