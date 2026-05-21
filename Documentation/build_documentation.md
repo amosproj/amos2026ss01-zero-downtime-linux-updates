@@ -148,6 +148,25 @@ cargo test -p security-module
 
 ## Running Locally
 
+### 0. Start *a* database
+
+The api server requires a database, which by default is expected as a Postgres instance running on `localhost:5432`. A local container instance can be managed like this:
+
+```bash
+cd .devcontainer/
+
+# start the container
+podman-compose up -d postgres
+
+# stop the container
+podman-compose down postgres
+
+# optional: to delete the data (volume)
+podman volume rm devcontainer_postgres_data
+```
+
+**Alternatively for local development** an sqlite database can be used. For that, just define a sqlite connection string via the config or an environment variable when running the server, e.g.: `APP_DATABASE_URL="sqlite://db.sqlite?mode=rwc" cargo run ..."`
+
 ### 1. Start the API mock server
 
 The mock server simulates the Cloud API on `localhost:80`:
