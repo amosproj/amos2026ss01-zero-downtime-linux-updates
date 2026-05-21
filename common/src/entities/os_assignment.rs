@@ -26,19 +26,17 @@ pub struct Model {
 
 #[async_trait::async_trait]
 impl ActiveModelBehavior for ActiveModel {
-    async fn before_save<C>(
-        self,
-        _db: &C,
-        _insert: bool,
-    ) -> Result<Self, DbErr>
+    async fn before_save<C>(self, _db: &C, _insert: bool) -> Result<Self, DbErr>
     where
         C: ConnectionTrait,
     {
         let has_device = matches!(self.device_id.clone(), ActiveValue::Set(Some(_)));
-        let has_group  = matches!(self.group_id.clone(), ActiveValue::Set(Some(_)));
+        let has_group = matches!(self.group_id.clone(), ActiveValue::Set(Some(_)));
 
         if !has_device && !has_group {
-            return Err(DbErr::Custom("Either device_id or group_id must be set".into()));
+            return Err(DbErr::Custom(
+                "Either device_id or group_id must be set".into()
+            ));
         }
 
         Ok(self)

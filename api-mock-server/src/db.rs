@@ -105,7 +105,10 @@ pub async fn add_application_config(
     let db = db!();
 
     let new_app_config = app_config.insert(&db).await?;
-    debug!("Inserted new application config: {:?}", new_app_config);
+    debug!(
+        "Inserted new application config: {:?}",
+        new_app_config
+    );
 
     Ok(new_app_config)
 }
@@ -202,13 +205,20 @@ mod tests {
     async fn test_insert_app_assignement_for_device_works() {
         test_initialize_empty_inmem_db().await;
 
-        let device = super::add_device("".to_owned(), "".to_owned(), None).await.unwrap();
+        let device = super::add_device("".to_owned(), "".to_owned(), None)
+            .await
+            .unwrap();
         println!("Created device: {:?}", device);
 
-        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned()).await.unwrap();
+        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned())
+            .await
+            .unwrap();
         println!("Created app: {:?}", app);
 
-        let app_config = super::add_application_config(app.id, "quay.io/bla".to_owned(), None, None).await.unwrap();
+        let app_config =
+            super::add_application_config(app.id, "quay.io/bla".to_owned(), None, None)
+                .await
+                .unwrap();
         println!("Created app config: {:?}", app_config);
 
         let result = super::add_application_assignment_to_device(app_config.id, device.id).await;
@@ -222,10 +232,15 @@ mod tests {
     async fn test_insert_app_assignement_without_group_or_device_fails() {
         test_initialize_empty_inmem_db().await;
 
-        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned()).await.unwrap();
+        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned())
+            .await
+            .unwrap();
         println!("Created app: {:?}", app);
 
-        let app_config = super::add_application_config(app.id, "quay.io/bla".to_owned(), None, None).await.unwrap();
+        let app_config =
+            super::add_application_config(app.id, "quay.io/bla".to_owned(), None, None)
+                .await
+                .unwrap();
         println!("Created app config: {:?}", app_config);
 
         let result = super::add_application_assignment(app_config.id, None, None).await;
@@ -239,7 +254,9 @@ mod tests {
     async fn generated_application_model_json_matches_expected() {
         test_initialize_empty_inmem_db().await;
 
-        let app = super::add_application("app-a".to_owned(), "cool app".to_owned()).await.unwrap();
+        let app = super::add_application("app-a".to_owned(), "cool app".to_owned())
+            .await
+            .unwrap();
         let app_json = serde_json::to_string(&app).unwrap();
 
         let expected = r#"{"id":1,"name":"app-a","description":"cool app"}"#;

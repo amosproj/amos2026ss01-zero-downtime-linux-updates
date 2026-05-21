@@ -9,7 +9,7 @@ use super::Application;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: i32,
-    
+
     pub application_id: i32,
     #[sea_orm(belongs_to, from = "application_id", to = "id")]
     pub application: HasOne<Application::Entity>,
