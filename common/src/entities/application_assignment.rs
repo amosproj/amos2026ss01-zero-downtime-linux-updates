@@ -35,7 +35,7 @@ impl ActiveModelBehavior for ActiveModel {
 
         if !has_device && !has_group {
             return Err(DbErr::Custom(
-                "Either device_id or group_id must be set".into()
+                "Either device_id or group_id must be set".into(),
             ));
         }
 

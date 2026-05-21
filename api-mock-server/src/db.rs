@@ -105,10 +105,7 @@ pub async fn add_application_config(
     let db = db!();
 
     let new_app_config = app_config.insert(&db).await?;
-    debug!(
-        "Inserted new application config: {:?}",
-        new_app_config
-    );
+    debug!("Inserted new application config: {:?}", new_app_config);
 
     Ok(new_app_config)
 }
@@ -129,7 +126,10 @@ async fn add_application_assignment(
     let db = db!();
 
     let new_app_assignment = app_assignment.insert(&db).await?;
-    debug!("Inserted new application config assignment: {:?}", new_app_assignment);
+    debug!(
+        "Inserted new application config assignment: {:?}",
+        new_app_assignment
+    );
 
     Ok(new_app_assignment)
 }
