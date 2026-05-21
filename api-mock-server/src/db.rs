@@ -32,10 +32,7 @@ pub async fn initialialize_db(database_url: String) -> Result<(), DbErr> {
 }
 
 #[allow(dead_code)]
-pub async fn add_tenant(
-    name: String,
-    description: Option<String>,
-) -> Result<Tenant::Model, DbErr> {
+pub async fn add_tenant(name: String, description: Option<String>) -> Result<Tenant::Model, DbErr> {
     let tenant = Tenant::ActiveModel {
         id: NotSet,
         name: Set(name),
@@ -194,13 +191,14 @@ mod tests {
     async fn test_insert_device_with_existing_group_and_tenant_works() {
         test_initialize_empty_inmem_db().await;
 
-        let tenant =
-            super::add_tenant("Kathis Käjsewelt".to_owned(), Some("Sitz: Nürnberg".to_owned()))
-                .await
-                .unwrap();
-        let group = super::add_group("Werk Erlangen #5".into())
-            .await
-            .unwrap();
+        let tenant = super::add_tenant(
+            "Kathis Käjsewelt".to_owned(),
+            Some("Sitz: Nürnberg".to_owned()),
+        )
+        .await
+        .unwrap();
+        let group = super::add_group("Werk Erlangen #5".into()).await.unwrap();
+
         super::add_device(
             "c0ffee-xdxdxd-129874".to_owned(),
             "host-01.er5.weber.group".to_owned(),
