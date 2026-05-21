@@ -5,7 +5,9 @@ use sea_orm_migration::MigratorTrait;
 use tokio::sync::RwLock;
 
 use crate::db_migration::Migrator;
-use amos_common::entities::{Application, ApplicationAssignment, ApplicationConfig, Device, Group, Tenant};
+use amos_common::entities::{
+    Application, ApplicationAssignment, ApplicationConfig, Device, Group, Tenant,
+};
 
 static DB: RwLock<Option<DatabaseConnection>> = RwLock::const_new(None);
 
