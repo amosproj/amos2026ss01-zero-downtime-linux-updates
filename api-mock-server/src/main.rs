@@ -3,7 +3,12 @@ mod config;
 mod db;
 pub(crate) mod db_migration;
 use amos_common::{api, util};
-use axum::{Json, Router, extract::Request, middleware, routing::get};
+use axum::{
+    Json, Router,
+    extract::Request,
+    middleware,
+    routing::{get, post},
+};
 use config::get_config;
 use log::{debug, error, info};
 use std::path::PathBuf;
@@ -72,6 +77,7 @@ async fn main() {
 
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
+        .route("/devices/sync", post(handle_device_sync_here))
         .nest_service("/download", ServeDir::new("assets"));
 
     let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(

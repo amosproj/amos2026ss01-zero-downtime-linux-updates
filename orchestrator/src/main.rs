@@ -13,6 +13,7 @@ use crate::{
     state::AgentState,
 };
 mod apps;
+mod download_manager;
 mod healthcheck;
 mod inventory;
 mod os_tree;
