@@ -2,13 +2,17 @@ pub use sea_orm_migration::prelude::*;
 use sea_orm_migration::sea_orm::{EntityTrait, Schema};
 
 mod m20220101_000001_create_table;
+mod m20260523_000001_add_reported_assignments;
 
 pub struct Migrator;
 
 #[async_trait::async_trait]
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![Box::new(m20220101_000001_create_table::Migration)]
+        vec![
+            Box::new(m20220101_000001_create_table::Migration),
+            Box::new(m20260523_000001_add_reported_assignments::Migration),
+        ]
     }
 }
 
