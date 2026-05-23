@@ -33,3 +33,21 @@ impl ActiveModelBehavior for ActiveModel {
         Ok(self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use sea_orm::{ActiveModelTrait, sea_query::prelude::serde_json};
+    use serde_json::Value;
+
+    #[test]
+    fn app_assignment_update_doesnt_require_updated_at() {
+        let update_json_str = r#"{ "application_config_id": 5, "device_id": 3 }"#;
+        let update_json: Value = serde_json::from_str(update_json_str).unwrap();
+        println!("Unmarshalled: {:?}", update_json);
+
+        let app_ass_update = super::ActiveModel::from_json(update_json.clone());
+        println!("Loaded ActiveModel: {:?}", app_ass_update);
+
+        assert!(app_ass_update.is_ok());
+    }
+}
