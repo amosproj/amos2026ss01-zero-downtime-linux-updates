@@ -13,7 +13,12 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let schema = Schema::new(manager.get_database_backend());
 
-        create_table(manager, &schema, entities::ReportedApplicationAssignment::Entity).await?;
+        create_table(
+            manager,
+            &schema,
+            entities::ReportedApplicationAssignment::Entity,
+        )
+        .await?;
         create_table(manager, &schema, entities::ReportedOsAssignment::Entity).await?;
 
         Ok(())
