@@ -6,7 +6,7 @@ use axum::{
     extract::{Path, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{delete, get, post, put},
+    routing::get,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -27,23 +27,23 @@ fn db_err(e: sea_orm::DbErr) -> Response {
 pub fn routes() -> Router {
     Router::new()
         .route("/devices/summary", get(list_device_summaries))
-        .route("/devices/:id/summary", get(get_device_summary))
+        .route("/devices/{id}/summary", get(get_device_summary))
         .route("/tenants", get(list_tenants).post(create_tenant))
-        .route("/tenants/:id", get(get_tenant).put(update_tenant).delete(delete_tenant))
+        .route("/tenants/{id}", get(get_tenant).put(update_tenant).delete(delete_tenant))
         .route("/groups", get(list_groups).post(create_group))
-        .route("/groups/:id", get(get_group).put(update_group).delete(delete_group))
+        .route("/groups/{id}", get(get_group).put(update_group).delete(delete_group))
         .route("/devices", get(list_devices).post(create_device))
-        .route("/devices/:id", get(get_device).put(update_device).delete(delete_device))
+        .route("/devices/{id}", get(get_device).put(update_device).delete(delete_device))
         .route("/applications", get(list_applications).post(create_application))
-        .route("/applications/:id", get(get_application).put(update_application).delete(delete_application))
+        .route("/applications/{id}", get(get_application).put(update_application).delete(delete_application))
         .route("/app-configs", get(list_application_configs).post(create_application_config))
-        .route("/app-configs/:id", get(get_application_config).put(update_application_config).delete(delete_application_config))
+        .route("/app-configs/{id}", get(get_application_config).put(update_application_config).delete(delete_application_config))
         .route("/app-assignments", get(list_application_assignments).post(create_application_assignment))
-        .route("/app-assignments/:id", get(get_application_assignment).put(update_application_assignment).delete(delete_application_assignment))
+        .route("/app-assignments/{id}", get(get_application_assignment).put(update_application_assignment).delete(delete_application_assignment))
         .route("/os-versions", get(list_os_versions).post(create_os_version))
-        .route("/os-versions/:id", get(get_os_version).put(update_os_version).delete(delete_os_version))
+        .route("/os-versions/{id}", get(get_os_version).put(update_os_version).delete(delete_os_version))
         .route("/os-assignments", get(list_os_assignments).post(create_os_assignment))
-        .route("/os-assignments/:id", get(get_os_assignment).put(update_os_assignment).delete(delete_os_assignment))
+        .route("/os-assignments/{id}", get(get_os_assignment).put(update_os_assignment).delete(delete_os_assignment))
 }
 
 // --Device Summary--
