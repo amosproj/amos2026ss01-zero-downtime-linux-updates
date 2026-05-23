@@ -1,7 +1,7 @@
 use clap::Parser;
+mod api_routes;
 mod config;
 mod db;
-mod api_routes;
 pub(crate) mod db_migration;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware, routing::get};
