@@ -13,6 +13,7 @@ mod apps;
 mod healthcheck;
 mod inventory;
 mod os_tree;
+mod podman;
 mod state;
 use std::env;
 use std::path::PathBuf;
