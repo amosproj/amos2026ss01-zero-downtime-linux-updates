@@ -1,6 +1,7 @@
 use clap::Parser;
 mod config;
 mod db;
+mod api_routes;
 pub(crate) mod db_migration;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware, routing::get};
@@ -72,7 +73,8 @@ async fn main() {
 
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
-        .nest_service("/download", ServeDir::new("assets"));
+        .nest_service("/download", ServeDir::new("assets"))
+        .merge(api_routes::routes());
 
     let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(
         async |req: Request, next: middleware::Next| {
