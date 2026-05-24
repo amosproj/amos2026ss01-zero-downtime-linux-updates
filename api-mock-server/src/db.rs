@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use crate::db_migration::Migrator;
 use amos_common::entities::{
     Application, ApplicationAssignment, ApplicationConfig, Device, Group, OsAssignment, OsVersion,
-    Tenant,
+    ReportedApplicationAssignment, ReportedOsAssignment, Tenant,
 };
 
 static DB: RwLock<Option<DatabaseConnection>> = RwLock::const_new(None);
@@ -41,20 +41,18 @@ pub async fn initialialize_db(database_url: String) -> Result<(), DbErr> {
 // --Device Summary--
 
 pub async fn get_device_summary(id: i32) -> Result<Option<serde_json::Value>, DbErr> {
-    let mut res = assemble_device_summary(Some(id), None, None).await?;
+    let mut res = assemble_device_summary(Some(id), None).await?;
     Ok(res.pop())
 }
 
 pub async fn list_device_summaries(
-    group_id: Option<i32>,
     tenant_id: Option<i32>,
 ) -> Result<Vec<serde_json::Value>, DbErr> {
-    assemble_device_summary(None, group_id, tenant_id).await
+    assemble_device_summary(None, tenant_id).await
 }
 
 pub async fn assemble_device_summary(
     device_id: Option<i32>,
-    group_id: Option<i32>,
     tenant_id: Option<i32>,
 ) -> Result<Vec<serde_json::Value>, DbErr> {
     let db = db!();
@@ -62,9 +60,6 @@ pub async fn assemble_device_summary(
     let mut query = Device::Entity::find();
     if let Some(id) = device_id {
         query = query.filter(Device::Column::Id.eq(id));
-    }
-    if let Some(id) = group_id {
-        query = query.filter(Device::Column::GroupId.eq(id));
     }
     if let Some(id) = tenant_id {
         query = query.filter(Device::Column::TenantId.eq(id));
@@ -77,22 +72,32 @@ pub async fn assemble_device_summary(
 
     let device_ids: Vec<i32> = devices.iter().map(|d| d.id).collect();
 
-    let os_rows = OsAssignment::Entity::find()
-        .filter(OsAssignment::Column::DeviceId.is_in(device_ids.clone()))
+    let os_rows = ReportedOsAssignment::Entity::find()
+        .filter(ReportedOsAssignment::Column::DeviceId.is_in(device_ids.clone()))
         .find_also_related(OsVersion::Entity)
         .all(&db)
         .await?;
 
-    let mut os_by_device: std::collections::HashMap<i32, Vec<OsVersion::Model>> =
+    let mut os_by_device: std::collections::HashMap<i32, Vec<serde_json::Value>> =
         std::collections::HashMap::new();
+
     for (assignment, version) in os_rows {
-        if let (Some(d_id), Some(os_v)) = (assignment.device_id, version) {
-            os_by_device.entry(d_id).or_default().push(os_v);
+        if let Some(os_v) = version {
+            os_by_device
+                .entry(assignment.device_id)
+                .or_default()
+                .push(json!({
+                    "reported_assignment_id": assignment.id,
+                    "updated_at": assignment.updated_at,
+                    "commit_hash": os_v.commit_hash,
+                    "orchestrator_version": os_v.orchestrator_version,
+                    "description": os_v.description,
+                }));
         }
     }
 
-    let app_rows = ApplicationAssignment::Entity::find()
-        .filter(ApplicationAssignment::Column::DeviceId.is_in(device_ids.clone()))
+    let app_rows = ReportedApplicationAssignment::Entity::find()
+        .filter(ReportedApplicationAssignment::Column::DeviceId.is_in(device_ids.clone()))
         .find_also_related(ApplicationConfig::Entity)
         .all(&db)
         .await?;
@@ -116,19 +121,21 @@ pub async fn assemble_device_summary(
         std::collections::HashMap::new();
 
     for (assignment, config) in app_rows {
-        if let Some(d_id) = assignment.device_id {
-            let app = config
-                .as_ref()
-                .and_then(|c| app_by_id.get(&c.application_id));
-            apps_by_device.entry(d_id).or_default().push(json!({
-                "assignment_id": assignment.id,
-                "application_name": app.map(|a| a.name.as_str()),
-                "application_description": app.map(|a| a.description.as_str()),
+        let application = config
+            .as_ref()
+            .and_then(|c| app_by_id.get(&c.application_id));
+        apps_by_device
+            .entry(assignment.device_id)
+            .or_default()
+            .push(json!({
+                "reported_assignment_id": assignment.id,
+                "updated_at": assignment.updated_at,
+                "application_name": application.map(|a| a.name.as_str()),
+                "application_description": application.map(|a| a.description.as_str()),
                 "image": config.as_ref().map(|c| &c.image),
-                "config": config.as_ref().and_then(|c| c.config.as_ref()),
-                "comment": config.as_ref().and_then(|c| c.comment.as_ref()),
+                "config": config.as_ref().and_then(|c| c.config.as_deref()),
+                "comment": config.as_ref().and_then(|c| c.comment.as_deref()),
             }))
-        }
     }
 
     let tenant_ids: Vec<i32> = devices
@@ -524,6 +531,83 @@ pub async fn delete_application_assignment(id: i32) -> Result<u64, DbErr> {
     Ok(del.rows_affected)
 }
 
+// --Reported Application Assignments--
+
+pub async fn list_reported_application_assignments(
+    device_id: Option<i32>,
+    application_config_id: Option<i32>,
+) -> Result<Vec<ReportedApplicationAssignment::Model>, DbErr> {
+    let db = db!();
+    let mut query = ReportedApplicationAssignment::Entity::find();
+    if let Some(id) = device_id {
+        query = query.filter(ReportedApplicationAssignment::Column::DeviceId.eq(id));
+    }
+    if let Some(id) = application_config_id {
+        query = query.filter(ReportedApplicationAssignment::Column::ApplicationConfigId.eq(id));
+    }
+    query.all(&db).await
+}
+
+pub async fn get_reported_application_assignment(
+    id: i32,
+) -> Result<Option<ReportedApplicationAssignment::Model>, DbErr> {
+    let db = db!();
+    ReportedApplicationAssignment::Entity::find_by_id(id)
+        .one(&db)
+        .await
+}
+
+#[allow(dead_code)]
+pub async fn add_reported_application_assignment(
+    application_config_id: i32,
+    device_id: i32,
+) -> Result<ReportedApplicationAssignment::Model, DbErr> {
+    let app_assignment = ReportedApplicationAssignment::ActiveModel {
+        id: NotSet,
+        application_config_id: Set(application_config_id),
+        device_id: Set(device_id),
+        updated_at: NotSet, // update_at is automatically set in before_save
+    };
+
+    let db = db!();
+
+    let new_app_assignment = app_assignment.insert(&db).await?;
+    debug!(
+        "Inserted new reported application assignment: {:?}",
+        new_app_assignment
+    );
+    Ok(new_app_assignment)
+}
+
+#[allow(dead_code)]
+pub async fn update_reported_application_assignment(
+    id: i32,
+    application_config_id: i32,
+    device_id: i32,
+) -> Result<ReportedApplicationAssignment::Model, DbErr> {
+    let db = db!();
+    let app_assignment = ReportedApplicationAssignment::ActiveModel {
+        id: Set(id),
+        application_config_id: Set(application_config_id),
+        device_id: Set(device_id),
+        updated_at: NotSet, // update_at is automatically set in before_save
+    };
+    let updated_group = app_assignment.update(&db).await?;
+    debug!(
+        "Updated reported application assignment: {:?}",
+        updated_group
+    );
+    Ok(updated_group)
+}
+
+pub async fn delete_reported_application_assignment(id: i32) -> Result<u64, DbErr> {
+    let db = db!();
+    let del = ReportedApplicationAssignment::Entity::delete_by_id(id)
+        .exec(&db)
+        .await?;
+    Ok(del.rows_affected)
+}
+
 // --OS Versions--
 
 pub async fn list_os_versions() -> Result<Vec<OsVersion::Model>, DbErr> {
@@ -650,6 +734,81 @@ pub async fn update_os_assignment(
 pub async fn delete_os_assignment(id: i32) -> Result<u64, DbErr> {
     let db = db!();
     let del = OsAssignment::Entity::delete_by_id(id).exec(&db).await?;
+    Ok(del.rows_affected)
+}
+
+// --Reported OS Assignments--
+
+pub async fn list_reported_os_assignments(
+    device_id: Option<i32>,
+    os_version_id: Option<i32>,
+) -> Result<Vec<ReportedOsAssignment::Model>, DbErr> {
+    let db = db!();
+    let mut query = ReportedOsAssignment::Entity::find();
+    if let Some(id) = device_id {
+        query = query.filter(ReportedOsAssignment::Column::DeviceId.eq(id));
+    }
+    if let Some(id) = os_version_id {
+        query = query.filter(ReportedOsAssignment::Column::OsVersionId.eq(id));
+    }
+    query.all(&db).await
+}
+
+pub async fn get_reported_os_assignment(
+    id: i32,
+) -> Result<Option<ReportedOsAssignment::Model>, DbErr> {
+    let db = db!();
+    ReportedOsAssignment::Entity::find_by_id(id).one(&db).await
+}
+
+#[allow(dead_code)]
+pub async fn add_reported_os_assignment(
+    os_version_id: i32,
+    device_id: i32,
+) -> Result<ReportedOsAssignment::Model, DbErr> {
+    let os_assignment = ReportedOsAssignment::ActiveModel {
+        id: NotSet,
+        os_version_id: Set(os_version_id),
+        device_id: Set(device_id),
+        updated_at: NotSet, // update_at is automatically set in before_save
+    };
+
+    let db = db!();
+
+    let new_os_assignment = os_assignment.insert(&db).await?;
+    debug!(
+        "Inserted new reported OS version assignment: {:?}",
+        new_os_assignment
+    );
+    Ok(new_os_assignment)
+}
+
+#[allow(dead_code)]
+pub async fn update_reported_os_assignment(
+    id: i32,
+    os_version_id: i32,
+    device_id: i32,
+) -> Result<ReportedOsAssignment::Model, DbErr> {
+    let db = db!();
+    let os_assignment = ReportedOsAssignment::ActiveModel {
+        id: Set(id),
+        os_version_id: Set(os_version_id),
+        device_id: Set(device_id),
+        updated_at: NotSet, // update_at is automatically set in before_save
+    };
+    let updated_os_assignment = os_assignment.update(&db).await?;
+    debug!(
+        "Updated reported OS version assignment: {:?}",
+        updated_os_assignment
+    );
+    Ok(updated_os_assignment)
+}
+
+pub async fn delete_reported_os_assignment(id: i32) -> Result<u64, DbErr> {
+    let db = db!();
+    let del = ReportedOsAssignment::Entity::delete_by_id(id)
+        .exec(&db)
+        .await?;
     Ok(del.rows_affected)
 }
 
@@ -850,60 +1009,6 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_device_summary_includes_assigned_application() {
-        test_initialize_empty_inmem_db().await;
-
-        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
-        let device = super::add_device(
-            "uuid-app".to_owned(),
-            "host-app".to_owned(),
-            tenant.id,
-            None,
-        )
-        .await
-        .unwrap();
-        let app = super::add_application("my-app".to_owned(), "does stuff".to_owned())
-            .await
-            .unwrap();
-        let config =
-            super::add_application_config(app.id, "quay.io/my-app:1.0".to_owned(), None, None)
-                .await
-                .unwrap();
-        super::add_application_assignment(config.id, Some(device.id), None)
-            .await
-            .unwrap();
-        let summary = super::get_device_summary(device.id).await.unwrap().unwrap();
-
-        assert_eq!(summary["applications"][0]["application_name"], "my-app");
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_list_device_summaries_filtered_by_group() {
-        test_initialize_empty_inmem_db().await;
-
-        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
-        let group = super::add_group("G".to_owned()).await.unwrap();
-        super::add_device(
-            "uuid-g".to_owned(),
-            "host-g".to_owned(),
-            tenant.id,
-            Some(group.id),
-        )
-        .await
-        .unwrap();
-        super::add_device("uuid-ng".to_owned(), "host-ng".to_owned(), tenant.id, None)
-            .await
-            .unwrap();
-        let summaries = super::list_device_summaries(Some(group.id), None)
-            .await
-            .unwrap();
-
-        assert_eq!(summaries.len(), 1);
-    }
-
-    #[tokio::test]
-    #[serial]
     async fn test_application_assignment_reassign_to_different_device() {
         test_initialize_empty_inmem_db().await;
 
@@ -930,5 +1035,129 @@ mod tests {
                 .unwrap();
 
         assert_eq!(updated.device_id, Some(d2.id));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_device_update_changes_hostname() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        let device = super::add_device("uuid".to_owned(), "old-host".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+        let updated = super::update_device(
+            device.id,
+            device.uuid,
+            "new-hostname".to_owned(),
+            tenant.id,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(updated.hostname, "new-hostname");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_application_update_changes_description() {
+        test_initialize_empty_inmem_db().await;
+
+        let app = super::add_application("app".to_owned(), "old".to_owned())
+            .await
+            .unwrap();
+        let updated = super::update_application(app.id, "app".to_owned(), "new".to_owned())
+            .await
+            .unwrap();
+
+        assert_eq!(updated.description, "new");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_device_summary_shape_and_contents() {
+        test_initialize_empty_inmem_db().await;
+
+        // -- Arrange --
+        let tenant = super::add_tenant("Acme".to_owned(), Some("Sitz: Nürnberg".to_owned()))
+            .await
+            .unwrap();
+        let device =
+            super::add_device("uuid-abc".to_owned(), "host-01".to_owned(), tenant.id, None)
+                .await
+                .unwrap();
+
+        // OS side
+        let os_version = super::add_os_version(
+            "deadbeef".to_owned(),
+            "1.2.3".to_owned(),
+            Some("stable release".to_owned()),
+        )
+        .await
+        .unwrap();
+        super::add_reported_os_assignment(os_version.id, device.id)
+            .await
+            .unwrap();
+
+        // App side
+        let app = super::add_application("my-app".to_owned(), "does things".to_owned())
+            .await
+            .unwrap();
+        let config = super::add_application_config(
+            app.id,
+            "quay.io/my-app:1.0".to_owned(),
+            Some(r#"{"port":8080}"#.to_owned()),
+            Some("primary instance".to_owned()),
+        )
+        .await
+        .unwrap();
+        super::add_reported_application_assignment(config.id, device.id)
+            .await
+            .unwrap();
+
+        // -- Act --
+        let summary = super::get_device_summary(device.id)
+            .await
+            .unwrap()
+            .expect("summary should exist for a known device id");
+
+        // -- Assert: top-level keys --
+        assert!(summary.get("device").is_some());
+        assert!(summary.get("tenant").is_some());
+        assert!(summary.get("os_versions").is_some());
+        assert!(summary.get("applications").is_some());
+
+        // -- Assert: device fields --
+        assert_eq!(summary["device"]["uuid"], "uuid-abc");
+        assert_eq!(summary["device"]["hostname"], "host-01");
+        assert_eq!(summary["device"]["tenant_id"], tenant.id);
+        assert_eq!(summary["device"]["group_id"], serde_json::Value::Null);
+
+        // -- Assert: tenant fields --
+        assert_eq!(summary["tenant"]["name"], "Acme");
+        assert_eq!(summary["tenant"]["description"], "Sitz: Nürnberg");
+
+        // -- Assert: os_versions entry --
+        let os_versions = summary["os_versions"].as_array().unwrap();
+        assert_eq!(os_versions.len(), 1);
+        let os_entry = &os_versions[0];
+        assert_eq!(os_entry["commit_hash"], "deadbeef");
+        assert_eq!(os_entry["orchestrator_version"], "1.2.3");
+        assert_eq!(os_entry["description"], "stable release");
+        assert!(os_entry.get("reported_assignment_id").is_some());
+        assert!(os_entry.get("updated_at").is_some());
+
+        // -- Assert: applications entry --
+        let applications = summary["applications"].as_array().unwrap();
+        assert_eq!(applications.len(), 1);
+        let app_entry = &applications[0];
+        assert_eq!(app_entry["application_name"], "my-app");
+        assert_eq!(app_entry["application_description"], "does things");
+        assert_eq!(app_entry["image"], "quay.io/my-app:1.0");
+        assert_eq!(app_entry["config"], r#"{"port":8080}"#);
+        assert_eq!(app_entry["comment"], "primary instance");
+        assert!(app_entry.get("reported_assignment_id").is_some());
+        assert!(app_entry.get("updated_at").is_some());
     }
 }
