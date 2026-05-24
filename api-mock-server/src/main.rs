@@ -68,7 +68,7 @@ async fn main() {
     });
 
     // Initialize database
-    db::initialialize_db(config.database_url)
+    let db_conn = db::initialialize_db(config.database_url)
         .await
         .unwrap_or_else(|err| {
             error!("Failed to initialize database connection: {}", err);
@@ -78,7 +78,8 @@ async fn main() {
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
         .route("/devices/sync", post(handle_device_sync_here))
-        .nest_service("/download", ServeDir::new("assets"));
+        .nest_service("/download", ServeDir::new("assets"))
+        .with_state(db_conn);
 
     let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(
         async |req: Request, next: middleware::Next| {

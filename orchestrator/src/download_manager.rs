@@ -1,8 +1,7 @@
-use crate::api::{CatalogResponse, CatalogResponseEntry};
-use crate::util::Base64;
 use anyhow::{Context, Result};
 use futures_util::StreamExt;
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 
@@ -14,41 +13,24 @@ pub struct Config {
     pub current_os_version: String,
 }
 
-// Payload
 #[derive(Serialize)]
-struct DeviceSyncRequest {
-    device_uuid: String,
-    current_os_version: String,
+pub struct DeviceSyncRequest {
+    pub device_uuid: String,
+    pub current_os_version: String,
 }
 
-// Expected response from cloud
 #[derive(Debug, Deserialize)]
 pub struct CloudSyncResponse {
     pub target_os_commit_hash: Option<String>,
-}
-
-// Temporary structs for holding (and returning) the server response with owned data since the current CatalogResponseEntry struct contains borrowed data
-// This struct should not be necessary in the future, when it is clear what logic the check_for_update function will need to implement
-// e.g. checking version discrepancies to currently installed os and apps and only returning relevant update information instead of the entire server response.
-pub struct CatalogResponseEntryWithOwnedData {
-    pub name: String,
-    pub version: String,
-    pub url: String,
-    pub signature: Base64<'static>,
-}
-pub struct CatalogResponseWithOwnedData {
-    pub entries: Vec<CatalogResponseEntryWithOwnedData>,
+    pub orchestrator_version: Option<String>,
+    pub description: Option<String>,
 }
 
 // Builds the async reqwest HTTP client
 // If https_proxy is set, it will be used for all requests. Otherwise, reqwest will use https_proxy from the environment variables.
-// Returns:
-// - Ok(Client) if the client was built successfully
-// - Err(anyhow::Error) if there was an error building the client, with a context message indicating the failure reason
 pub fn build_http_client(config: &Config) -> Result<Client> {
     let mut builder = Client::builder();
 
-    // Reqwest uses https_proxy environment variable by default, we overwrite it if https_proxy is set in config.
     if let Some(proxy_url) = &config.https_proxy {
         println!("Using https proxy: {}", proxy_url);
         let proxy = reqwest::Proxy::https(proxy_url)
@@ -64,20 +46,12 @@ pub fn build_http_client(config: &Config) -> Result<Client> {
 }
 
 // Poll the server to check what the available OS version is
-// Exact details of logic wanted here are still tbd, so for now this function returns a owned version of the entire server response.
-// Returns:
-// - Ok(CatalogResponseWithOwnedData) if the server responded with a valid catalog response
-// - Err(anyhow::Error) if there was an error making the request or parsing the response, with a context message indicating the failure reason
-pub async fn check_for_update(
-    client: &Client,
-    config: &Config,
-) -> Result<CatalogResponseWithOwnedData> {
+pub async fn check_for_update(client: &Client, config: &Config) -> Result<CloudSyncResponse> {
     let request_payload = DeviceSyncRequest {
         device_uuid: config.device_uuid.clone(),
         current_os_version: config.current_os_version.clone(),
     };
 
-    // Await server response with hard coded timeout. Could be added to config in the future.
     let resp = client
         .post(format!("{}/v1/devices/sync", config.server_url))
         .json(&request_payload)
@@ -99,36 +73,19 @@ pub async fn check_for_update(
         .await
         .with_context(|| "Failed to read server response as text")?;
 
-    let update_info: CatalogResponse = serde_json::from_str::<CatalogResponse>(&text)
-        .with_context(|| "Failed to parse server response as CatalogResponse")?;
+    let update_info: CloudSyncResponse = serde_json::from_str(&text)
+        .with_context(|| "Failed to parse server response as CloudSyncResponse")?;
 
-    let owned_update_info = CatalogResponseWithOwnedData {
-        entries: update_info
-            .0
-            .iter()
-            .map(|entry| CatalogResponseEntryWithOwnedData {
-                name: entry.name.to_string(),
-                version: entry.version.to_string(),
-                url: entry.url.to_string(),
-                signature: Base64::from(entry.signature.0.clone().into_owned()),
-            })
-            .collect(),
-    };
-
-    Ok(owned_update_info)
+    Ok(update_info)
 }
 
-// Downloads the update from a given CatalogResponseEntry and saves it as "update_<name>_<version>.bin" to the directory specified in config.download_dir.
-// Input will most likely not be a CatalogResponseEntry in the future due to temporary nature of the current CatalogResponseEntry struct.
-// Returns:
-// - Ok(PathBuf) with the path to the downloaded file if the download was successful
-// - Err(anyhow::Error) if there was an error during the download or file writing process, with a context message indicating the failure reason
+// Downloads the update from the server based on the target commit hash
 pub async fn download_update(
     client: &Client,
-    single_update_info: &CatalogResponseEntry<'static>,
+    target_commit_hash: &str,
     config: &Config,
 ) -> Result<PathBuf> {
-    // Creates download directory according to config, which currently ONLY EXISTS IN THIS TEMPORARY CONFIG STRUCT
+
     tokio::fs::create_dir_all(&config.download_dir)
         .await
         .with_context(|| {
@@ -138,19 +95,18 @@ pub async fn download_update(
             )
         })?;
 
-    let filename = format!(
-        "update_{}_{}.bin",
-        single_update_info.name, single_update_info.version
-    );
+    let filename = format!("update_{}.bin", target_commit_hash);
     let file_path = config.download_dir.join(&filename);
 
-    // Await server download response with hard coded (long) timeout. Could be added to config in the future.
+    // Need to configure bootc download here for mid project review
+    let download_url = format!("{}/v1/download/{}", config.server_url, target_commit_hash);
+
     let resp = client
-        .get(single_update_info.url)
-        .timeout(std::time::Duration::from_secs(3600)) // Potentially long download, timeout set to 1 hour for now
+        .get(&download_url)
+        .timeout(std::time::Duration::from_secs(3600)) 
         .send()
         .await
-        .with_context(|| format!("Failed to download update from {}", &single_update_info.url))?;
+        .with_context(|| format!("Failed to download update from {}", &download_url))?;
 
     if !resp.status().is_success() {
         anyhow::bail!(
@@ -159,7 +115,6 @@ pub async fn download_update(
         );
     }
 
-    // Create the file to write the downloaded update into
     let mut file = tokio::fs::File::create(&file_path)
         .await
         .with_context(|| format!("Failed to create file at {:?}", &file_path))?;
@@ -167,7 +122,6 @@ pub async fn download_update(
     // Get the response body as a stream of bytes to write it in chunks, which is more efficient for large files
     let mut stream = resp.bytes_stream();
 
-    // Write the download in chunks
     while let Some(chunk) = stream.next().await {
         let dl_chunk = chunk.with_context(|| "Failed to read chunk from download stream")?;
         file.write_all(&dl_chunk)
