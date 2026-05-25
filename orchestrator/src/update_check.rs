@@ -22,7 +22,10 @@ use crate::util::executer::Executer;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateDecision {
     UpToDate,
-    UpdateRequired { reasons: Vec<String> },
+    UpdateRequired {
+        reasons: Vec<String>,
+        target_os_version: String,
+    },
 }
 
 pub struct UpdateChecker {
@@ -141,7 +144,10 @@ pub fn compare(current: &Inventory, target: &SystemRequirements) -> UpdateDecisi
         UpdateDecision::UpToDate
     } else {
         debug!("Update decision reasons: {:?}", reasons);
-        UpdateDecision::UpdateRequired { reasons }
+        UpdateDecision::UpdateRequired {
+            reasons,
+            target_os_version: target.system.os_version.clone(),
+        }
     }
 }
 
@@ -259,7 +265,7 @@ mod tests {
         );
         let target = requirements("41", target_bootc_with_checksum("def", None), vec![]);
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
+            UpdateDecision::UpdateRequired { reasons, .. } => {
                 assert!(reasons.iter().any(|r| r.contains("checksum drift")));
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
@@ -275,7 +281,7 @@ mod tests {
         );
         let target = requirements("41", target_bootc_with_checksum("abc", None), vec![]);
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
+            UpdateDecision::UpdateRequired { reasons, .. } => {
                 assert!(reasons.iter().any(|r| r.contains("OS version drift")));
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
@@ -301,7 +307,7 @@ mod tests {
             }],
         );
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
+            UpdateDecision::UpdateRequired { reasons, .. } => {
                 assert!(reasons.iter().any(|r| r.contains("data_collector")));
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
@@ -324,7 +330,7 @@ mod tests {
             }],
         );
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
+            UpdateDecision::UpdateRequired { reasons, .. } => {
                 assert!(reasons.iter().any(|r| r.contains("missing")));
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
@@ -343,7 +349,7 @@ mod tests {
         );
         let target = requirements("41", target_bootc_with_checksum("abc", None), vec![]);
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
+            UpdateDecision::UpdateRequired { reasons, .. } => {
                 assert!(reasons.iter().any(|r| r.contains("should be removed")));
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
@@ -361,5 +367,23 @@ mod tests {
         );
         let target = requirements("41", target_bootc_with_checksum("abc", None), vec![]);
         assert_eq!(compare(&current, &target), UpdateDecision::UpToDate);
+    }
+
+    #[test]
+    fn target_os_version_is_propagated_in_update_required() {
+        let current = inventory(
+            "40",
+            CollectionResult::Ok(local_bootc_with_checksum("abc", None)),
+            CollectionResult::Ok(vec![]),
+        );
+        let target = requirements("41", target_bootc_with_checksum("abc", None), vec![]);
+        match compare(&current, &target) {
+            UpdateDecision::UpdateRequired {
+                target_os_version, ..
+            } => {
+                assert_eq!(target_os_version, "41");
+            }
+            other => panic!("expected UpdateRequired, got {:?}", other),
+        }
     }
 }

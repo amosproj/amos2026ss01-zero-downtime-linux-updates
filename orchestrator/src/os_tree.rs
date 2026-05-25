@@ -44,6 +44,7 @@ impl RpmOstreeClient {
         Ok(status)
     }
 
+    #[allow(dead_code)]
     pub async fn upgrade(&self) -> Result<()> {
         let res = self
             .executer
@@ -55,6 +56,32 @@ impl RpmOstreeClient {
 
         if res.exit_code != Some(0) {
             return Err(anyhow!("rpm-ostree upgrade failed: {}", res.stderr));
+        }
+        Ok(())
+    }
+
+    /// Deploy a specific OS version as defined by the cloud database.
+    /// Runs `rpm-ostree deploy <version>` so that the requested version is
+    /// installed instead of blindly pulling the latest available.
+    pub async fn deploy(&self, version: &str) -> Result<()> {
+        let res = self
+            .executer
+            .execute(
+                "sudo".to_string(),
+                vec![
+                    "rpm-ostree".to_string(),
+                    "deploy".to_string(),
+                    version.to_string(),
+                ],
+            )
+            .await?;
+
+        if res.exit_code != Some(0) {
+            return Err(anyhow!(
+                "rpm-ostree deploy {} failed: {}",
+                version,
+                res.stderr
+            ));
         }
         Ok(())
     }
@@ -118,6 +145,106 @@ impl RpmOstreeClient {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::util::executer::{ExecResult, MockExecuter};
+    use mockall::predicate::eq;
+
+    #[tokio::test]
+    async fn deploy_calls_rpm_ostree_deploy_with_correct_version() {
+        let mut mock_exec = MockExecuter::new();
+
+        mock_exec
+            .expect_execute()
+            .with(
+                eq("sudo".to_string()),
+                eq(vec![
+                    "rpm-ostree".to_string(),
+                    "deploy".to_string(),
+                    "41".to_string(),
+                ]),
+            )
+            .times(1)
+            .returning(|_, _| {
+                Ok(ExecResult {
+                    stdout: "Staging deployment...done".to_string(),
+                    stderr: "".to_string(),
+                    exit_code: Some(0),
+                })
+            });
+
+        let client = RpmOstreeClient::new(Arc::new(mock_exec));
+        let result = client.deploy("41").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn deploy_returns_error_on_nonzero_exit_code() {
+        let mut mock_exec = MockExecuter::new();
+
+        mock_exec
+            .expect_execute()
+            .with(
+                eq("sudo".to_string()),
+                eq(vec![
+                    "rpm-ostree".to_string(),
+                    "deploy".to_string(),
+                    "99".to_string(),
+                ]),
+            )
+            .times(1)
+            .returning(|_, _| {
+                Ok(ExecResult {
+                    stdout: "".to_string(),
+                    stderr: "error: Version 99 not found in history".to_string(),
+                    exit_code: Some(1),
+                })
+            });
+
+        let client = RpmOstreeClient::new(Arc::new(mock_exec));
+        let result = client.deploy("99").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("rpm-ostree deploy 99 failed"));
+        assert!(err.contains("Version 99 not found in history"));
+    }
+
+    #[tokio::test]
+    async fn deploy_uses_version_from_update_decision() {
+        // Stellt sicher, dass die Version aus UpdateDecision 1:1 an rpm-ostree weitergereicht wird.
+        let target_version = "42";
+        let mut mock_exec = MockExecuter::new();
+
+        mock_exec
+            .expect_execute()
+            .with(
+                eq("sudo".to_string()),
+                eq(vec![
+                    "rpm-ostree".to_string(),
+                    "deploy".to_string(),
+                    target_version.to_string(),
+                ]),
+            )
+            .times(1)
+            .returning(|_, _| {
+                Ok(ExecResult {
+                    stdout: "Deploying 42...done".to_string(),
+                    stderr: "".to_string(),
+                    exit_code: Some(0),
+                })
+            });
+
+        let client = RpmOstreeClient::new(Arc::new(mock_exec));
+
+        // Simuliert den Aufruf aus run_os_tree_main_loop:
+        // UpdateDecision::UpdateRequired { target_os_version: "42", ... }
+        let decision_version = "42".to_string();
+        let result = client.deploy(&decision_version).await;
+        assert!(result.is_ok());
+    }
+}
+
 pub async fn run_os_tree_main_loop(
     agent_state: AgentState,
     client: Arc<RpmOstreeClient>,
@@ -148,28 +275,36 @@ pub async fn run_os_tree_main_loop(
             Ok(UpdateDecision::UpToDate) => {
                 info!("System is up to date.");
             }
-            Ok(UpdateDecision::UpdateRequired { reasons }) => {
+            Ok(UpdateDecision::UpdateRequired {
+                reasons,
+                target_os_version,
+            }) => {
                 info!(
                     "Update required ({} reason(s)): {}",
                     reasons.len(),
                     reasons.join("; ")
                 );
+                info!(
+                    "Deploying target OS version `{}` as defined by the database",
+                    target_os_version
+                );
 
-                match client.upgrade().await {
+                match client.deploy(&target_os_version).await {
                     Ok(()) => {
                         info!(
-                            "rpm-ostree upgrade staged successfully. Initiating system reboot..."
+                            "rpm-ostree deploy `{}` staged successfully. Initiating system reboot...",
+                            target_os_version
                         );
 
                         if let Err(e) = client.apply_reboot().await {
                             error!(
-                                "Critical: Upgrade succeeded but system reboot invocation failed: {:?}",
+                                "Critical: Deploy succeeded but system reboot invocation failed: {:?}",
                                 e
                             );
                         }
                     }
                     Err(e) => {
-                        error!("OS upgrade failed execution: {:?}", e);
+                        error!("OS deploy failed execution: {:?}", e);
                     }
                 }
             }
