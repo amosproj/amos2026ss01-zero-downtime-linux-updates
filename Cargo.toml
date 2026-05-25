@@ -1,12 +1,11 @@
 [workspace]
 resolver = "3"
-members = ["api-mock-server", "common", "orchestrator", "security-module"]
+members = ["api-mock-server", "common", "orchestrator"]
 
 [workspace.dependencies]
 amos-api-mock-server = { path = "api-mock-server" }
 amos-common = { path = "common" }
 amos-orchestrator = { path = "orchestrator" }
-amos-security-module = { path = "security-module" }
 
 clap = { version = "4.6.1", features = ["derive"] }
 config = { version = "0.15.22", features = ["toml"] }
