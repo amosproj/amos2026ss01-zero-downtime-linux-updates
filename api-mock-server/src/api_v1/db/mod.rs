@@ -144,28 +144,6 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_insert_app_assignement_without_group_or_device_fails() {
-        test_initialize_empty_inmem_db().await;
-
-        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned())
-            .await
-            .unwrap();
-        println!("Created app: {:?}", app);
-
-        let app_config =
-            super::add_application_config(app.id, "quay.io/bla".to_owned(), None, None)
-                .await
-                .unwrap();
-        println!("Created app config: {:?}", app_config);
-
-        let result = super::add_application_assignment(app_config.id, None, None).await;
-        println!("Created application assignment: {:?}", result);
-
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    #[serial]
     async fn generated_application_model_json_matches_expected() {
         test_initialize_empty_inmem_db().await;
 
@@ -252,7 +230,7 @@ mod tests {
             super::add_application_config(app.id, "quay.io/app:1.0".to_owned(), None, None)
                 .await
                 .unwrap();
-        let assignment = super::add_application_assignment(config.id, Some(d1.id), None)
+        let assignment = super::add_application_assignment_to_device(config.id, d1.id)
             .await
             .unwrap();
         let updated =
