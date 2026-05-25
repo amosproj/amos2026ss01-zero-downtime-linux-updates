@@ -1,5 +1,6 @@
 pub mod entities;
 
+pub mod http_errors;
 pub mod util;
 
 pub mod api {

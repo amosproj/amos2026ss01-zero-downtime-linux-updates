@@ -12,3 +12,4 @@ sea-orm = { workspace = true }
 serde_json = { workspace = true }
 tokio = { version = "1.52.2", features = ["full"] }
 base64 = "0.22"
+axum = { version = "0.8.9", default-features = false, features = ["http1", "http2", "json", "tokio", "query"] }
