@@ -12,6 +12,7 @@ config = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
 sea-orm = { workspace = true }
+# Ensure to match version with sea-orm from workspace!
 sea-orm-migration = { version = "2.0.0-rc", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 serde = { workspace = true }
 tokio = { workspace = true }
