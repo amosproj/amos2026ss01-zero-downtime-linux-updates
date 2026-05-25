@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-amos-common.workspace = true
+amos-common = { workspace = true }
 
 axum = { version = "0.8.9", default-features = false, features = ["http1", "http2", "json", "tokio"] }
 clap = { workspace = true }
