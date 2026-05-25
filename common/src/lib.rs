@@ -1,7 +1,12 @@
 pub mod entities;
 
-pub mod http_errors;
 pub mod util;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+pub struct ErrorResponse {
+    pub error: String,
+}
 
 pub mod api {
     use crate::util::Base64;

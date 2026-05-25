@@ -11,6 +11,37 @@ pub mod tenants;
 
 use axum::Router;
 
+use amos_common::ErrorResponse;
+use axum::{
+    Json,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
+
+pub(super) fn err(status: StatusCode, message: impl ToString) -> Response {
+    (
+        status,
+        Json(ErrorResponse {
+            error: message.to_string(),
+        }),
+    )
+        .into_response()
+}
+
+pub(super) fn not_found(resource: &str, id: i32) -> Response {
+    err(
+        StatusCode::NOT_FOUND,
+        format!("{} with id {} not found", resource, id),
+    )
+}
+
+pub(super) fn db_err(e: sea_orm::DbErr) -> Response {
+    err(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        format!("Database error: {}", e),
+    )
+}
+
 pub fn routes() -> Router {
     Router::new()
         .merge(application_assignments::routes())
