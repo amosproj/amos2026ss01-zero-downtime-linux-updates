@@ -33,7 +33,7 @@ pub async fn get_application_assignment(
     ApplicationAssignment::Entity::find_by_id(id).one(&db).await
 }
 
-pub async fn add_application_assignment(
+async fn add_application_assignment(
     app_config_id: i32,
     device_id: Option<i32>,
     group_id: Option<i32>,
@@ -82,7 +82,6 @@ pub async fn delete_application_assignment(id: i32) -> Result<u64, DbErr> {
     Ok(del.rows_affected)
 }
 
-#[allow(dead_code)]
 pub async fn add_application_assignment_to_device(
     app_config_id: i32,
     device_id: i32,
@@ -90,7 +89,6 @@ pub async fn add_application_assignment_to_device(
     add_application_assignment(app_config_id, Some(device_id), None).await
 }
 
-#[allow(dead_code)]
 pub async fn add_application_assignment_to_group(
     app_config_id: i32,
     group_id: i32,
