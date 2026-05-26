@@ -30,3 +30,14 @@ api "/os-assignments" POST '{ "id": 0, "os_version_id": 1, "device_id": 1 }'
 
 # api "/os-assignments?device_uuid=8b722f94-6852-42cf-9722-98446499a457" # works
 # api "/os-assignments?device_uuid=abc-123" # fails
+
+# --- reported-os-assignments ---
+
+# Create using explicit device_id in body (expects 201)
+api "/reported-os-assignments" POST '{ "id": 0, "os_version_id": 1, "device_id": 1, "updated_at": "1970-01-01T00:00:00Z" }'
+
+# Create using device_uuid query param to resolve device_id (expects 201)
+api "/reported-os-assignments?device_uuid=8b722f94-6852-42cf-9722-98446499a457" POST '{ "id": 0, "os_version_id": 1, "device_id": 0, "updated_at": "1970-01-01T00:00:00Z" }'
+
+# Create with non-existent device_uuid (expects 404)
+api "/reported-os-assignments?device_uuid=00000000-0000-0000-0000-000000000000" POST '{ "id": 0, "os_version_id": 1, "device_id": 0, "updated_at": "1970-01-01T00:00:00Z" }'
