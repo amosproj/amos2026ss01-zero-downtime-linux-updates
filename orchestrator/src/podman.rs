@@ -6,7 +6,6 @@
 
 use std::{
     collections::BTreeMap,
-    error::Error,
     marker::PhantomData,
     path::{Path, PathBuf},
     sync::Mutex,
@@ -23,13 +22,13 @@ static INSTANCE: Mutex<Option<Podman<RealPodmanRunner>>> = Mutex::new(Option::So
     phantom: PhantomData,
 }));
 
-struct Podman<R: PodmanRunner> {
+pub struct Podman<R: PodmanRunner> {
     version_cache: BTreeMap<String, String>,
     phantom: PhantomData<R>,
 }
 
 #[async_trait::async_trait]
-trait PodmanRunner {
+pub trait PodmanRunner {
     async fn run_podman(args: &[&str]) -> PodmanErr<Vec<u8>>;
     async fn try_write_version(item: &ComposeLsResultItem, ver: &str) -> PodmanErr<()>;
     async fn try_read_version(item: &ComposeLsResultItem) -> PodmanErr<String>;
@@ -46,7 +45,7 @@ impl Podman<RealPodmanRunner> {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct ComposeLsResultItem<'a> {
+pub struct ComposeLsResultItem<'a> {
     name: &'a str,
     status: &'a str,
     config_files: &'a str,
@@ -139,7 +138,7 @@ impl<R: PodmanRunner> Podman<R> {
         })()
         .await
         {
-            log::info!("Failed to save stack version: {e}");
+            log::warn!("Failed to save stack version: {e}");
         }
 
         self.version_cache.insert(id.clone(), version.clone());
@@ -153,7 +152,7 @@ impl<R: PodmanRunner> Podman<R> {
     }
 
     // Remove stopped containers, unused images, volumes and cache entries
-    pub async fn cleanup<'a>(&'a mut self) -> PodmanErr<()> {
+    pub async fn prune<'a>(&'a mut self) -> PodmanErr<()> {
         R::run_podman(&["system", "prune", "--all", "--force", "--volumes"]).await?;
 
         // Compose cache needs some extra attention
@@ -193,10 +192,10 @@ impl<R: PodmanRunner> Podman<R> {
             }
         }
 
-        println!("Deletion list: {:?}", deletion_list);
         for item in deletion_list {
-            // Treat deletion failures as non-fatal
-            let _ = tokio::fs::remove_dir_all(&item).await;
+            if let Err(e) = tokio::fs::remove_dir_all(&item).await {
+                log::warn!("Failed to delete stale Compose cache folder: {e}");
+            }
         }
 
         Ok(())
@@ -204,10 +203,10 @@ impl<R: PodmanRunner> Podman<R> {
 }
 
 #[derive(Clone, Copy)]
-struct StackSource<'a>(&'a str);
+pub struct StackSource<'a>(&'a str);
 
 impl<'a> StackSource<'a> {
-    pub fn new(source: &'a str) -> Result<Self, Box<dyn Error>> {
+    pub fn new(source: &'a str) -> PodmanErr<Self> {
         if !source.starts_with("oci://") {
             Err("Only compose files from OCI registries supported (oci://...)".into())
         } else if source.ends_with("latest") {
@@ -218,15 +217,15 @@ impl<'a> StackSource<'a> {
     }
 }
 
-struct PodmanStack<'a, R: PodmanRunner> {
+pub struct PodmanStack<'a, R: PodmanRunner> {
     id: String,
     status: PodmanStackStatus,
     version: Option<String>,
     phantom: PhantomData<(&'a (), R)>,
 }
 
-#[derive(PartialEq, Eq, Debug)]
-enum PodmanStackStatus {
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum PodmanStackStatus {
     Stopped,
     Ambiguous,
     Running,
@@ -249,9 +248,19 @@ impl<'a, R: PodmanRunner> PodmanStack<'a, R> {
         R::run_podman(&["compose", "-p", &self.id, "down", "--timeout", "30"]).await?;
         Ok(())
     }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    pub fn status(&self) -> PodmanStackStatus {
+        self.status
+    }
+    pub fn version(&self) -> &Option<String> {
+        &self.version
+    }
 }
 
-struct RealPodmanRunner;
+pub struct RealPodmanRunner;
 
 impl RealPodmanRunner {
     fn infer_version_file_path(ls_item: &ComposeLsResultItem) -> PodmanErr<PathBuf> {
