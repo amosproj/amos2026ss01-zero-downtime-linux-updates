@@ -409,8 +409,8 @@ mod tests {
         assert_eq!(result.len(), 2);
 
         // First entry is the booted deployment
-        assert_eq!(result[0].is_booted, true);
-        assert_eq!(result[0].is_staged, false);
+        assert!(result[0].is_booted);
+        assert!(!result[0].is_staged);
         assert_eq!(result[0].version, "44.20260511.0".to_string());
         assert_eq!(
             result[0].checksum,
@@ -422,8 +422,8 @@ mod tests {
         );
 
         // Second entry is the rollback deployment
-        assert_eq!(result[1].is_booted, false);
-        assert_eq!(result[1].is_staged, false);
+        assert!(!result[1].is_booted);
+        assert!(!result[1].is_staged);
         assert_eq!(result[1].version, "44.20260427.0".to_string());
         assert_eq!(
             result[1].checksum,

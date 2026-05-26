@@ -406,7 +406,8 @@ mod tests {
     // ReportedApplicationAssignment::Model: { id: i32, application_config_id: i32, device_id: i32, updated_at: DateTimeUtc }
     // ReportedOsAssignment::Model:          { id: i32, os_version_id: i32, device_id: i32, updated_at: DateTimeUtc }
     // device_id is NOT optional on reported assignments (i32, not Option<i32>).
-    // No POST/PUT routes are registered for these — only GET and DELETE.
+    // No POST/PUT routes for reported-app-assignments — only GET and DELETE.
+    // reported-os-assignments supports POST: body device_id or ?device_uuid=<str> query param.
 
     #[tokio::test]
     #[serial]
@@ -415,18 +416,6 @@ mod tests {
             test_app().await,
             "/v1/reported-app-assignments",
             r#"{"id":0,"application_config_id":1,"device_id":1,"updated_at":"2024-01-01T00:00:00Z"}"#,
-        )
-        .await;
-        assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_post_reported_os_assignments_returns_405() {
-        let (status, _) = post(
-            test_app().await,
-            "/v1/reported-os-assignments",
-            r#"{"id":0,"os_version_id":1,"device_id":1,"updated_at":"2024-01-01T00:00:00Z"}"#,
         )
         .await;
         assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
@@ -446,6 +435,91 @@ mod tests {
         let (status, body) = get(test_app().await, "/v1/reported-os-assignments").await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(body, "[]");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_reported_os_assignment_with_device_id_returns_201() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"dev-uuid-1","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/os-versions",
+            r#"{"id":0,"commit_hash":"abc123","orchestrator_version":"1.0","description":null}"#,
+        )
+        .await;
+
+        let (status, body) = post(
+            app,
+            "/v1/reported-os-assignments",
+            r#"{"id":0,"os_version_id":1,"device_id":1,"updated_at":"2024-01-01T00:00:00Z"}"#,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["os_version_id"], 1);
+        assert_eq!(json["device_id"], 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_reported_os_assignment_with_device_uuid_returns_201() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"test-uuid-42","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/os-versions",
+            r#"{"id":0,"commit_hash":"abc123","orchestrator_version":"1.0","description":null}"#,
+        )
+        .await;
+
+        let (status, body) = post(
+            app,
+            "/v1/reported-os-assignments?device_uuid=test-uuid-42",
+            r#"{"id":0,"os_version_id":1,"device_id":0,"updated_at":"2024-01-01T00:00:00Z"}"#,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["os_version_id"], 1);
+        assert_eq!(json["device_id"], 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_reported_os_assignment_with_unknown_device_uuid_returns_404() {
+        let (status, _) = post(
+            test_app().await,
+            "/v1/reported-os-assignments?device_uuid=does-not-exist",
+            r#"{"id":0,"os_version_id":1,"device_id":0,"updated_at":"2024-01-01T00:00:00Z"}"#,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::NOT_FOUND);
     }
 
     // --- Error response shape ---

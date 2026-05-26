@@ -3,19 +3,21 @@ use clap::Parser;
 use config_loader::get_config;
 use log::{debug, error, info};
 
+use crate::loop_os::run_os_tree_main_loop;
+use crate::state::OsState;
 use crate::util::bootc_wrapper::Bootc;
 use crate::util::executer::RealExecuter;
 
 use crate::{
-    apps::{get_initial_apps_state, run_apps_main_loop},
     inventory::collect_and_save_inventory,
-    os_tree::{RpmOstreeClient, run_os_tree_main_loop},
+    loop_apps::{get_initial_apps_state, run_apps_main_loop},
     state::AgentState,
 };
-mod apps;
+mod download_manager;
 mod healthcheck;
 mod inventory;
-mod os_tree;
+mod loop_apps;
+mod loop_os;
 mod state;
 mod util;
 use std::env;
@@ -54,11 +56,9 @@ async fn main() {
 
     env_logger::builder().filter_level(log_level).init();
 
-    let executer = RealExecuter;
-    let bootc_client = Bootc::new(Box::new(executer));
+    let bootc_client = Arc::new(Bootc::new(Box::new(RealExecuter)));
 
-    let ostree_client = Arc::new(RpmOstreeClient::new(Arc::new(RealExecuter)));
-
+    // run the selfcheck pipeline if --self-check is provided as commandline arg
     if cli.self_check {
         if let Err(err) =
             crate::healthcheck::healthcheck(&bootc_client, &RealExecuter, cli.config.clone()).await
@@ -72,10 +72,10 @@ async fn main() {
 
     info!("Started app...");
 
-    let config = get_config(cli.config).unwrap_or_else(|err| {
+    let config = Arc::new(get_config(cli.config).unwrap_or_else(|err| {
         error!("Failed to load config: {}", err);
         std::process::exit(1);
-    });
+    }));
 
     debug!("Loaded config: {:?}", config);
 
@@ -92,27 +92,44 @@ async fn main() {
     }
 
     info!("Reading inital OS State");
-    let os_state = ostree_client.status().await.unwrap_or_else(|err| {
-        error!("Failed to fetch initial rpm-ostree status: {}", err);
+    let bootc_status = bootc_client.status().await.unwrap_or_else(|err| {
+        error!("Failed to fetch initial bootc status: {}", err);
         std::process::exit(1);
     });
+    let os_state = OsState {
+        update_pending: bootc_status.staged.is_some(),
+        booted_image: bootc_status.booted.checksum.clone(),
+        update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
+    };
 
     info!("Reading inital application state");
     let apps_state = get_initial_apps_state();
 
     debug!("Creating AgentState");
-    let agent_state = AgentState::new(VERSION, config, os_state, apps_state);
+    let agent_state = AgentState::new(VERSION, Arc::clone(&config), os_state, apps_state);
 
     info!(
         "Running amos-zero-downtime with version: {}",
         agent_state.self_version
     );
 
+    let download_manager = Arc::new(
+        match download_manager::DownloadManager::new(Arc::clone(&config)) {
+            Ok(dm) => dm,
+            Err(err) => {
+                error!("Failed to initialize secure cloud HTTP client: {:?}", err);
+                std::process::exit(1);
+            }
+        },
+    );
+
     let _apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
         agent_state.clone(),
-        ostree_client.clone(),
+        Arc::clone(&bootc_client),
+        Arc::clone(&download_manager),
     ));
+
     tokio::signal::ctrl_c().await.unwrap();
 }
 

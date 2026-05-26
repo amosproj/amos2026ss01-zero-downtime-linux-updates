@@ -22,6 +22,11 @@ pub struct Settings {
 
     #[serde(default = "default_inventory_path")]
     pub inventory_path: String,
+
+    pub https_proxy: Option<String>,
+
+    #[allow(dead_code)]
+    pub device_uuid: String,
 }
 
 pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::ConfigError> {
@@ -58,14 +63,19 @@ pub fn validate_config(config: &Settings) -> Result<(), String> {
 mod tests {
     use super::*;
 
-    fn get_default() -> Result<Settings, config::ConfigError> {
-        let config = Config::builder().build()?;
-        config.try_deserialize()
+    fn get_default() -> Settings {
+        Settings {
+            cloud_url: default_cloud(),
+            poll_interval_secs: default_interval(),
+            inventory_path: default_inventory_path(),
+            https_proxy: None,
+            device_uuid: "00000000-0000-0000-0000-000000000000".into(),
+        }
     }
 
     #[test]
     fn url_with_http_succeeds() {
-        let mut config = get_default().unwrap();
+        let mut config = get_default();
         config.cloud_url = "http://weber.cloud/foo".into();
 
         let validation = validate_config(&config);
@@ -74,7 +84,7 @@ mod tests {
 
     #[test]
     fn url_with_https_succeeds() {
-        let mut config = get_default().unwrap();
+        let mut config = get_default();
         config.cloud_url = "https://weber.cloud/foo".into();
 
         let validation = validate_config(&config);
@@ -83,7 +93,7 @@ mod tests {
 
     #[test]
     fn url_without_http_or_https_fails() {
-        let mut config = get_default().unwrap();
+        let mut config = get_default();
         config.cloud_url = "ftp://weber.cloud/foo".into();
 
         let validation = validate_config(&config);
@@ -92,7 +102,7 @@ mod tests {
 
     #[test]
     fn poll_interval_zero_fails() {
-        let mut config = get_default().unwrap();
+        let mut config = get_default();
         config.poll_interval_secs = 0;
 
         let validation = validate_config(&config);

@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
+amos-common = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 clap = { workspace = true }
 config = { workspace = true }
@@ -15,8 +17,10 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = "0.1.44"
+futures-util = "0.3.32"
+reqwest = { version = "0.13.3", features = ["json"] }
 
 [dev-dependencies]
-mockall = "0.11"
-rand = "0.8"
+mockall = "0.14"
+rand = "0.10.1"
 tempfile = "3"

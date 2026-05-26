@@ -8,6 +8,7 @@ use crate::config_loader::Settings;
 pub struct OsState {
     #[expect(unused)]
     pub update_pending: bool, // when an update is pending (updated but not yet rebooted)
+    #[expect(unused)]
     pub booted_image: String, // the current version and tag of the running image
     #[expect(unused)]
     pub update_ostree_commit: Option<String>, // if update available -> the image tag for the update
@@ -25,7 +26,7 @@ pub struct AppState {
 #[derive(Debug, Clone)]
 pub struct AgentState {
     pub self_version: String,
-    pub config: Settings,
+    pub config: Arc<Settings>,
 
     pub os_state: Arc<Mutex<OsState>>,
     pub apps_state: Arc<Mutex<Vec<AppState>>>,
@@ -34,7 +35,7 @@ pub struct AgentState {
 impl AgentState {
     pub fn new(
         version: impl Into<String>,
-        config: Settings,
+        config: Arc<Settings>,
         initial_os_state: OsState,
         inital_apps_state: Vec<AppState>,
     ) -> Self {

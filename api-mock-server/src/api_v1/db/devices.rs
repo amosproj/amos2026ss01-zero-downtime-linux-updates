@@ -27,6 +27,16 @@ pub async fn get_device(id: i32) -> Result<Option<Device::Model>, DbErr> {
     Device::Entity::find_by_id(id).one(&db).await
 }
 
+/// Returns the Device for a given uuid, empty Option if the uuid does not exist
+pub async fn get_device_by_uuid(uuid: String) -> Result<Option<Device::Model>, DbErr> {
+    let db = db!();
+
+    Device::Entity::find()
+        .filter(Device::Column::Uuid.eq(uuid))
+        .one(&db)
+        .await
+}
+
 pub async fn add_device(
     uuid: String,
     hostname: String,

@@ -29,7 +29,6 @@ pub async fn get_reported_os_assignment(
     ReportedOsAssignment::Entity::find_by_id(id).one(&db).await
 }
 
-#[allow(dead_code)]
 pub async fn add_reported_os_assignment(
     os_version_id: i32,
     device_id: i32,
