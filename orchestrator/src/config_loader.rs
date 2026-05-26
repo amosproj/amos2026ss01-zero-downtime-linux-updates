@@ -11,9 +11,6 @@ fn default_interval() -> u32 {
 fn default_inventory_path() -> String {
     "./inventory/inventory.json".into()
 }
-fn default_download_dir() -> String {
-    "./downloads".into()
-}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
@@ -28,9 +25,7 @@ pub struct Settings {
 
     pub https_proxy: Option<String>,
 
-    #[serde(default = "default_download_dir")]
-    pub download_dir: String,
-
+    #[allow(dead_code)]
     pub device_uuid: String,
 }
 
@@ -74,7 +69,6 @@ mod tests {
             poll_interval_secs: default_interval(),
             inventory_path: default_inventory_path(),
             https_proxy: None,
-            download_dir: default_download_dir(),
             device_uuid: "00000000-0000-0000-0000-000000000000".into(),
         }
     }

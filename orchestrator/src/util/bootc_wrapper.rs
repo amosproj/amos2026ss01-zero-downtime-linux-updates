@@ -225,7 +225,7 @@ mod tests {
             result.booted.checksum,
             "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443"
         );
-        assert_eq!(result.rollback_queued, false);
+        assert!(!result.rollback_queued);
     }
 
     #[tokio::test]

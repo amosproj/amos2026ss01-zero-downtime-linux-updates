@@ -38,14 +38,15 @@ async fn list_os_assignments(Query(params): Query<OsAssignmentQuery>) -> Respons
     let mut device_id = params.device_id;
 
     // Resolve device_uuid
-    if params.device_uuid.is_some() {
-        let device_uuid = params.device_uuid.unwrap();
+    if let Some(device_uuid) = params.device_uuid {
         match db::get_device_by_uuid(device_uuid.clone()).await {
             Ok(Some(device)) => device_id = Some(device.id),
-            Ok(None) => return err(
-                StatusCode::NOT_FOUND,
-                format!("No device with uuid {} found", device_uuid),
-            ),
+            Ok(None) => {
+                return err(
+                    StatusCode::NOT_FOUND,
+                    format!("No device with uuid {} found", device_uuid),
+                );
+            }
             Err(e) => return db_err(e),
         }
     }

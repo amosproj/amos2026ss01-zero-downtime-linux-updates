@@ -13,11 +13,15 @@ pub struct DownloadManager {
 impl DownloadManager {
     pub fn new(config: Arc<Settings>) -> Result<Self> {
         let http_client = build_http_client(&config)?;
-        Ok(Self { http_client, config })
+        Ok(Self {
+            http_client,
+            config,
+        })
     }
 
     /// Fetches the OS version assigned to this device from the API.
     /// Queries `/os-assignments?device_uuid=<uuid>` then `/os-versions/<id>`.
+    #[allow(dead_code)]
     pub async fn get_expected_os_version(&self) -> Result<OsVersion::Model> {
         let assignment = self.get_os_assignment().await?;
         self.get_os_version(assignment.os_version_id).await
@@ -37,11 +41,7 @@ impl DownloadManager {
             .with_context(|| format!("Failed to reach server at {}", &self.config.cloud_url))?;
 
         if !resp.status().is_success() {
-            anyhow::bail!(
-                "Server responded with status {} for {}",
-                resp.status(),
-                url
-            );
+            anyhow::bail!("Server responded with status {} for {}", resp.status(), url);
         }
 
         let assignments: Vec<OsAssignment::Model> = resp
@@ -68,11 +68,7 @@ impl DownloadManager {
             .with_context(|| format!("Failed to reach server at {}", &self.config.cloud_url))?;
 
         if !resp.status().is_success() {
-            anyhow::bail!(
-                "Server responded with status {} for {}",
-                resp.status(),
-                url
-            );
+            anyhow::bail!("Server responded with status {} for {}", resp.status(), url);
         }
 
         resp.json::<OsVersion::Model>()

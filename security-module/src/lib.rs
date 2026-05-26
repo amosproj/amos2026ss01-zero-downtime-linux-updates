@@ -31,7 +31,7 @@ mod tests {
     async fn setup_test_file(name: &str, content: &[u8]) -> std::path::PathBuf {
         let path = std::env::temp_dir().join(name);
         fs::write(&path, content).await.unwrap();
-        return path;
+        path
     }
 
     #[tokio::test]
