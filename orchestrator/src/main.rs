@@ -5,18 +5,18 @@ use log::{debug, error, info};
 
 use crate::util::bootc_wrapper::Bootc;
 use crate::util::executer::RealExecuter;
+use crate::util::os_tree::RpmOstreeClient;
 
 use crate::{
-    apps::{get_initial_apps_state, run_apps_main_loop},
     inventory::collect_and_save_inventory,
-    os_tree::{RpmOstreeClient, run_os_tree_main_loop},
+    loop_apps::{get_initial_apps_state, run_apps_main_loop},
     state::AgentState,
 };
-mod apps;
 mod download_manager;
 mod healthcheck;
 mod inventory;
-mod os_tree;
+mod loop_apps;
+mod loop_os;
 mod state;
 mod util;
 use std::env;
@@ -110,9 +110,9 @@ async fn main() {
     );
 
     let dm_config = download_manager::Config {
-        server_url: config.server_url.clone(), 
+        server_url: config.server_url.clone(),
         https_proxy: config.https_proxy.clone(), // None most likely
-        download_dir: PathBuf::from(&config.download_dir), 
+        download_dir: PathBuf::from(&config.download_dir),
         device_uuid: config.device_uuid.clone(), // Hard-code for now, get from device later
         current_os_version: config.current_os_commit.clone(), // Need to actually get that from inventory or improvise temporarily
     };
@@ -128,26 +128,42 @@ async fn main() {
     info!("Polling cloud server for targeted system updates...");
     match download_manager::check_for_update(&http_client, &dm_config).await {
         Ok(sync_response) => {
-            info!("Cloud sync successful. Server response: {:?}", sync_response);
-            
+            info!(
+                "Cloud sync successful. Server response: {:?}",
+                sync_response
+            );
+
             if let Some(target_hash) = sync_response.target_os_commit_hash {
                 if target_hash != dm_config.current_os_version {
-                    info!("New target OS update discovered [Hash: {}]. Starting download phase...", target_hash);
-                    
-                    match download_manager::download_update(&http_client, &target_hash, &dm_config).await {
+                    info!(
+                        "New target OS update discovered [Hash: {}]. Starting download phase...",
+                        target_hash
+                    );
+
+                    match download_manager::download_update(&http_client, &target_hash, &dm_config)
+                        .await
+                    {
                         Ok(downloaded_path) => {
-                            info!("Update image successfully staged locally at: {:?}", downloaded_path);
+                            info!(
+                                "Update image successfully staged locally at: {:?}",
+                                downloaded_path
+                            );
                             // downloaded_path to bootc here
                         }
                         Err(err) => {
-                            error!("Critical failure while transferring update payload: {:?}", err);
+                            error!(
+                                "Critical failure while transferring update payload: {:?}",
+                                err
+                            );
                         }
                     }
                 } else {
                     info!("System is up to date. Target matches running commit hash.");
                 }
             } else {
-                info!("No target OS updates assigned to this hardware profile by cloud orchestrator.");
+                info!(
+                    "No target OS updates assigned to this hardware profile by cloud orchestrator."
+                );
             }
         }
         Err(err) => {
