@@ -28,16 +28,13 @@ pub struct CatalogResponseWithOwnedData {
     pub entries: Vec<CatalogResponseEntryWithOwnedData>,
 }
 
-// Builds the async reqwest HTTP client
-// If https_proxy is set, it will be used for all requests. Otherwise, reqwest will use https_proxy from the environment variables.
-// Returns:
-// - Ok(Client) if the client was built successfully
-// - Err(anyhow::Error) if there was an error building the client, with a context message indicating the failure reason
-pub fn build_http_client(config: &Config) -> Result<Client> {
+// Builds the async reqwest HTTP client.
+// If `https_proxy` is set, it is used for all requests. Otherwise, reqwest falls back to the
+// https_proxy environment variable if set.
+pub fn build_http_client(https_proxy: Option<&str>) -> Result<Client> {
     let mut builder = Client::builder();
 
-    // Reqwest uses https_proxy environment variable by default, we overwrite it if https_proxy is set in config.
-    if let Some(proxy_url) = &config.https_proxy {
+    if let Some(proxy_url) = https_proxy {
         println!("Using https proxy: {}", proxy_url);
         let proxy = reqwest::Proxy::https(proxy_url)
             .with_context(|| format!("Failed to set https proxy: {}", proxy_url))?;
@@ -110,9 +107,9 @@ pub async fn check_for_update(
 // - Err(anyhow::Error) on transport, status, or deserialization failures, with context.
 pub async fn get_system_requirements(
     client: &Client,
-    config: &Config,
+    server_url: &str,
 ) -> Result<SystemRequirements> {
-    let url = format!("{}/v1/system-requirements", config.server_url);
+    let url = format!("{}/v1/system-requirements", server_url);
 
     let resp = client
         .get(&url)

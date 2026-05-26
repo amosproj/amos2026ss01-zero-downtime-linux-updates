@@ -1,5 +1,7 @@
+use crate::inventory::collect_inventory;
 use crate::state::{AgentState, OsState};
 use crate::update_check::{UpdateChecker, UpdateDecision};
+use crate::util::bootc_wrapper::Bootc;
 use anyhow::{Context, Result, anyhow};
 
 use log::{error, info, warn};
@@ -122,6 +124,8 @@ pub async fn run_os_tree_main_loop(
     agent_state: AgentState,
     client: Arc<RpmOstreeClient>,
     update_checker: Arc<UpdateChecker>,
+    bootc: Arc<Bootc>,
+    exec: Arc<dyn Executer>,
 ) {
     let mut update_interval = interval(Duration::from_secs(
         agent_state.config.poll_interval_secs.into(),
@@ -143,34 +147,57 @@ pub async fn run_os_tree_main_loop(
             *current_state = host_status;
         }
 
-        info!("Checking for OS update");
-        match update_checker.check().await {
+        let inventory = match collect_inventory(bootc.as_ref(), exec.as_ref()).await {
+            Ok(inv) => inv,
+            Err(e) => {
+                warn!("Failed to collect inventory for update check: {:?}", e);
+                continue;
+            }
+        };
+
+        info!("Checking for update");
+        match update_checker.check(&inventory).await {
             Ok(UpdateDecision::UpToDate) => {
                 info!("System is up to date.");
             }
-            Ok(UpdateDecision::UpdateRequired { reasons }) => {
-                info!(
-                    "Update required ({} reason(s)): {}",
-                    reasons.len(),
-                    reasons.join("; ")
-                );
+            Ok(UpdateDecision::UpdateRequired {
+                os_reasons,
+                app_reasons,
+            }) => {
+                if !os_reasons.is_empty() {
+                    info!(
+                        "OS update required ({} reason(s)): {}",
+                        os_reasons.len(),
+                        os_reasons.join("; ")
+                    );
 
-                match client.upgrade().await {
-                    Ok(()) => {
-                        info!(
-                            "rpm-ostree upgrade staged successfully. Initiating system reboot..."
-                        );
-
-                        if let Err(e) = client.apply_reboot().await {
-                            error!(
-                                "Critical: Upgrade succeeded but system reboot invocation failed: {:?}",
-                                e
+                    match client.upgrade().await {
+                        Ok(()) => {
+                            info!(
+                                "rpm-ostree upgrade staged successfully. Initiating system reboot..."
                             );
+
+                            if let Err(e) = client.apply_reboot().await {
+                                error!(
+                                    "Critical: Upgrade succeeded but system reboot invocation failed: {:?}",
+                                    e
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            error!("OS upgrade failed execution: {:?}", e);
                         }
                     }
-                    Err(e) => {
-                        error!("OS upgrade failed execution: {:?}", e);
-                    }
+                }
+
+                // Application drift is reported here but not acted on; apps are
+                // managed by run_apps_main_loop and must not trigger a reboot.
+                if !app_reasons.is_empty() {
+                    info!(
+                        "Application update required ({} reason(s)) — handled by apps loop: {}",
+                        app_reasons.len(),
+                        app_reasons.join("; ")
+                    );
                 }
             }
             Err(e) => {

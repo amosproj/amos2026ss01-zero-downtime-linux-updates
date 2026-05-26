@@ -108,14 +108,7 @@ async fn main() {
 
     debug!("Building update checker");
     let update_checker = Arc::new(
-        UpdateChecker::new(
-            config.cloud_url.clone(),
-            None,
-            PathBuf::from("./downloads"),
-            bootc_client.clone(),
-            exec.clone(),
-        )
-        .unwrap_or_else(|err| {
+        UpdateChecker::new(config.cloud_url.clone(), None).unwrap_or_else(|err| {
             error!("Failed to build update checker: {}", err);
             std::process::exit(1);
         }),
@@ -134,6 +127,8 @@ async fn main() {
         agent_state.clone(),
         ostree_client.clone(),
         update_checker.clone(),
+        bootc_client.clone(),
+        exec.clone(),
     ));
     tokio::signal::ctrl_c().await.unwrap();
 }

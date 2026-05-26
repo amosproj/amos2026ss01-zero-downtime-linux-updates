@@ -1,74 +1,61 @@
 // Compares the device's local inventory against the cloud-side target state
-// (SystemRequirements) and produces an UpdateDecision. The HTTP fetch and the
-// local collection are wired together by `UpdateChecker`; the pure comparison
-// lives in `compare()` so it can be unit-tested without I/O.
-
-use std::path::PathBuf;
-use std::sync::Arc;
+// (SystemRequirements) and produces an UpdateDecision. The HTTP fetch is owned
+// by `UpdateChecker`; the pure comparison lives in `compare()` so it can be
+// unit-tested without I/O. The caller supplies the local `Inventory`, so the
+// checker does not duplicate collection work the surrounding loop already did.
 
 use anyhow::Result;
 use log::{debug, warn};
 use reqwest::Client as HttpClient;
 
-use amos_common::download_manager::{
-    Config as DownloadManagerConfig, build_http_client, get_system_requirements,
-};
-use amos_common::inventory_model::SystemRequirements;
+use amos_common::download_manager::{build_http_client, get_system_requirements};
 
-use crate::inventory::{CollectionResult, Inventory, collect_inventory};
-use crate::util::bootc_wrapper::Bootc;
-use crate::util::executer::Executer;
+use crate::inventory::{CollectionResult, Inventory};
 
+// Update reasons are split so the caller can act on OS drift (rpm-ostree
+// upgrade + reboot) independently from application drift (which today is
+// handled elsewhere and must not trigger a reboot).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateDecision {
     UpToDate,
-    UpdateRequired { reasons: Vec<String> },
+    UpdateRequired {
+        os_reasons: Vec<String>,
+        app_reasons: Vec<String>,
+    },
 }
 
 pub struct UpdateChecker {
     http: HttpClient,
-    dm_config: DownloadManagerConfig,
-    bootc: Arc<Bootc>,
-    exec: Arc<dyn Executer>,
+    server_url: String,
 }
 
 impl UpdateChecker {
-    pub fn new(
-        server_url: String,
-        https_proxy: Option<String>,
-        download_dir: PathBuf,
-        bootc: Arc<Bootc>,
-        exec: Arc<dyn Executer>,
-    ) -> Result<Self> {
-        let dm_config = DownloadManagerConfig {
-            server_url,
-            https_proxy,
-            download_dir,
-        };
-        let http = build_http_client(&dm_config)?;
-        Ok(Self {
-            http,
-            dm_config,
-            bootc,
-            exec,
-        })
+    pub fn new(server_url: String, https_proxy: Option<String>) -> Result<Self> {
+        let http = build_http_client(https_proxy.as_deref())?;
+        Ok(Self { http, server_url })
     }
 
-    pub async fn check(&self) -> Result<UpdateDecision> {
-        let target = get_system_requirements(&self.http, &self.dm_config).await?;
-        let current = collect_inventory(self.bootc.as_ref(), self.exec.as_ref()).await?;
-        Ok(compare(&current, &target))
+    // Fetches the cloud-side requirements and compares them to the supplied
+    // local inventory. The inventory is passed in so the caller can reuse a
+    // single collection per poll cycle.
+    pub async fn check(&self, current: &Inventory) -> Result<UpdateDecision> {
+        let target = get_system_requirements(&self.http, &self.server_url).await?;
+        Ok(compare(current, &target))
     }
 }
 
 // Pure comparison between local inventory and cloud target.
 // CollectionResult::Unavailable entries are logged and skipped — an unknown
 // local section doesn't fabricate an update reason.
-pub fn compare(current: &Inventory, target: &SystemRequirements) -> UpdateDecision {
-    let mut reasons = Vec::new();
+pub fn compare(
+    current: &Inventory,
+    target: &amos_common::inventory_model::SystemRequirements,
+) -> UpdateDecision {
+    let mut os_reasons = Vec::new();
+    let mut app_reasons = Vec::new();
 
     if current.system.os_version != target.system.os_version {
-        reasons.push(format!(
+        os_reasons.push(format!(
             "OS version drift: current `{}` -> target `{}`",
             current.system.os_version, target.system.os_version
         ));
@@ -77,7 +64,7 @@ pub fn compare(current: &Inventory, target: &SystemRequirements) -> UpdateDecisi
     match &current.bootc_status {
         CollectionResult::Ok(status) => {
             if status.booted.checksum != target.bootc_status.booted.checksum {
-                reasons.push(format!(
+                os_reasons.push(format!(
                     "Bootc booted checksum drift: current `{}` -> target `{}`",
                     status.booted.checksum, target.bootc_status.booted.checksum
                 ));
@@ -90,7 +77,7 @@ pub fn compare(current: &Inventory, target: &SystemRequirements) -> UpdateDecisi
                 .as_ref()
                 .map(|i| i.image_ref.as_str());
             if current_image_ref != target_image_ref {
-                reasons.push(format!(
+                os_reasons.push(format!(
                     "Bootc booted image_ref drift: current {:?} -> target {:?}",
                     current_image_ref, target_image_ref
                 ));
@@ -106,11 +93,11 @@ pub fn compare(current: &Inventory, target: &SystemRequirements) -> UpdateDecisi
             for target_app in &target.applications {
                 match apps.iter().find(|a| a.app_name == target_app.app_name) {
                     Some(curr) if curr.app_version == target_app.app_version => {}
-                    Some(curr) => reasons.push(format!(
+                    Some(curr) => app_reasons.push(format!(
                         "Application `{}` version drift: current `{}` -> target `{}`",
                         target_app.app_name, curr.app_version, target_app.app_version
                     )),
-                    None => reasons.push(format!(
+                    None => app_reasons.push(format!(
                         "Application `{}` missing: target version `{}`",
                         target_app.app_name, target_app.app_version
                     )),
@@ -122,7 +109,7 @@ pub fn compare(current: &Inventory, target: &SystemRequirements) -> UpdateDecisi
                     .iter()
                     .any(|t| t.app_name == curr.app_name)
                 {
-                    reasons.push(format!(
+                    app_reasons.push(format!(
                         "Application `{}` should be removed (current version `{}`)",
                         curr.app_name, curr.app_version
                     ));
@@ -137,11 +124,17 @@ pub fn compare(current: &Inventory, target: &SystemRequirements) -> UpdateDecisi
         }
     }
 
-    if reasons.is_empty() {
+    if os_reasons.is_empty() && app_reasons.is_empty() {
         UpdateDecision::UpToDate
     } else {
-        debug!("Update decision reasons: {:?}", reasons);
-        UpdateDecision::UpdateRequired { reasons }
+        debug!(
+            "Update decision: os_reasons={:?}, app_reasons={:?}",
+            os_reasons, app_reasons
+        );
+        UpdateDecision::UpdateRequired {
+            os_reasons,
+            app_reasons,
+        }
     }
 }
 
@@ -251,7 +244,7 @@ mod tests {
     }
 
     #[test]
-    fn bootc_checksum_drift_triggers_update() {
+    fn bootc_checksum_drift_is_os_only() {
         let current = inventory(
             "41",
             CollectionResult::Ok(local_bootc_with_checksum("abc", None)),
@@ -259,15 +252,19 @@ mod tests {
         );
         let target = requirements("41", target_bootc_with_checksum("def", None), vec![]);
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
-                assert!(reasons.iter().any(|r| r.contains("checksum drift")));
+            UpdateDecision::UpdateRequired {
+                os_reasons,
+                app_reasons,
+            } => {
+                assert!(os_reasons.iter().any(|r| r.contains("checksum drift")));
+                assert!(app_reasons.is_empty());
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
         }
     }
 
     #[test]
-    fn os_version_drift_triggers_update() {
+    fn os_version_drift_is_os_only() {
         let current = inventory(
             "40",
             CollectionResult::Ok(local_bootc_with_checksum("abc", None)),
@@ -275,15 +272,19 @@ mod tests {
         );
         let target = requirements("41", target_bootc_with_checksum("abc", None), vec![]);
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
-                assert!(reasons.iter().any(|r| r.contains("OS version drift")));
+            UpdateDecision::UpdateRequired {
+                os_reasons,
+                app_reasons,
+            } => {
+                assert!(os_reasons.iter().any(|r| r.contains("OS version drift")));
+                assert!(app_reasons.is_empty());
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
         }
     }
 
     #[test]
-    fn app_version_drift_triggers_update() {
+    fn app_version_drift_is_app_only() {
         let current = inventory(
             "41",
             CollectionResult::Ok(local_bootc_with_checksum("abc", None)),
@@ -301,15 +302,19 @@ mod tests {
             }],
         );
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
-                assert!(reasons.iter().any(|r| r.contains("data_collector")));
+            UpdateDecision::UpdateRequired {
+                os_reasons,
+                app_reasons,
+            } => {
+                assert!(os_reasons.is_empty());
+                assert!(app_reasons.iter().any(|r| r.contains("data_collector")));
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
         }
     }
 
     #[test]
-    fn missing_target_app_triggers_update() {
+    fn missing_target_app_is_app_only() {
         let current = inventory(
             "41",
             CollectionResult::Ok(local_bootc_with_checksum("abc", None)),
@@ -324,15 +329,19 @@ mod tests {
             }],
         );
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
-                assert!(reasons.iter().any(|r| r.contains("missing")));
+            UpdateDecision::UpdateRequired {
+                os_reasons,
+                app_reasons,
+            } => {
+                assert!(os_reasons.is_empty());
+                assert!(app_reasons.iter().any(|r| r.contains("missing")));
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
         }
     }
 
     #[test]
-    fn extra_local_app_triggers_removal() {
+    fn extra_local_app_is_app_only() {
         let current = inventory(
             "41",
             CollectionResult::Ok(local_bootc_with_checksum("abc", None)),
@@ -343,8 +352,42 @@ mod tests {
         );
         let target = requirements("41", target_bootc_with_checksum("abc", None), vec![]);
         match compare(&current, &target) {
-            UpdateDecision::UpdateRequired { reasons } => {
-                assert!(reasons.iter().any(|r| r.contains("should be removed")));
+            UpdateDecision::UpdateRequired {
+                os_reasons,
+                app_reasons,
+            } => {
+                assert!(os_reasons.is_empty());
+                assert!(app_reasons.iter().any(|r| r.contains("should be removed")));
+            }
+            other => panic!("expected UpdateRequired, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn os_and_app_drift_split_into_two_buckets() {
+        let current = inventory(
+            "40",
+            CollectionResult::Ok(local_bootc_with_checksum("abc", None)),
+            CollectionResult::Ok(vec![ApplicationInfo {
+                app_name: "data_collector".into(),
+                app_version: "v1.0.0".into(),
+            }]),
+        );
+        let target = requirements(
+            "41",
+            target_bootc_with_checksum("abc", None),
+            vec![TargetApp {
+                app_name: "data_collector".into(),
+                app_version: "v1.0.1".into(),
+            }],
+        );
+        match compare(&current, &target) {
+            UpdateDecision::UpdateRequired {
+                os_reasons,
+                app_reasons,
+            } => {
+                assert!(os_reasons.iter().any(|r| r.contains("OS version drift")));
+                assert!(app_reasons.iter().any(|r| r.contains("data_collector")));
             }
             other => panic!("expected UpdateRequired, got {:?}", other),
         }
