@@ -17,3 +17,11 @@ After doing so and waiting for it to finish (building the container the first ti
 ## Caveats
 
 Dev Containers should be viewed as transient and read-only. Do not make changes to your running container, always change or extend the definition and rebuild to ensure replicability. When changing any file in the ```.devcontainer/``` folder also change the ```devcontainer.json``` file, so people get prompted to rebuild their containers when pulling.
+
+## SBOM
+
+To keep the SBOM up-to-date, the following command can be used to list all (top level) dependencies and compare them with the SBOM sheet:
+
+```bash
+cargo tree --depth 1 --prefix none --edges normal | grep -v '^amos' | grep -v '(*)$' | sort | uniq
+```

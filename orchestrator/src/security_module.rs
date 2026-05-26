@@ -2,6 +2,7 @@ use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use std::path::Path;
 use tokio::fs; // alternatively std::fs
 
+#[allow(dead_code)]
 pub async fn verify_signature(
     file_path: &Path,
     signature_bytes: &[u8],

@@ -1,0 +1,80 @@
+use crate::api_v1::db;
+use crate::api_v1::routes::{db_err, err, not_found};
+use amos_common::entities::Application;
+use axum::{
+    Json, Router,
+    extract::Path,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::get,
+};
+
+pub fn routes() -> Router {
+    Router::new()
+        .route(
+            "/applications",
+            get(list_applications).post(create_application),
+        )
+        .route(
+            "/applications/{id}",
+            get(get_application)
+                .put(update_application)
+                .delete(delete_application),
+        )
+}
+
+/// GET /applications — List all applications.
+async fn list_applications() -> Response {
+    match db::list_applications().await {
+        Ok(apps) => Json(apps).into_response(),
+        Err(e) => db_err(e),
+    }
+}
+
+/// GET /applications/{id} — Get an application by ID.
+async fn get_application(Path(id): Path<i32>) -> Response {
+    match db::get_application(id).await {
+        Ok(Some(app)) => Json(app).into_response(),
+        Ok(None) => not_found("Application", id),
+        Err(e) => db_err(e),
+    }
+}
+
+/// POST /applications — Create an application.
+/// Body: `{ name: string (required), description: string }`
+async fn create_application(Json(body): Json<Application::Model>) -> Response {
+    if body.name.trim().is_empty() {
+        return err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Application name cannot be empty",
+        );
+    }
+    match db::add_application(body.name, body.description).await {
+        Ok(app) => (StatusCode::CREATED, Json(app)).into_response(),
+        Err(e) => db_err(e),
+    }
+}
+
+/// PUT /applications/{id} — Replace an application by ID.
+/// Body: `{ name: string (required), description: string }`
+async fn update_application(Path(id): Path<i32>, Json(body): Json<Application::Model>) -> Response {
+    if body.name.trim().is_empty() {
+        return err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Application name cannot be empty",
+        );
+    }
+    match db::update_application(id, body.name, body.description).await {
+        Ok(app) => Json(app).into_response(),
+        Err(e) => db_err(e),
+    }
+}
+
+/// DELETE /applications/{id} — Delete an application by ID. Returns 204 on success.
+async fn delete_application(Path(id): Path<i32>) -> Response {
+    match db::delete_application(id).await {
+        Ok(0) => not_found("Application", id),
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => db_err(e),
+    }
+}

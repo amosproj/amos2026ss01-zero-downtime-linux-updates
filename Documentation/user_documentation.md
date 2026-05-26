@@ -230,3 +230,120 @@ The catalog response from the mock server looks like:
   { "name": "app", "version": "4.5.6", "url": "/v1/download/app4.5.6", "signature": "AAAA..." }
 ]
 ```
+
+### API Reference
+
+All routes are served under `/v1`. Fields marked `*` are required.
+
+**Device Summaries** _(read-only)_
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/devices/summary` | List device summaries. Query: `?tenant_id=<id>` |
+| `GET` | `/v1/devices/{id}/summary` | Get a single device summary |
+
+**Tenants**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/tenants` | List all tenants |
+| `POST` | `/v1/tenants` | Create — body: `{ name*, description }` |
+| `GET` | `/v1/tenants/{id}` | Get by ID |
+| `PUT` | `/v1/tenants/{id}` | Replace by ID |
+| `DELETE` | `/v1/tenants/{id}` | Delete — 204 on success |
+
+**Groups**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/groups` | List all groups |
+| `POST` | `/v1/groups` | Create — body: `{ name* }` |
+| `GET` | `/v1/groups/{id}` | Get by ID |
+| `PUT` | `/v1/groups/{id}` | Replace by ID |
+| `DELETE` | `/v1/groups/{id}` | Delete — 204 on success |
+
+**Devices**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/devices` | List devices. Query: `?group_id=<id>&tenant_id=<id>` |
+| `POST` | `/v1/devices` | Create — body: `{ uuid*, hostname*, tenant_id, group_id }` |
+| `GET` | `/v1/devices/{id}` | Get by ID |
+| `PUT` | `/v1/devices/{id}` | Replace by ID |
+| `DELETE` | `/v1/devices/{id}` | Delete — 204 on success |
+
+**Applications**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/applications` | List all applications |
+| `POST` | `/v1/applications` | Create — body: `{ name*, description }` |
+| `GET` | `/v1/applications/{id}` | Get by ID |
+| `PUT` | `/v1/applications/{id}` | Replace by ID |
+| `DELETE` | `/v1/applications/{id}` | Delete — 204 on success |
+
+**Application Configs**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/app-configs` | List configs. Query: `?application_id=<id>` |
+| `POST` | `/v1/app-configs` | Create — body: `{ application_id, image*, config, comment }` |
+| `GET` | `/v1/app-configs/{id}` | Get by ID |
+| `PUT` | `/v1/app-configs/{id}` | Replace by ID |
+| `DELETE` | `/v1/app-configs/{id}` | Delete — 204 on success |
+
+**Application Assignments**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/app-assignments` | List. Query: `?application_config_id=<id>&device_id=<id>&group_id=<id>` |
+| `POST` | `/v1/app-assignments` | Create — body: `{ application_config_id, device_id, group_id }` — `device_id` or `group_id` required |
+| `GET` | `/v1/app-assignments/{id}` | Get by ID |
+| `PUT` | `/v1/app-assignments/{id}` | Replace by ID |
+| `DELETE` | `/v1/app-assignments/{id}` | Delete — 204 on success |
+
+**Reported Application Assignments** _(device-originated — no POST/PUT)_
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/reported-app-assignments` | List. Query: `?application_config_id=<id>&device_id=<id>` |
+| `GET` | `/v1/reported-app-assignments/{id}` | Get by ID |
+| `DELETE` | `/v1/reported-app-assignments/{id}` | Delete — 204 on success |
+
+**OS Versions**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/os-versions` | List all OS versions |
+| `POST` | `/v1/os-versions` | Create — body: `{ commit_hash*, orchestrator_version*, description }` |
+| `GET` | `/v1/os-versions/{id}` | Get by ID |
+| `PUT` | `/v1/os-versions/{id}` | Replace by ID |
+| `DELETE` | `/v1/os-versions/{id}` | Delete — 204 on success |
+
+**OS Assignments**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/os-assignments` | List. Query: `?os_version_id=<id>&device_id=<id>&group_id=<id>` |
+| `POST` | `/v1/os-assignments` | Create — body: `{ os_version_id, device_id, group_id }` — `device_id` or `group_id` required |
+| `GET` | `/v1/os-assignments/{id}` | Get by ID |
+| `PUT` | `/v1/os-assignments/{id}` | Replace by ID |
+| `DELETE` | `/v1/os-assignments/{id}` | Delete — 204 on success |
+
+**Reported OS Assignments** _(device-originated — no POST/PUT)_
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/reported-os-assignments` | List. Query: `?os_version_id=<id>&device_id=<id>` |
+| `GET` | `/v1/reported-os-assignments/{id}` | Get by ID |
+| `DELETE` | `/v1/reported-os-assignments/{id}` | Delete — 204 on success |
+
+### Error responses
+
+All errors return JSON: `{ "error": "<message>" }`
+
+| Status | Meaning |
+|--------|---------|
+| `404 Not Found` | No resource with that ID |
+| `422 Unprocessable Entity` | Validation failed (empty required field; missing `device_id`/`group_id`) |
+| `500 Internal Server Error` | Database error |

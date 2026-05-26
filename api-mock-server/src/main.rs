@@ -1,6 +1,6 @@
 use clap::Parser;
+mod api_v1;
 mod config;
-mod db;
 pub(crate) mod db_migration;
 use amos_common::inventory_model::{
     ApplicationInfo, BootcDeploymentInfo, BootcImageInfo, BootcStatus, SystemInfo,
@@ -100,7 +100,7 @@ async fn main() {
     });
 
     // Initialize database
-    db::initialialize_db(config.database_url)
+    api_v1::db::initialialize_db(config.database_url)
         .await
         .unwrap_or_else(|err| {
             error!("Failed to initialize database connection: {}", err);
@@ -114,6 +114,7 @@ async fn main() {
             get(|| async { Json(mock_system_requirements()) }),
         )
         .nest_service("/download", ServeDir::new("assets"));
+        .merge(api_v1::routes::routes());
 
     let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(
         async |req: Request, next: middleware::Next| {

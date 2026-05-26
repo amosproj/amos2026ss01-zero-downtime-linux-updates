@@ -6,7 +6,7 @@ labels: ''
 assignees: ''
 ---
 
-##Technical Context
+## Technical Context
 
 The Current State: 
 
@@ -14,7 +14,7 @@ The Problem:
 
 The Target: 
 
-##Acceptance Criteria:
+## Acceptance Criteria:
 * Criterion 1
 * Criterion 2
 * ...

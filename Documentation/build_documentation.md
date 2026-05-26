@@ -130,9 +130,9 @@ cargo test
 ### Run tests for a specific crate
 
 ```bash
+cargo test -p amos-api-mock-server
 cargo test -p amos-orchestrator
 cargo test -p amos-common
-cargo test -p security-module
 ```
 
 ### Notable test coverage
@@ -142,11 +142,29 @@ cargo test -p security-module
 | `amos-orchestrator` | CLI flag parsing (`--self-check`, `--config`, `--debug`) |
 | `amos-orchestrator` | Config validation (URL scheme, poll interval) |
 | `amos-common` | `CatalogResponse` JSON serialisation/deserialisation |
-| `security-module` | Ed25519 signature verification (valid, invalid, tampered) |
 
 ---
 
 ## Running Locally
+
+### 0. Start *a* database
+
+The api server requires a database, which by default is expected as a Postgres instance running on `localhost:5432`. A local container instance can be managed like this:
+
+```bash
+cd .devcontainer/
+
+# start the container
+podman-compose up -d postgres
+
+# stop the container
+podman-compose down postgres
+
+# optional: to delete the data (volume)
+podman volume rm devcontainer_postgres_data
+```
+
+**Alternatively for local development** an sqlite database can be used. For that, just define a sqlite connection string via the config or an environment variable when running the server, e.g.: `APP_DATABASE_URL="sqlite://db.sqlite?mode=rwc" cargo run ..."`
 
 ### 1. Start the API mock server
 
