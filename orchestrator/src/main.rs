@@ -1,8 +1,9 @@
 mod config_loader;
 use clap::Parser;
 use config_loader::get_config;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 
+use crate::loop_os::run_os_tree_main_loop;
 use crate::util::bootc_wrapper::Bootc;
 use crate::util::executer::RealExecuter;
 use crate::util::os_tree::RpmOstreeClient;
@@ -60,6 +61,7 @@ async fn main() {
 
     let ostree_client = Arc::new(RpmOstreeClient::new(Arc::new(RealExecuter)));
 
+    // run the selfcheck pipeline if --self-check is provided as commandline arg
     if cli.self_check {
         if let Err(err) =
             crate::healthcheck::healthcheck(&bootc_client, &RealExecuter, cli.config.clone()).await
@@ -109,15 +111,7 @@ async fn main() {
         agent_state.self_version
     );
 
-    let dm_config = download_manager::Config {
-        server_url: config.server_url.clone(),
-        https_proxy: config.https_proxy.clone(), // None most likely
-        download_dir: PathBuf::from(&config.download_dir),
-        device_uuid: config.device_uuid.clone(), // Hard-code for now, get from device later
-        current_os_version: config.current_os_commit.clone(), // Need to actually get that from inventory or improvise temporarily
-    };
-
-    let http_client = match download_manager::build_http_client(&dm_config) {
+    let http_client = match download_manager::build_http_client_from_settings(&config) {
         Ok(client) => client,
         Err(err) => {
             error!("Failed to initialize secure cloud HTTP client: {:?}", err);
@@ -176,6 +170,7 @@ async fn main() {
         agent_state.clone(),
         ostree_client.clone(),
     ));
+
     tokio::signal::ctrl_c().await.unwrap();
 }
 

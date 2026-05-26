@@ -5,12 +5,13 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 
-pub struct Config {
+use crate::config_loader::Settings;
+
+pub struct DownloadManagerConfig {
     pub server_url: String,
     pub https_proxy: Option<String>,
     pub download_dir: PathBuf,
     pub device_uuid: String,
-    pub current_os_version: String,
 }
 
 #[derive(Serialize)]
@@ -26,9 +27,21 @@ pub struct CloudSyncResponse {
     pub description: Option<String>,
 }
 
+/// Creates a DownloadManager HTTP client from the application Settings.
+/// `current_os_version` is passed separately because it comes from runtime state, not config.
+pub fn build_http_client_from_settings(settings: &Settings) -> Result<Client> {
+    let config = DownloadManagerConfig {
+        server_url: settings.cloud_url.clone(),
+        https_proxy: settings.https_proxy.clone(),
+        download_dir: PathBuf::from(&settings.download_dir),
+        device_uuid: settings.device_uuid.clone(),
+    };
+    build_http_client(&config)
+}
+
 // Builds the async reqwest HTTP client
 // If https_proxy is set, it will be used for all requests. Otherwise, reqwest will use https_proxy from the environment variables.
-pub fn build_http_client(config: &Config) -> Result<Client> {
+pub fn build_http_client(config: &DownloadManagerConfig) -> Result<Client> {
     let mut builder = Client::builder();
 
     if let Some(proxy_url) = &config.https_proxy {
@@ -46,7 +59,10 @@ pub fn build_http_client(config: &Config) -> Result<Client> {
 }
 
 // Poll the server to check what the available OS version is
-pub async fn check_for_update(client: &Client, config: &Config) -> Result<CloudSyncResponse> {
+pub async fn check_for_update(
+    client: &Client,
+    config: &DownloadManagerConfig,
+) -> Result<CloudSyncResponse> {
     let request_payload = DeviceSyncRequest {
         device_uuid: config.device_uuid.clone(),
         current_os_version: config.current_os_version.clone(),
@@ -83,9 +99,8 @@ pub async fn check_for_update(client: &Client, config: &Config) -> Result<CloudS
 pub async fn download_update(
     client: &Client,
     target_commit_hash: &str,
-    config: &Config,
+    config: &DownloadManagerConfig,
 ) -> Result<PathBuf> {
-
     tokio::fs::create_dir_all(&config.download_dir)
         .await
         .with_context(|| {
@@ -103,7 +118,7 @@ pub async fn download_update(
 
     let resp = client
         .get(&download_url)
-        .timeout(std::time::Duration::from_secs(3600)) 
+        .timeout(std::time::Duration::from_secs(3600))
         .send()
         .await
         .with_context(|| format!("Failed to download update from {}", &download_url))?;
