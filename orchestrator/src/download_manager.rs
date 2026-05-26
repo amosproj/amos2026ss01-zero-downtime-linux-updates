@@ -1,3 +1,4 @@
+use amos_common::entities::{OsAssignment, OsVersion};
 use anyhow::{Context, Result};
 use reqwest::Client;
 use std::sync::Arc;
@@ -13,6 +14,70 @@ impl DownloadManager {
     pub fn new(config: Arc<Settings>) -> Result<Self> {
         let http_client = build_http_client(&config)?;
         Ok(Self { http_client, config })
+    }
+
+    /// Fetches the OS version assigned to this device from the API.
+    /// Queries `/os-assignments?device_uuid=<uuid>` then `/os-versions/<id>`.
+    pub async fn get_expected_os_version(&self) -> Result<OsVersion::Model> {
+        let assignment = self.get_os_assignment().await?;
+        self.get_os_version(assignment.os_version_id).await
+    }
+
+    async fn get_os_assignment(&self) -> Result<OsAssignment::Model> {
+        let url = format!(
+            "{}/os-assignments?device_uuid={}",
+            self.config.cloud_url, self.config.device_uuid
+        );
+        let resp = self
+            .http_client
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+            .with_context(|| format!("Failed to reach server at {}", &self.config.cloud_url))?;
+
+        if !resp.status().is_success() {
+            anyhow::bail!(
+                "Server responded with status {} for {}",
+                resp.status(),
+                url
+            );
+        }
+
+        let assignments: Vec<OsAssignment::Model> = resp
+            .json()
+            .await
+            .with_context(|| "Failed to parse OS assignments response")?;
+
+        assignments.into_iter().next().ok_or_else(|| {
+            anyhow::anyhow!(
+                "No OS assignment found for device {}",
+                self.config.device_uuid
+            )
+        })
+    }
+
+    async fn get_os_version(&self, id: i32) -> Result<OsVersion::Model> {
+        let url = format!("{}/os-versions/{}", self.config.cloud_url, id);
+        let resp = self
+            .http_client
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+            .with_context(|| format!("Failed to reach server at {}", &self.config.cloud_url))?;
+
+        if !resp.status().is_success() {
+            anyhow::bail!(
+                "Server responded with status {} for {}",
+                resp.status(),
+                url
+            );
+        }
+
+        resp.json::<OsVersion::Model>()
+            .await
+            .with_context(|| format!("Failed to parse OS version {} response", id))
     }
 }
 
