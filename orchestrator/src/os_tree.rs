@@ -145,6 +145,76 @@ impl RpmOstreeClient {
     }
 }
 
+pub async fn run_os_tree_main_loop(
+    agent_state: AgentState,
+    client: Arc<RpmOstreeClient>,
+    update_checker: Arc<dyn CheckForUpdate>,
+) {
+    let mut update_interval = interval(Duration::from_secs(
+        agent_state.config.poll_interval_secs.into(),
+    ));
+
+    loop {
+        update_interval.tick().await;
+
+        let host_status = match client.status().await {
+            Ok(status) => status,
+            Err(e) => {
+                error!("Failed to fetch live rpm-ostree status: {:?}", e);
+                continue;
+            }
+        };
+
+        {
+            let mut current_state = agent_state.os_state.lock().await;
+            *current_state = host_status;
+        }
+
+        info!("Checking for OS update");
+        match update_checker.check().await {
+            Ok(UpdateDecision::UpToDate) => {
+                info!("System is up to date.");
+            }
+            Ok(UpdateDecision::UpdateRequired {
+                reasons,
+                target_os_version,
+            }) => {
+                info!(
+                    "Update required ({} reason(s)): {}",
+                    reasons.len(),
+                    reasons.join("; ")
+                );
+                info!(
+                    "Deploying target OS version `{}` as defined by the database",
+                    target_os_version
+                );
+
+                match client.deploy(&target_os_version).await {
+                    Ok(()) => {
+                        info!(
+                            "rpm-ostree deploy `{}` staged successfully. Initiating system reboot...",
+                            target_os_version
+                        );
+
+                        if let Err(e) = client.apply_reboot().await {
+                            error!(
+                                "Critical: Deploy succeeded but system reboot invocation failed: {:?}",
+                                e
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        error!("OS deploy failed execution: {:?}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Update check failed, will retry next tick: {:?}", e);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,15 +404,12 @@ mod tests {
 
         // UpdateChecker-Mock: gibt beim ersten Aufruf UpdateRequired zurück
         let mut mock_checker = MockCheckForUpdate::new();
-        mock_checker
-            .expect_check()
-            .times(1)
-            .returning(|| {
-                Ok(UpdateDecision::UpdateRequired {
-                    reasons: vec!["OS version drift: current `41` -> target `42`".into()],
-                    target_os_version: "42".into(),
-                })
-            });
+        mock_checker.expect_check().times(1).returning(|| {
+            Ok(UpdateDecision::UpdateRequired {
+                reasons: vec!["OS version drift: current `41` -> target `42`".into()],
+                target_os_version: "42".into(),
+            })
+        });
 
         let agent_state = test_agent_state(1);
 
@@ -404,75 +471,5 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         handle.abort();
-    }
-}
-
-pub async fn run_os_tree_main_loop(
-    agent_state: AgentState,
-    client: Arc<RpmOstreeClient>,
-    update_checker: Arc<dyn CheckForUpdate>,
-) {
-    let mut update_interval = interval(Duration::from_secs(
-        agent_state.config.poll_interval_secs.into(),
-    ));
-
-    loop {
-        update_interval.tick().await;
-
-        let host_status = match client.status().await {
-            Ok(status) => status,
-            Err(e) => {
-                error!("Failed to fetch live rpm-ostree status: {:?}", e);
-                continue;
-            }
-        };
-
-        {
-            let mut current_state = agent_state.os_state.lock().await;
-            *current_state = host_status;
-        }
-
-        info!("Checking for OS update");
-        match update_checker.check().await {
-            Ok(UpdateDecision::UpToDate) => {
-                info!("System is up to date.");
-            }
-            Ok(UpdateDecision::UpdateRequired {
-                reasons,
-                target_os_version,
-            }) => {
-                info!(
-                    "Update required ({} reason(s)): {}",
-                    reasons.len(),
-                    reasons.join("; ")
-                );
-                info!(
-                    "Deploying target OS version `{}` as defined by the database",
-                    target_os_version
-                );
-
-                match client.deploy(&target_os_version).await {
-                    Ok(()) => {
-                        info!(
-                            "rpm-ostree deploy `{}` staged successfully. Initiating system reboot...",
-                            target_os_version
-                        );
-
-                        if let Err(e) = client.apply_reboot().await {
-                            error!(
-                                "Critical: Deploy succeeded but system reboot invocation failed: {:?}",
-                                e
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        error!("OS deploy failed execution: {:?}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                warn!("Update check failed, will retry next tick: {:?}", e);
-            }
-        }
     }
 }

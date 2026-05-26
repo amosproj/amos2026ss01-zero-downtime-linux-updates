@@ -40,9 +40,7 @@ pub fn validate_config(config: &Settings) -> Result<(), String> {
     if !config.database_url.starts_with("postgres://")
         && !config.database_url.starts_with("sqlite:")
     {
-        return Err(
-            "Database connection url must begin with `postgres://` or `sqlite:`".into(),
-        );
+        return Err("Database connection url must begin with `postgres://` or `sqlite:`".into());
     }
 
     if config.http_port == 0 {

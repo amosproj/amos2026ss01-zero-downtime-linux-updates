@@ -56,7 +56,7 @@ pub mod api {
 
             let result = serde_json::to_string(&catalog).unwrap();
 
-            if &result != CATALOG_TEST {
+            if result != CATALOG_TEST {
                 panic!("Wrong serialization: {}", result)
             }
         }
