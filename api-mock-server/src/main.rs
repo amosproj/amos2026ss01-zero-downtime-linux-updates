@@ -113,7 +113,7 @@ async fn main() {
             "/system-requirements",
             get(|| async { Json(mock_system_requirements()) }),
         )
-        .nest_service("/download", ServeDir::new("assets"));
+        .nest_service("/download", ServeDir::new("assets"))
         .merge(api_v1::routes::routes());
 
     let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(
