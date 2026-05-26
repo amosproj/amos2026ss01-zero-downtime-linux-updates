@@ -1,6 +1,6 @@
 use clap::Parser;
+mod api_v1;
 mod config;
-mod db;
 pub(crate) mod db_migration;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware, routing::get};
@@ -63,7 +63,7 @@ async fn main() {
     });
 
     // Initialize database
-    db::initialialize_db(config.database_url)
+    api_v1::db::initialialize_db(config.database_url)
         .await
         .unwrap_or_else(|err| {
             error!("Failed to initialize database connection: {}", err);
@@ -72,7 +72,8 @@ async fn main() {
 
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
-        .nest_service("/download", ServeDir::new("assets"));
+        .nest_service("/download", ServeDir::new("assets"))
+        .merge(api_v1::routes::routes());
 
     let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(
         async |req: Request, next: middleware::Next| {

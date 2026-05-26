@@ -6,7 +6,8 @@ edition = "2024"
 [dependencies]
 amos-common.workspace = true
 
-axum = { version = "0.8.9", default-features = false, features = ["http1", "http2", "json", "tokio"] }
+axum = { version = "0.8.9", default-features = false, features = ["http1", "http2", "json", "tokio", "query"] }
+serde_json = { workspace = true }
 clap = { workspace = true }
 config = { workspace = true }
 env_logger = { workspace = true }
@@ -19,3 +20,4 @@ tower-http = { version = "0.6", features = ["fs"] }
 
 [dev-dependencies]
 serial_test = "3.4.0"
+tower = "0.5.3"
