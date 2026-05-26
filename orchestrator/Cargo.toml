@@ -5,14 +5,8 @@ edition = "2024"
 
 [dependencies]
 amos-common = { workspace = true }
-clap = { version = "4.6.1", features = ["derive"] }
-config = { version = "0.15.22", features = ["toml"] }
-env_logger = "0.11.10"
-log = "0.4.29"
 reqwest = "0.13.3"
 serde = { version = "1.0.228", features = ["derive"] }
-tokio = { version = "1.52.1", features = ["full"] }
-anyhow = "1.0.102"
 serde_json.workspace = true
 anyhow = { workspace = true }
 async-trait = "0.1"
@@ -21,7 +15,6 @@ config = { workspace = true }
 ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
 env_logger = { workspace = true }
 log = { workspace = true }
-serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = "0.1.44"
