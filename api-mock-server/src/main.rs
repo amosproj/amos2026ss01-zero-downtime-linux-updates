@@ -3,12 +3,7 @@ mod config;
 mod db;
 pub(crate) mod db_migration;
 use amos_common::{api, util};
-use axum::{
-    Json, Router,
-    extract::Request,
-    middleware,
-    routing::{get, post},
-};
+use axum::{Json, Router, extract::Request, middleware, routing::get};
 use config::get_config;
 use log::{debug, error, info};
 use std::path::PathBuf;
