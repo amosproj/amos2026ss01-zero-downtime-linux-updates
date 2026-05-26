@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
+use async_trait::async_trait;
 use log::{debug, warn};
 use reqwest::Client as HttpClient;
 
@@ -26,6 +27,12 @@ pub enum UpdateDecision {
         reasons: Vec<String>,
         target_os_version: String,
     },
+}
+
+#[cfg_attr(test, mockall::automock)]
+#[async_trait]
+pub trait CheckForUpdate: Send + Sync {
+    async fn check(&self) -> Result<UpdateDecision>;
 }
 
 pub struct UpdateChecker {
@@ -56,8 +63,11 @@ impl UpdateChecker {
             exec,
         })
     }
+}
 
-    pub async fn check(&self) -> Result<UpdateDecision> {
+#[async_trait]
+impl CheckForUpdate for UpdateChecker {
+    async fn check(&self) -> Result<UpdateDecision> {
         let target = get_system_requirements(&self.http, &self.dm_config).await?;
         let current = collect_inventory(self.bootc.as_ref(), self.exec.as_ref()).await?;
         Ok(compare(&current, &target))

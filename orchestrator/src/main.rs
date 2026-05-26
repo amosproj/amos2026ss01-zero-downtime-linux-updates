@@ -11,7 +11,7 @@ use crate::{
     inventory::collect_and_save_inventory,
     os_tree::{RpmOstreeClient, run_os_tree_main_loop},
     state::AgentState,
-    update_check::UpdateChecker,
+    update_check::{CheckForUpdate, UpdateChecker},
 };
 mod apps;
 mod healthcheck;
@@ -133,7 +133,7 @@ async fn main() {
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
         agent_state.clone(),
         ostree_client.clone(),
-        update_checker.clone(),
+        update_checker.clone() as Arc<dyn CheckForUpdate>,
     ));
     tokio::signal::ctrl_c().await.unwrap();
 }

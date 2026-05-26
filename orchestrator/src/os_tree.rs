@@ -1,5 +1,5 @@
 use crate::state::{AgentState, OsState};
-use crate::update_check::{UpdateChecker, UpdateDecision};
+use crate::update_check::{CheckForUpdate, UpdateDecision};
 use anyhow::{Context, Result, anyhow};
 
 use log::{error, info, warn};
@@ -148,6 +148,8 @@ impl RpmOstreeClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config_loader::Settings;
+    use crate::update_check::MockCheckForUpdate;
     use crate::util::executer::{ExecResult, MockExecuter};
     use mockall::predicate::eq;
 
@@ -243,12 +245,172 @@ mod tests {
         let result = client.deploy(&decision_version).await;
         assert!(result.is_ok());
     }
+
+    /// helper function: creates a minimal `AgentState` for tests.
+    fn test_agent_state(poll_interval_secs: u32) -> AgentState {
+        use crate::state::AppState;
+        let config = Settings {
+            cloud_url: "http://localhost".into(),
+            poll_interval_secs,
+            inventory_path: "/tmp/inv.json".into(),
+        };
+        let os_state = OsState {
+            update_pending: false,
+            booted_image: "registry.example.com/os:41".into(),
+            update_ostree_commit: None,
+        };
+        AgentState::new("0.0.0", config, os_state, Vec::<AppState>::new())
+    }
+
+    /// Valides rpm-ostree-Status-JSON für den MockExecuter.
+    fn os_status_json() -> String {
+        r#"{"update_pending":false,"booted_image":"registry.example.com/os:41","update_ostree_commit":null}"#
+            .to_string()
+    }
+
+    /// `run_os_tree_main_loop` muss `deploy(<version>)` und danach `systemctl reboot`
+    /// aufrufen, wenn der UpdateChecker `UpdateRequired` zurückgibt.
+    #[tokio::test]
+    async fn main_loop_calls_deploy_and_reboot_when_update_required() {
+        let mut mock_exec = MockExecuter::new();
+
+        // 1. rpm-ostree status (wird vom Loop zu Beginn jeder Iteration abgerufen)
+        mock_exec
+            .expect_execute()
+            .with(
+                eq("sudo".to_string()),
+                eq(vec![
+                    "rpm-ostree".to_string(),
+                    "status".to_string(),
+                    "--json".to_string(),
+                ]),
+            )
+            .times(1)
+            .returning(|_, _| {
+                Ok(ExecResult {
+                    stdout: os_status_json(),
+                    stderr: "".to_string(),
+                    exit_code: Some(0),
+                })
+            });
+
+        // 2. rpm-ostree deploy 42
+        mock_exec
+            .expect_execute()
+            .with(
+                eq("sudo".to_string()),
+                eq(vec![
+                    "rpm-ostree".to_string(),
+                    "deploy".to_string(),
+                    "42".to_string(),
+                ]),
+            )
+            .times(1)
+            .returning(|_, _| {
+                Ok(ExecResult {
+                    stdout: "Staging deployment...done".to_string(),
+                    stderr: "".to_string(),
+                    exit_code: Some(0),
+                })
+            });
+
+        // 3. systemctl reboot
+        mock_exec
+            .expect_execute()
+            .with(
+                eq("sudo".to_string()),
+                eq(vec!["systemctl".to_string(), "reboot".to_string()]),
+            )
+            .times(1)
+            .returning(|_, _| {
+                Ok(ExecResult {
+                    stdout: "".to_string(),
+                    stderr: "".to_string(),
+                    exit_code: Some(0),
+                })
+            });
+
+        let client = Arc::new(RpmOstreeClient::new(Arc::new(mock_exec)));
+
+        // UpdateChecker-Mock: gibt beim ersten Aufruf UpdateRequired zurück
+        let mut mock_checker = MockCheckForUpdate::new();
+        mock_checker
+            .expect_check()
+            .times(1)
+            .returning(|| {
+                Ok(UpdateDecision::UpdateRequired {
+                    reasons: vec!["OS version drift: current `41` -> target `42`".into()],
+                    target_os_version: "42".into(),
+                })
+            });
+
+        let agent_state = test_agent_state(1);
+
+        // Loop in einem separaten Task starten und nach kurzer Zeit abbrechen.
+        // Nach der ersten Iteration sollten alle Mock-Erwartungen erfüllt sein.
+        let handle = tokio::spawn(run_os_tree_main_loop(
+            agent_state,
+            client,
+            Arc::new(mock_checker),
+        ));
+
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        handle.abort();
+        // mockall prüft die Erwartungen beim Drop – kein weiterer assert nötig.
+    }
+
+    /// `run_os_tree_main_loop` darf `deploy` NICHT aufrufen, wenn das System
+    /// bereits aktuell ist.
+    #[tokio::test]
+    async fn main_loop_does_not_deploy_when_up_to_date() {
+        let mut mock_exec = MockExecuter::new();
+
+        mock_exec
+            .expect_execute()
+            .with(
+                eq("sudo".to_string()),
+                eq(vec![
+                    "rpm-ostree".to_string(),
+                    "status".to_string(),
+                    "--json".to_string(),
+                ]),
+            )
+            .times(1)
+            .returning(|_, _| {
+                Ok(ExecResult {
+                    stdout: os_status_json(),
+                    stderr: "".to_string(),
+                    exit_code: Some(0),
+                })
+            });
+
+        // deploy und reboot dürfen NICHT aufgerufen werden → keine expect_execute für sie
+
+        let client = Arc::new(RpmOstreeClient::new(Arc::new(mock_exec)));
+
+        let mut mock_checker = MockCheckForUpdate::new();
+        mock_checker
+            .expect_check()
+            .times(1)
+            .returning(|| Ok(UpdateDecision::UpToDate));
+
+        let agent_state = test_agent_state(1);
+
+        let handle = tokio::spawn(run_os_tree_main_loop(
+            agent_state,
+            client,
+            Arc::new(mock_checker),
+        ));
+
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        handle.abort();
+    }
 }
 
 pub async fn run_os_tree_main_loop(
     agent_state: AgentState,
     client: Arc<RpmOstreeClient>,
-    update_checker: Arc<UpdateChecker>,
+    update_checker: Arc<dyn CheckForUpdate>,
 ) {
     let mut update_interval = interval(Duration::from_secs(
         agent_state.config.poll_interval_secs.into(),
