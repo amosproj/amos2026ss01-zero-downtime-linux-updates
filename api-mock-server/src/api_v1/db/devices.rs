@@ -31,7 +31,10 @@ pub async fn get_device(id: i32) -> Result<Option<Device::Model>, DbErr> {
 pub async fn get_device_by_uuid(uuid: String) -> Result<Option<Device::Model>, DbErr> {
     let db = db!();
 
-    Device::Entity::find().filter(Device::Column::Uuid.eq(uuid)).one(&db).await
+    Device::Entity::find()
+        .filter(Device::Column::Uuid.eq(uuid))
+        .one(&db)
+        .await
 }
 
 pub async fn add_device(
