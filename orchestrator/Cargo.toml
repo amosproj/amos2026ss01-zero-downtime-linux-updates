@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
+amos-common = { workspace = true }
 async-trait = "0.1"
 clap = { workspace = true }
 config = { workspace = true }
@@ -20,6 +21,5 @@ reqwest = { version = "0.13.3", features = ["json"] }
 
 [dev-dependencies]
 mockall = "0.14"
-
 rand = "0.8"
 tempfile = "3"

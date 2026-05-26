@@ -86,6 +86,7 @@ dependencies = [
 name = "amos-orchestrator"
 version = "0.1.0"
 dependencies = [
+ "amos-common",
  "anyhow",
  "async-trait",
  "clap",
