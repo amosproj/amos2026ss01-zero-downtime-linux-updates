@@ -28,13 +28,29 @@ pub fn routes() -> Router {
 struct OsAssignmentQuery {
     os_version_id: Option<i32>,
     device_id: Option<i32>,
+    device_uuid: Option<String>,
     group_id: Option<i32>,
 }
 
 /// GET /os-assignments — List OS assignments (target state).
-/// Optional query: `?os_version_id=<i32>&device_id=<i32>&group_id=<i32>`
+/// Optional query: `?os_version_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>`
 async fn list_os_assignments(Query(params): Query<OsAssignmentQuery>) -> Response {
-    match db::list_os_assignments(params.os_version_id, params.device_id, params.group_id).await {
+    let mut device_id = params.device_id;
+
+    // Resolve device_uuid
+    if params.device_uuid.is_some() {
+        let device_uuid = params.device_uuid.unwrap();
+        match db::get_device_by_uuid(device_uuid.clone()).await {
+            Ok(Some(device)) => device_id = Some(device.id),
+            Ok(None) => return err(
+                StatusCode::NOT_FOUND,
+                format!("No device with uuid {} found", device_uuid),
+            ),
+            Err(e) => return db_err(e),
+        }
+    }
+
+    match db::list_os_assignments(params.os_version_id, device_id, params.group_id).await {
         Ok(assignments) => Json(assignments).into_response(),
         Err(e) => db_err(e),
     }
