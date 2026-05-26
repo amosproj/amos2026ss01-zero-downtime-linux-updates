@@ -9,6 +9,7 @@ pub struct RpmOstreeClient {
     executer: Arc<dyn Executer>,
 }
 
+#[allow(dead_code)]
 impl RpmOstreeClient {
     pub fn new(executer: Arc<dyn Executer>) -> Self {
         Self { executer }
