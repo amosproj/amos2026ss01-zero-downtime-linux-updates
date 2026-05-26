@@ -11,6 +11,9 @@ fn default_interval() -> u32 {
 fn default_inventory_path() -> String {
     "./inventory/inventory.json".into()
 }
+fn default_download_dir() -> String {
+    "./downloads".into()
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
@@ -22,6 +25,13 @@ pub struct Settings {
 
     #[serde(default = "default_inventory_path")]
     pub inventory_path: String,
+
+    pub https_proxy: Option<String>,
+
+    #[serde(default = "default_download_dir")]
+    pub download_dir: String,
+
+    pub device_uuid: String,
 }
 
 pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::ConfigError> {

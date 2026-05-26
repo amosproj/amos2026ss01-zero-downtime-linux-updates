@@ -3,20 +3,21 @@ use clap::Parser;
 use config_loader::get_config;
 use log::{debug, error, info};
 
+use crate::loop_os::run_os_tree_main_loop;
 use crate::util::bootc_wrapper::Bootc;
 use crate::util::executer::RealExecuter;
+use crate::util::os_tree::RpmOstreeClient;
 
 use crate::{
-    apps::{get_initial_apps_state, run_apps_main_loop},
     inventory::collect_and_save_inventory,
-    os_tree::{RpmOstreeClient, run_os_tree_main_loop},
+    loop_apps::{get_initial_apps_state, run_apps_main_loop},
     state::AgentState,
 };
-mod apps;
 mod download_manager;
 mod healthcheck;
 mod inventory;
-mod os_tree;
+mod loop_apps;
+mod loop_os;
 mod state;
 mod util;
 use std::env;
@@ -60,6 +61,7 @@ async fn main() {
 
     let ostree_client = Arc::new(RpmOstreeClient::new(Arc::new(RealExecuter)));
 
+    // run the selfcheck pipeline if --self-check is provided as commandline arg
     if cli.self_check {
         if let Err(err) =
             crate::healthcheck::healthcheck(&bootc_client, &RealExecuter, cli.config.clone()).await
@@ -73,10 +75,10 @@ async fn main() {
 
     info!("Started app...");
 
-    let config = get_config(cli.config).unwrap_or_else(|err| {
+    let config = Arc::new(get_config(cli.config).unwrap_or_else(|err| {
         error!("Failed to load config: {}", err);
         std::process::exit(1);
-    });
+    }));
 
     debug!("Loaded config: {:?}", config);
 
@@ -102,64 +104,27 @@ async fn main() {
     let apps_state = get_initial_apps_state();
 
     debug!("Creating AgentState");
-    let agent_state = AgentState::new(VERSION, config, os_state, apps_state);
+    let agent_state = AgentState::new(VERSION, Arc::clone(&config), os_state, apps_state);
 
     info!(
         "Running amos-zero-downtime with version: {}",
         agent_state.self_version
     );
 
-    let dm_config = download_manager::Config {
-        server_url: config.server_url.clone(), 
-        https_proxy: config.https_proxy.clone(), // None most likely
-        download_dir: PathBuf::from(&config.download_dir), 
-        device_uuid: config.device_uuid.clone(), // Hard-code for now, get from device later
-        current_os_version: config.current_os_commit.clone(), // Need to actually get that from inventory or improvise temporarily
-    };
-
-    let http_client = match download_manager::build_http_client(&dm_config) {
-        Ok(client) => client,
+    let _download_manager = match download_manager::DownloadManager::new(Arc::clone(&config)) {
+        Ok(dm) => dm,
         Err(err) => {
             error!("Failed to initialize secure cloud HTTP client: {:?}", err);
             std::process::exit(1);
         }
     };
 
-    info!("Polling cloud server for targeted system updates...");
-    match download_manager::check_for_update(&http_client, &dm_config).await {
-        Ok(sync_response) => {
-            info!("Cloud sync successful. Server response: {:?}", sync_response);
-            
-            if let Some(target_hash) = sync_response.target_os_commit_hash {
-                if target_hash != dm_config.current_os_version {
-                    info!("New target OS update discovered [Hash: {}]. Starting download phase...", target_hash);
-                    
-                    match download_manager::download_update(&http_client, &target_hash, &dm_config).await {
-                        Ok(downloaded_path) => {
-                            info!("Update image successfully staged locally at: {:?}", downloaded_path);
-                            // downloaded_path to bootc here
-                        }
-                        Err(err) => {
-                            error!("Critical failure while transferring update payload: {:?}", err);
-                        }
-                    }
-                } else {
-                    info!("System is up to date. Target matches running commit hash.");
-                }
-            } else {
-                info!("No target OS updates assigned to this hardware profile by cloud orchestrator.");
-            }
-        }
-        Err(err) => {
-            warn!("Cloud synchronization check failed: {:?}", err);
-        }
-    }
-
     let _apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
         agent_state.clone(),
         ostree_client.clone(),
     ));
+
     tokio::signal::ctrl_c().await.unwrap();
 }
 
