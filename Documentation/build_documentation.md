@@ -130,9 +130,9 @@ cargo test
 ### Run tests for a specific crate
 
 ```bash
+cargo test -p amos-api-mock-server
 cargo test -p amos-orchestrator
 cargo test -p amos-common
-cargo test -p security-module
 ```
 
 ### Notable test coverage
@@ -142,7 +142,6 @@ cargo test -p security-module
 | `amos-orchestrator` | CLI flag parsing (`--self-check`, `--config`, `--debug`) |
 | `amos-orchestrator` | Config validation (URL scheme, poll interval) |
 | `amos-common` | `CatalogResponse` JSON serialisation/deserialisation |
-| `security-module` | Ed25519 signature verification (valid, invalid, tampered) |
 
 ---
 

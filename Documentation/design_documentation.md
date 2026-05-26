@@ -69,17 +69,6 @@ Shared code used by both the orchestrator and the mock server:
 
 ---
 
-### `security-module` (library crate)
-
-Provides cryptographic signature verification for update artifacts using **Ed25519** (via `ed25519-dalek`).
-
-- `verify_signature(file_path, signature_bytes, public_key_bytes) → bool`
-- Reads the file from disk and verifies the signature asynchronously.
-
-**Entry point:** `security-module/src/lib.rs`
-
----
-
 ### `amos-api-mock-server` (binary crate)
 
 A lightweight Axum-based HTTP server used during development and testing to simulate the Cloud API. Serves a hardcoded catalog and static download files from an `assets/` directory.
@@ -213,9 +202,7 @@ The loop:
 
 ## Security Module
 
-> **Current status:** The security module currently lives in a standalone library crate (`security-module`). It is **not yet called** by the Orchestrator or Download Manager. The standalone crate is **planned to be merged into `amos-common`** in a future sprint once it is wired into the update loops.
-
-The `security-module` crate provides one public async function:
+The `security-module` module provides one public async function:
 
 ```rust
 pub async fn verify_signature(
@@ -347,9 +334,7 @@ workspace
 ├── amos-orchestrator (bin)
 │   └── amos-common (lib)
 │       └── reqwest, serde, serde_json, tokio, futures-util
-│   └── security-module (lib)
-│       └── ed25519-dalek, tokio
-│   └── clap, config, env_logger, log, anyhow, tokio
+│   └── clap, config, ed25519-dalek, env_logger, log, anyhow, tokio
 │
 └── amos-api-mock-server (bin)
     └── amos-common (lib)
