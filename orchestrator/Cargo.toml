@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 amos-common = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 clap = { workspace = true }
 config = { workspace = true }
