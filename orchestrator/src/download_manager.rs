@@ -1,4 +1,4 @@
-use amos_common::entities::{OsAssignment, OsVersion};
+use amos_common::entities::{OsAssignment, OsVersion, ReportedOsAssignment};
 use anyhow::{Context, Result};
 use reqwest::Client;
 use std::sync::Arc;
@@ -55,6 +55,38 @@ impl DownloadManager {
                 self.config.device_uuid
             )
         })
+    }
+
+    /// Reports the current OS assignment for this device to the API.
+    /// POSTs to `/reported-os-assignments?device_uuid=<uuid>`.
+    #[allow(dead_code)]
+    pub async fn report_os_assignment(&self, os_version_id: i32) -> Result<()> {
+        let url = format!(
+            "{}/reported-os-assignments?device_uuid={}",
+            self.config.cloud_url, self.config.device_uuid
+        );
+
+        let body = ReportedOsAssignment::Model {
+            id: 0,
+            os_version_id,
+            device_id: 0,
+            updated_at: chrono::Utc::now(),
+        };
+
+        let resp = self
+            .http_client
+            .post(&url)
+            .json(&body)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+            .with_context(|| format!("Failed to reach server at {}", &self.config.cloud_url))?;
+
+        if !resp.status().is_success() {
+            anyhow::bail!("Server responded with status {} for {}", resp.status(), url);
+        }
+
+        Ok(())
     }
 
     async fn get_os_version(&self, id: i32) -> Result<OsVersion::Model> {
