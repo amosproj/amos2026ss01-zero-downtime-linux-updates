@@ -1,7 +1,7 @@
 mod config_loader;
 use clap::Parser;
 use config_loader::get_config;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 
 use crate::loop_os::run_os_tree_main_loop;
 use crate::util::bootc_wrapper::Bootc;
@@ -75,10 +75,10 @@ async fn main() {
 
     info!("Started app...");
 
-    let config = get_config(cli.config).unwrap_or_else(|err| {
+    let config = Arc::new(get_config(cli.config).unwrap_or_else(|err| {
         error!("Failed to load config: {}", err);
         std::process::exit(1);
-    });
+    }));
 
     debug!("Loaded config: {:?}", config);
 
@@ -104,66 +104,20 @@ async fn main() {
     let apps_state = get_initial_apps_state();
 
     debug!("Creating AgentState");
-    let agent_state = AgentState::new(VERSION, config, os_state, apps_state);
+    let agent_state = AgentState::new(VERSION, Arc::clone(&config), os_state, apps_state);
 
     info!(
         "Running amos-zero-downtime with version: {}",
         agent_state.self_version
     );
 
-    let http_client = match download_manager::build_http_client_from_settings(&config) {
-        Ok(client) => client,
+    let _download_manager = match download_manager::DownloadManager::new(Arc::clone(&config)) {
+        Ok(dm) => dm,
         Err(err) => {
             error!("Failed to initialize secure cloud HTTP client: {:?}", err);
             std::process::exit(1);
         }
     };
-
-    info!("Polling cloud server for targeted system updates...");
-    match download_manager::check_for_update(&http_client, &dm_config).await {
-        Ok(sync_response) => {
-            info!(
-                "Cloud sync successful. Server response: {:?}",
-                sync_response
-            );
-
-            if let Some(target_hash) = sync_response.target_os_commit_hash {
-                if target_hash != dm_config.current_os_version {
-                    info!(
-                        "New target OS update discovered [Hash: {}]. Starting download phase...",
-                        target_hash
-                    );
-
-                    match download_manager::download_update(&http_client, &target_hash, &dm_config)
-                        .await
-                    {
-                        Ok(downloaded_path) => {
-                            info!(
-                                "Update image successfully staged locally at: {:?}",
-                                downloaded_path
-                            );
-                            // downloaded_path to bootc here
-                        }
-                        Err(err) => {
-                            error!(
-                                "Critical failure while transferring update payload: {:?}",
-                                err
-                            );
-                        }
-                    }
-                } else {
-                    info!("System is up to date. Target matches running commit hash.");
-                }
-            } else {
-                info!(
-                    "No target OS updates assigned to this hardware profile by cloud orchestrator."
-                );
-            }
-        }
-        Err(err) => {
-            warn!("Cloud synchronization check failed: {:?}", err);
-        }
-    }
 
     let _apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(

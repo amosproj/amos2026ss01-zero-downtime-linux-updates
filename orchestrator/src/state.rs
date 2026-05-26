@@ -25,7 +25,7 @@ pub struct AppState {
 #[derive(Debug, Clone)]
 pub struct AgentState {
     pub self_version: String,
-    pub config: Settings,
+    pub config: Arc<Settings>,
 
     pub os_state: Arc<Mutex<OsState>>,
     pub apps_state: Arc<Mutex<Vec<AppState>>>,
@@ -34,7 +34,7 @@ pub struct AgentState {
 impl AgentState {
     pub fn new(
         version: impl Into<String>,
-        config: Settings,
+        config: Arc<Settings>,
         initial_os_state: OsState,
         inital_apps_state: Vec<AppState>,
     ) -> Self {
