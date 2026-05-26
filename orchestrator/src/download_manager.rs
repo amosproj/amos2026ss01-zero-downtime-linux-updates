@@ -21,7 +21,6 @@ impl DownloadManager {
 
     /// Fetches the OS version assigned to this device from the API.
     /// Queries `/os-assignments?device_uuid=<uuid>` then `/os-versions/<id>`.
-    #[allow(dead_code)]
     pub async fn get_expected_os_version(&self) -> Result<OsVersion::Model> {
         let assignment = self.get_os_assignment().await?;
         self.get_os_version(assignment.os_version_id).await
@@ -59,7 +58,6 @@ impl DownloadManager {
 
     /// Reports the current OS assignment for this device to the API.
     /// POSTs to `/reported-os-assignments?device_uuid=<uuid>`.
-    #[allow(dead_code)]
     pub async fn report_os_assignment(&self, os_version_id: i32) -> Result<()> {
         let url = format!(
             "{}/reported-os-assignments?device_uuid={}",
