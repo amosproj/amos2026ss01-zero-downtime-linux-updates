@@ -441,9 +441,24 @@ mod tests {
     #[serial]
     async fn test_create_reported_os_assignment_with_device_id_returns_201() {
         let app = test_app().await;
-        post(app.clone(), "/v1/tenants", r#"{"id":0,"name":"T","description":null}"#).await;
-        post(app.clone(), "/v1/devices", r#"{"id":0,"uuid":"dev-uuid-1","hostname":"host-1","tenant_id":1,"group_id":null}"#).await;
-        post(app.clone(), "/v1/os-versions", r#"{"id":0,"commit_hash":"abc123","orchestrator_version":"1.0","description":null}"#).await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"dev-uuid-1","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/os-versions",
+            r#"{"id":0,"commit_hash":"abc123","orchestrator_version":"1.0","description":null}"#,
+        )
+        .await;
 
         let (status, body) = post(
             app,
@@ -462,9 +477,24 @@ mod tests {
     #[serial]
     async fn test_create_reported_os_assignment_with_device_uuid_returns_201() {
         let app = test_app().await;
-        post(app.clone(), "/v1/tenants", r#"{"id":0,"name":"T","description":null}"#).await;
-        post(app.clone(), "/v1/devices", r#"{"id":0,"uuid":"test-uuid-42","hostname":"host-1","tenant_id":1,"group_id":null}"#).await;
-        post(app.clone(), "/v1/os-versions", r#"{"id":0,"commit_hash":"abc123","orchestrator_version":"1.0","description":null}"#).await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"test-uuid-42","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/os-versions",
+            r#"{"id":0,"commit_hash":"abc123","orchestrator_version":"1.0","description":null}"#,
+        )
+        .await;
 
         let (status, body) = post(
             app,
