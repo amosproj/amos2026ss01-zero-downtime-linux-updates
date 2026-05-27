@@ -1,5 +1,6 @@
 use crate::download_manager::DownloadManager;
 use crate::state::{AgentState, OsState};
+use crate::update_check::{CheckForUpdate, UpdateDecision};
 use crate::util::bootc_wrapper::Bootc;
 use log::{error, info, warn};
 use std::sync::Arc;
@@ -10,6 +11,7 @@ pub async fn run_os_tree_main_loop(
     agent_state: AgentState,
     client: Arc<Bootc>,
     download_manager: Arc<DownloadManager>,
+    update_checker: Arc<dyn CheckForUpdate>,
 ) {
     let mut update_interval = interval(Duration::from_secs(
         agent_state.config.poll_interval_secs.into(),
@@ -26,24 +28,15 @@ pub async fn run_os_tree_main_loop(
             }
         };
 
-        let expected_os_version = match download_manager.get_expected_os_version().await {
-            Ok(v) => v,
+        let decision = match update_checker.check_os(&bootc_status).await {
+            Ok(d) => d,
             Err(e) => {
-                error!("Failed to get expected OS version from API: {:?}", e);
+                error!("OS update check failed: {:?}", e);
                 continue;
             }
         };
 
         let booted_checksum = bootc_status.booted.checksum.clone();
-        let target_commit = expected_os_version.commit_hash;
-        if booted_checksum == target_commit
-            && let Err(e) = download_manager
-                .report_os_assignment(expected_os_version.id)
-                .await
-        {
-            warn!("Failed to report OS assignment: {:?}", e);
-        }
-
         let host_os_state = OsState {
             update_pending: bootc_status.staged.is_some(),
             booted_image: booted_checksum.clone(),
@@ -55,32 +48,42 @@ pub async fn run_os_tree_main_loop(
             *current_state = host_os_state;
         }
 
-        handle_bootc(&client, &booted_checksum, &target_commit).await;
+        match decision {
+            UpdateDecision::UpToDate { target } => {
+                info!(
+                    "OS is up to date (target #{} {})",
+                    target.id, target.commit_hash
+                );
+                if let Err(e) = download_manager.report_os_assignment(target.id).await {
+                    warn!("Failed to report OS assignment: {:?}", e);
+                }
+            }
+            UpdateDecision::UpdateRequired { reasons, target } => {
+                for reason in &reasons {
+                    info!("{}", reason);
+                }
+                handle_bootc(&client, &booted_checksum, &target.commit_hash).await;
+            }
+        }
     }
 }
 
 async fn handle_bootc(client: &Bootc, booted_checksum: &str, target_commit: &str) {
-    info!("Checking for OS update");
+    info!(
+        "Switching OS image: current {} -> target {}",
+        booted_checksum, target_commit
+    );
 
-    if booted_checksum != target_commit {
-        info!(
-            "New image detected! Current: {} -> Target: {}",
-            booted_checksum, target_commit
-        );
+    match client.switch(target_commit).await {
+        Ok(()) => {
+            info!("bootc switch staged successfully. Applying and rebooting...");
 
-        match client.switch(target_commit).await {
-            Ok(()) => {
-                info!("bootc switch staged successfully. Applying and rebooting...");
-
-                if let Err(e) = client.apply().await {
-                    error!("Critical: switch succeeded but apply failed: {:?}", e);
-                }
-            }
-            Err(e) => {
-                error!("bootc switch failed: {:?}", e);
+            if let Err(e) = client.apply().await {
+                error!("Critical: switch succeeded but apply failed: {:?}", e);
             }
         }
-    } else {
-        info!("System is up to date.");
+        Err(e) => {
+            error!("bootc switch failed: {:?}", e);
+        }
     }
 }

@@ -111,7 +111,7 @@ pub async fn collect_and_save_inventory(
     Ok(())
 }
 
-async fn collect_inventory(bootc: &Bootc, exec: &dyn Executer) -> Result<Inventory> {
+pub(crate) async fn collect_inventory(bootc: &Bootc, exec: &dyn Executer) -> Result<Inventory> {
     Ok(Inventory {
         // System info collection is required, if it fails, we return an error for the entire inventory collection process
         system: collect_system_info()?,
