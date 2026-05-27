@@ -16,7 +16,9 @@ pub struct OsState {
 
 #[derive(Debug, Clone)]
 pub struct AppState {
-    pub app_id: String,  // the podman/docker image name
+    #[expect(unused)]
+    pub app_id: String, // the podman/docker image name
+    #[expect(unused)]
     pub version: String, // the podman/docker image tag
     #[expect(unused)]
     pub updating: bool,
