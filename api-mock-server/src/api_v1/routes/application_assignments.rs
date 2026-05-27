@@ -28,18 +28,30 @@ pub fn routes() -> Router {
 struct AppAssignmentQuery {
     application_config_id: Option<i32>,
     device_id: Option<i32>,
+    device_uuid: Option<String>,
     group_id: Option<i32>,
 }
 
 /// GET /app-assignments — List app assignments.
-/// Optional query: `?application_config_id=<i32>&device_id=<i32>&group_id=<i32>`
+/// Optional query: `?application_config_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>`
 async fn list_application_assignments(Query(params): Query<AppAssignmentQuery>) -> Response {
-    match db::list_application_assignments(
-        params.application_config_id,
-        params.device_id,
-        params.group_id,
-    )
-    .await
+    let mut device_id = params.device_id;
+
+    if let Some(device_uuid) = params.device_uuid {
+        match db::get_device_by_uuid(device_uuid.clone()).await {
+            Ok(Some(device)) => device_id = Some(device.id),
+            Ok(None) => {
+                return err(
+                    StatusCode::NOT_FOUND,
+                    format!("No device with uuid {} found", device_uuid),
+                );
+            }
+            Err(e) => return db_err(e),
+        }
+    }
+
+    match db::list_application_assignments(params.application_config_id, device_id, params.group_id)
+        .await
     {
         Ok(assignments) => Json(assignments).into_response(),
         Err(e) => db_err(e),
