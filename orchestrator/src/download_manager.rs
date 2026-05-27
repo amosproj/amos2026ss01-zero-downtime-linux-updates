@@ -1,5 +1,6 @@
 use amos_common::entities::{OsAssignment, OsVersion, ReportedOsAssignment};
 use anyhow::{Context, Result};
+use log::{info, warn};
 use reqwest::Client;
 use std::sync::Arc;
 
@@ -17,6 +18,19 @@ impl DownloadManager {
             http_client,
             config,
         })
+    }
+
+    // Sends device pings to the API to indicate the orchestrator is still running
+    pub async fn send_ping(&self) {
+        let url = format!(
+            "{}/pings/{}",
+            self.config.cloud_url, self.config.device_uuid
+        );
+
+        let result = self.http_client.put(url).send().await;
+        if let Err(err) = result {
+            warn!("Aliveness report failed: {}", err);
+        }
     }
 
     /// Fetches the OS version assigned to this device from the API.
@@ -112,12 +126,12 @@ fn build_http_client(settings: &Settings) -> Result<Client> {
     let mut builder = Client::builder();
 
     if let Some(proxy_url) = &settings.https_proxy {
-        println!("Using https proxy: {}", proxy_url);
+        info!("Using https proxy: {}", proxy_url);
         let proxy = reqwest::Proxy::https(proxy_url)
             .with_context(|| format!("Failed to set https proxy: {}", proxy_url))?;
         builder = builder.proxy(proxy);
     } else {
-        println!("No https proxy set, using environment variables if available");
+        info!("No https proxy set, using environment variables if available");
     }
 
     builder

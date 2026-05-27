@@ -5,6 +5,7 @@ pub mod devices;
 pub mod groups;
 pub mod os_assignments;
 pub mod os_versions;
+pub mod pings;
 pub mod reported_application_assignments;
 pub mod reported_os_assignments;
 pub mod tenants;
@@ -51,6 +52,7 @@ pub fn routes() -> Router {
         .merge(groups::routes())
         .merge(os_assignments::routes())
         .merge(os_versions::routes())
+        .merge(pings::routes())
         .merge(reported_application_assignments::routes())
         .merge(reported_os_assignments::routes())
         .merge(tenants::routes())

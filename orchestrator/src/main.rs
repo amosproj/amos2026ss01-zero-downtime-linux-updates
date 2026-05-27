@@ -123,12 +123,14 @@ async fn main() {
         },
     );
 
-    let _apps_handle = tokio::spawn(run_apps_main_loop(agent_state.clone()));
-    let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
-        agent_state.clone(),
-        Arc::clone(&bootc_client),
-        Arc::clone(&download_manager),
-    ));
+    let download_manager_clone = Arc::clone(&download_manager);
+    let _ping_poll_handle = tokio::spawn(async move {
+        loop {
+            download_manager_clone.send_ping().await;
+
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        }
+    });
 
     tokio::signal::ctrl_c().await.unwrap();
 }

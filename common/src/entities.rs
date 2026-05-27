@@ -19,6 +19,9 @@ pub use crate::entities::os_assignment as OsAssignment;
 pub mod os_version;
 pub use crate::entities::os_version as OsVersion;
 
+pub mod ping;
+pub use crate::entities::ping as Ping;
+
 pub mod reported_application_assignment;
 pub use crate::entities::reported_application_assignment as ReportedApplicationAssignment;
 
