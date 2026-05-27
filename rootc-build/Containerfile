@@ -1,14 +1,30 @@
-# Compile the orchestrator binary
-FROM rust:1.95-slim AS builder
+# Compile the orchestrator binary on the BUILD arch, target the IMAGE arch
+FROM --platform=$BUILDPLATFORM rust:1.95-slim AS builder
+ARG TARGETARCH
+RUN set -eux; \
+    case "$TARGETARCH" in \
+      amd64) RUST_TARGET=x86_64-unknown-linux-gnu;  PKG=gcc-x86-64-linux-gnu  ;; \
+      arm64) RUST_TARGET=aarch64-unknown-linux-gnu; PKG=gcc-aarch64-linux-gnu ;; \
+      *) echo "unsupported TARGETARCH=$TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    echo "$RUST_TARGET" > /rust-target; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends "$PKG"; \
+    rm -rf /var/lib/apt/lists/*; \
+    rustup target add "$RUST_TARGET"
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 COPY . /workspace
 WORKDIR /workspace
-RUN cargo build --package amos-orchestrator --release
+RUN RUST_TARGET="$(cat /rust-target)"; \
+    cargo build --package amos-orchestrator --release --target "$RUST_TARGET"; \
+    cp "target/$RUST_TARGET/release/amos-orchestrator" /amos-orchestrator
 
-# Bootable OS image (fedora-bootc)
+# Bootable OS image (fedora-bootc) — resolves to the matching arch automatically
 FROM quay.io/fedora/fedora-bootc:latest
 
 # Copy the compiled binary from the build stage
-COPY --from=builder /workspace/target/release/amos-orchestrator /usr/local/bin/amos-orchestrator
+COPY --from=builder /amos-orchestrator /usr/local/bin/amos-orchestrator
 
 # Install the systemd unit and enable it
 COPY rootc-build/orchestrator.service /etc/systemd/system/orchestrator.service

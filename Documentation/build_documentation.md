@@ -273,6 +273,26 @@ podman tag amos-orchestrator:latest ghcr.io/amosproj/amos2026ss01-zero-downtime-
 podman push ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:latest
 ```
 
+### Building for ARM (Apple Silicon)
+
+The `Containerfile` cross-compiles the orchestrator binary based on the build platform, so an `arm64` image can be produced on any host (including an x86 CI runner). The `linux/arm64` final stage pulls the matching `quay.io/fedora/fedora-bootc` variant automatically.
+
+To build and run locally on a Mac with `podman-bootc`:
+
+```bash
+# Build an arm64 image
+podman build --platform=linux/arm64 \
+  -f rootc-build/Containerfile \
+  -t amos-orchestrator-arm64:local .
+
+# Boot it in a VM
+podman-bootc run --filesystem=ext4 amos-orchestrator-arm64:local
+```
+
+The release CI workflow (`container-orchestrator.yml`) builds and pushes a multi-arch manifest list (`linux/amd64` + `linux/arm64`) on every tag, so `podman-bootc run --filesystem=ext4 ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:<tag>` works on both Linux/x86 and Apple Silicon once the tag has been published with multi-arch support.
+
+> **Note:** Existing tags pushed before multi-arch was added (e.g. `mid-project-release-candidate`) are amd64-only. Either build locally with the recipe above, or have a maintainer delete and re-push the tag to trigger a multi-arch rebuild.
+
 ---
 
 ## CI / CD
