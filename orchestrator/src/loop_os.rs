@@ -34,7 +34,7 @@ pub async fn run_os_tree_main_loop(
             }
         };
 
-        let booted_checksum = bootc_status.booted.checksum.clone();
+        let booted_checksum = bootc_status.booted.unwrap().checksum.clone();
         let target_commit = expected_os_version.commit_hash;
         if booted_checksum == target_commit
             && let Err(e) = download_manager

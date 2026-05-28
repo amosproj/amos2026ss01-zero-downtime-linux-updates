@@ -98,7 +98,7 @@ async fn main() {
     });
     let os_state = OsState {
         update_pending: bootc_status.staged.is_some(),
-        booted_image: bootc_status.booted.checksum.clone(),
+        booted_image: bootc_status.booted.unwrap().checksum.clone(),
         update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
     };
 

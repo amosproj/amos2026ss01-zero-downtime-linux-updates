@@ -487,12 +487,14 @@ mod tests {
 
         let result: BootcStatus = serde_json::from_str(&status_block).unwrap();
 
+        let booted_info = result.booted.as_ref().expect("Expected booted deployment to be present");
+
         // Booted deployment
         assert_eq!(
-            result.booted.checksum,
+            booted_info.checksum,
             "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443"
         );
-        assert!(result.booted.image.is_none()); // null on basic VM
+        assert!(result.booted.as_ref().unwrap().image.is_none()); // null on basic VM
 
         // No staged deployment
         assert!(result.staged.is_none());
