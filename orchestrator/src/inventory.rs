@@ -487,7 +487,10 @@ mod tests {
 
         let result: BootcStatus = serde_json::from_str(&status_block).unwrap();
 
-        let booted_info = result.booted.as_ref().expect("Expected booted deployment to be present");
+        let booted_info = result
+            .booted
+            .as_ref()
+            .expect("Expected booted deployment to be present");
 
         // Booted deployment
         assert_eq!(
