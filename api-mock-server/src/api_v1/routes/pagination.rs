@@ -1,4 +1,4 @@
-use serde::{Serialize};
+use serde::Serialize;
 
 /// Query params: `?page=1&page_size=20`
 /// Index 1 is the first page
@@ -22,8 +22,8 @@ impl PageParams {
         Self { page, page_size }
     }
     /// Convert 1-based page index to 0-based offset
-    pub fn to_db_page(&self) -> u64 {
-        self.page -1
+    pub fn to_db_page(self) -> u64 {
+        self.page - 1
     }
 
     pub fn validate(&self) -> Result<(), &'static str> {

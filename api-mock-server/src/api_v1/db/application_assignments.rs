@@ -1,7 +1,9 @@
 use amos_common::entities::ApplicationAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+};
 
 use super::db;
 
@@ -15,7 +17,8 @@ pub async fn list_application_assignments(
     page_size: u64,
 ) -> Result<(Vec<ApplicationAssignment::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = ApplicationAssignment::Entity::find().order_by_asc(ApplicationAssignment::Column::Id);
+    let mut query =
+        ApplicationAssignment::Entity::find().order_by_asc(ApplicationAssignment::Column::Id);
     if let Some(id) = application_config_id {
         query = query.filter(ApplicationAssignment::Column::ApplicationConfigId.eq(id));
     }

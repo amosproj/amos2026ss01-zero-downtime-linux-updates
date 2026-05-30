@@ -1,5 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, not_found, pagination_err, pagination::{default_page, default_page_size, Page, PageParams}};
+use crate::api_v1::routes::{
+    db_err, not_found,
+    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination_err,
+};
 use axum::{
     Json, Router,
     extract::{Path, Query},

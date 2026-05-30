@@ -3,8 +3,8 @@ use amos_common::entities::{
     ReportedOsAssignment, Tenant,
 };
 use sea_orm::DbErr;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder, PaginatorTrait, ExprTrait};
 use sea_orm::sea_query::Expr;
+use sea_orm::{ColumnTrait, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter, QueryOrder};
 use serde_json::json;
 
 use super::db;
@@ -24,7 +24,16 @@ pub async fn list_device_summaries(
     page: u64,
     page_size: u64,
 ) -> Result<(Vec<serde_json::Value>, u64), DbErr> {
-    assemble_device_summary(None, group_id, tenant_id, uuid_filter, hostname_filter, page, page_size).await
+    assemble_device_summary(
+        None,
+        group_id,
+        tenant_id,
+        uuid_filter,
+        hostname_filter,
+        page,
+        page_size,
+    )
+    .await
 }
 
 pub async fn assemble_device_summary(

@@ -1,5 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found, pagination_err, pagination::{default_page, default_page_size, Page, PageParams}};
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination_err,
+};
 use amos_common::entities::ApplicationAssignment;
 use axum::{
     Json, Router,
@@ -51,7 +55,9 @@ async fn list_application_assignments(Query(params): Query<AppAssignmentQuery>) 
     )
     .await
     {
-        Ok((assignments, total)) => Json(Page::new(assignments, page_params, total)).into_response(),
+        Ok((assignments, total)) => {
+            Json(Page::new(assignments, page_params, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

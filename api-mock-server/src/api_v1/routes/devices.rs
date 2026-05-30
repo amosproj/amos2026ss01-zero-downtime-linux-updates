@@ -1,5 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found, pagination_err, pagination::{default_page, default_page_size, Page, PageParams}};
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination_err,
+};
 use amos_common::entities::Device;
 use axum::{
     Json, Router,
@@ -47,7 +51,9 @@ async fn list_device_summaries(Query(params): Query<DeviceQuery>) -> Response {
         params.hostname,
         page_params.to_db_page(),
         page_params.page_size,
-    ).await {
+    )
+    .await
+    {
         Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
         Err(e) => db_err(e),
     }
@@ -62,7 +68,7 @@ async fn get_device_summary(Path(id): Path<i32>) -> Response {
     }
 }
 
-/// GET /devices — List devices. 
+/// GET /devices — List devices.
 /// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
 async fn list_devices(Query(params): Query<DeviceQuery>) -> Response {
     let page_params = PageParams::new(params.page, params.page_size);
@@ -76,7 +82,9 @@ async fn list_devices(Query(params): Query<DeviceQuery>) -> Response {
         params.hostname,
         page_params.to_db_page(),
         page_params.page_size,
-    ).await {
+    )
+    .await
+    {
         Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
         Err(e) => db_err(e),
     }

@@ -1,5 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found, pagination_err, pagination::{default_page, default_page_size, Page, PageParams}};
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination_err,
+};
 use amos_common::entities::OsAssignment;
 use axum::{
     Json, Router,
@@ -59,7 +63,15 @@ async fn list_os_assignments(Query(params): Query<OsAssignmentQuery>) -> Respons
         }
     }
 
-    match db::list_os_assignments(params.os_version_id, device_id, params.group_id, page_params.to_db_page(), page_params.page_size).await {
+    match db::list_os_assignments(
+        params.os_version_id,
+        device_id,
+        params.group_id,
+        page_params.to_db_page(),
+        page_params.page_size,
+    )
+    .await
+    {
         Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
         Err(e) => db_err(e),
     }

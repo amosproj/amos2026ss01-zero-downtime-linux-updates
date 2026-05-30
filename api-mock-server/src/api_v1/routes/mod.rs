@@ -143,9 +143,24 @@ mod tests {
     #[serial]
     async fn test_list_tenants_name_filter_returns_matching_items() {
         let app = test_app().await;
-        post(app.clone(), "/v1/tenants", r#"{"id":0,"name":"Acme Corp","description":null}"#).await;
-        post(app.clone(), "/v1/tenants", r#"{"id":0,"name":"Acme Ltd","description":null}"#).await;
-        post(app.clone(), "/v1/tenants", r#"{"id":0,"name":"Other","description":null}"#).await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Acme Corp","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Acme Ltd","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Other","description":null}"#,
+        )
+        .await;
         let (_, body) = get(app, "/v1/tenants?name=Acme").await;
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json["total_items"], 2);
@@ -291,9 +306,24 @@ mod tests {
     #[serial]
     async fn test_list_devices_page_size_one_returns_first_item_only() {
         let app = test_app().await;
-        post(app.clone(), "/v1/tenants", r#"{"id":0,"name":"T","description":null}"#).await;
-        post(app.clone(), "/v1/devices", r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#).await;
-        post(app.clone(), "/v1/devices", r#"{"id":0,"uuid":"u2","hostname":"h2","tenant_id":1,"group_id":null}"#).await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u2","hostname":"h2","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
         let (_, body) = get(app, "/v1/devices?page_size=1").await;
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json["data"].as_array().unwrap().len(), 1);
@@ -338,9 +368,24 @@ mod tests {
     #[serial]
     async fn test_list_device_summaries_total_items_correct() {
         let app = test_app().await;
-        post(app.clone(), "/v1/tenants", r#"{"id":0,"name":"T","description":null}"#).await;
-        post(app.clone(), "/v1/devices", r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#).await;
-        post(app.clone(), "/v1/devices", r#"{"id":0,"uuid":"u2","hostname":"h2","tenant_id":1,"group_id":null}"#).await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u2","hostname":"h2","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
         let (_, body) = get(app, "/v1/devices/summary").await;
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json["total_items"], 2);
@@ -370,9 +415,24 @@ mod tests {
     #[serial]
     async fn test_list_applications_name_filter_returns_matching_items() {
         let app = test_app().await;
-        post(app.clone(), "/v1/applications", r#"{"id":0,"name":"nginx","description":"web server"}"#).await;
-        post(app.clone(), "/v1/applications", r#"{"id":0,"name":"postgres","description":"database"}"#).await;
-        post(app.clone(), "/v1/applications", r#"{"id":0,"name":"nginx-exporter","description":"metrics"}"#).await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"nginx","description":"web server"}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"postgres","description":"database"}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"nginx-exporter","description":"metrics"}"#,
+        )
+        .await;
         let (_, body) = get(app, "/v1/applications?name=nginx").await;
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json["total_items"], 2);

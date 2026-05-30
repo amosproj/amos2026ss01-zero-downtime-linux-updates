@@ -1,8 +1,10 @@
 use amos_common::entities::Tenant;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, ExprTrait};
 use sea_orm::sea_query::Expr;
+use sea_orm::{
+    ActiveModelTrait, DbErr, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter, QueryOrder,
+};
 
 use super::db;
 
