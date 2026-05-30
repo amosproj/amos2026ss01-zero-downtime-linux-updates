@@ -1,15 +1,27 @@
 use amos_common::entities::Tenant;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, ExprTrait};
+use sea_orm::sea_query::Expr;
 
 use super::db;
 
 // --Tenants--
 
-pub async fn list_tenants() -> Result<Vec<Tenant::Model>, DbErr> {
+pub async fn list_tenants(
+    name_filter: Option<String>,
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<Tenant::Model>, u64), DbErr> {
     let db = db!();
-    Tenant::Entity::find().all(&db).await
+    let mut query = Tenant::Entity::find().order_by_asc(Tenant::Column::Id);
+    if let Some(name) = name_filter {
+        query = query.filter(Expr::col(Tenant::Column::Name).like(format!("%{}%", name)));
+    }
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((data, total_items))
 }
 
 pub async fn get_tenant(id: i32) -> Result<Option<Tenant::Model>, DbErr> {

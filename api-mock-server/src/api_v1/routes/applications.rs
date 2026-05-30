@@ -1,9 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err, pagination::{default_page, default_page_size, Page, PageParams}};
 use amos_common::entities::Application;
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -23,10 +23,24 @@ pub fn routes() -> Router {
         )
 }
 
-/// GET /applications — List all applications.
-async fn list_applications() -> Response {
-    match db::list_applications().await {
-        Ok(apps) => Json(apps).into_response(),
+#[derive(serde::Deserialize)]
+struct ApplicationQuery {
+    name: Option<String>,
+    #[serde(default = "default_page")]
+    page: u64,
+    #[serde(default = "default_page_size")]
+    page_size: u64,
+}
+
+/// GET /applications — List applications.
+/// Optional query: `?name=<string>&page=1&page_size=20`
+async fn list_applications(Query(params): Query<ApplicationQuery>) -> Response {
+    let page_params = PageParams::new(params.page, params.page_size);
+    if let Err(e) = page_params.validate() {
+        return pagination_err(e);
+    }
+    match db::list_applications(params.name, page_params.to_db_page(), page_params.page_size).await {
+        Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
         Err(e) => db_err(e),
     }
 }

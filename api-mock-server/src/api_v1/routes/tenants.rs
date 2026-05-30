@@ -1,9 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err, pagination::{default_page, default_page_size, Page, PageParams}};
 use amos_common::entities::Tenant;
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -18,10 +18,24 @@ pub fn routes() -> Router {
         )
 }
 
-/// GET /tenants — List all tenants.
-async fn list_tenants() -> Response {
-    match db::list_tenants().await {
-        Ok(tenants) => Json(tenants).into_response(),
+#[derive(serde::Deserialize)]
+struct TenantQuery {
+    name: Option<String>,
+    #[serde(default = "default_page")]
+    page: u64,
+    #[serde(default = "default_page_size")]
+    page_size: u64,
+}
+
+/// GET /tenants — List tenants.
+/// Optional query: `?name=<string>&page=1&page_size=20`
+async fn list_tenants(Query(params): Query<TenantQuery>) -> Response {
+    let page_params = PageParams::new(params.page, params.page_size);
+    if let Err(e) = page_params.validate() {
+        return pagination_err(e);
+    }
+    match db::list_tenants(params.name, page_params.to_db_page(), page_params.page_size).await {
+        Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
         Err(e) => db_err(e),
     }
 }

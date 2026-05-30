@@ -1,15 +1,22 @@
 use amos_common::entities::OsVersion;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, PaginatorTrait, QueryOrder};
 
 use super::db;
 
 // --OS Versions--
 
-pub async fn list_os_versions() -> Result<Vec<OsVersion::Model>, DbErr> {
+pub async fn list_os_versions(
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<OsVersion::Model>, u64), DbErr> {
     let db = db!();
-    OsVersion::Entity::find().all(&db).await
+    let query = OsVersion::Entity::find().order_by_asc(OsVersion::Column::Id);
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((data, total_items))
 }
 
 pub async fn get_os_version(id: i32) -> Result<Option<OsVersion::Model>, DbErr> {

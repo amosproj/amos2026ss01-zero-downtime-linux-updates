@@ -1,5 +1,5 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err, pagination::{default_page, default_page_size, Page, PageParams}};
 use amos_common::entities::OsAssignment;
 use axum::{
     Json, Router,
@@ -30,11 +30,19 @@ struct OsAssignmentQuery {
     device_id: Option<i32>,
     device_uuid: Option<String>,
     group_id: Option<i32>,
+    #[serde(default = "default_page")]
+    page: u64,
+    #[serde(default = "default_page_size")]
+    page_size: u64,
 }
 
 /// GET /os-assignments — List OS assignments (target state).
-/// Optional query: `?os_version_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>`
+/// Optional query: `?os_version_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>&page=1&page_size=20`
 async fn list_os_assignments(Query(params): Query<OsAssignmentQuery>) -> Response {
+    let page_params = PageParams::new(params.page, params.page_size);
+    if let Err(e) = page_params.validate() {
+        return pagination_err(e);
+    }
     let mut device_id = params.device_id;
 
     // Resolve device_uuid
@@ -51,8 +59,8 @@ async fn list_os_assignments(Query(params): Query<OsAssignmentQuery>) -> Respons
         }
     }
 
-    match db::list_os_assignments(params.os_version_id, device_id, params.group_id).await {
-        Ok(assignments) => Json(assignments).into_response(),
+    match db::list_os_assignments(params.os_version_id, device_id, params.group_id, page_params.to_db_page(), page_params.page_size).await {
+        Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
         Err(e) => db_err(e),
     }
 }

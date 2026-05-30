@@ -1,5 +1,5 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err, pagination::{default_page, default_page_size, Page, PageParams}};
 use amos_common::entities::Device;
 use axum::{
     Json, Router,
@@ -25,13 +25,30 @@ pub fn routes() -> Router {
 struct DeviceQuery {
     group_id: Option<i32>,
     tenant_id: Option<i32>,
+    uuid: Option<String>,
+    hostname: Option<String>,
+    #[serde(default = "default_page")]
+    page: u64,
+    #[serde(default = "default_page_size")]
+    page_size: u64,
 }
 
-/// GET /devices/summary — List all device summaries (reported state).
-/// Optional query: `?tenant_id=<i32>`
+/// GET /devices/summary — List device summaries (reported state).
+/// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
 async fn list_device_summaries(Query(params): Query<DeviceQuery>) -> Response {
-    match db::list_device_summaries(params.tenant_id).await {
-        Ok(summaries) => Json(summaries).into_response(),
+    let page_params = PageParams::new(params.page, params.page_size);
+    if let Err(e) = page_params.validate() {
+        return pagination_err(e);
+    }
+    match db::list_device_summaries(
+        params.group_id,
+        params.tenant_id,
+        params.uuid,
+        params.hostname,
+        page_params.to_db_page(),
+        page_params.page_size,
+    ).await {
+        Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
         Err(e) => db_err(e),
     }
 }
@@ -45,10 +62,22 @@ async fn get_device_summary(Path(id): Path<i32>) -> Response {
     }
 }
 
-/// GET /devices — List devices. Optional query: `?group_id=<i32>&tenant_id=<i32>`
+/// GET /devices — List devices. 
+/// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
 async fn list_devices(Query(params): Query<DeviceQuery>) -> Response {
-    match db::list_devices(params.group_id, params.tenant_id).await {
-        Ok(devices) => Json(devices).into_response(),
+    let page_params = PageParams::new(params.page, params.page_size);
+    if let Err(e) = page_params.validate() {
+        return pagination_err(e);
+    }
+    match db::list_devices(
+        params.group_id,
+        params.tenant_id,
+        params.uuid,
+        params.hostname,
+        page_params.to_db_page(),
+        page_params.page_size,
+    ).await {
+        Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
         Err(e) => db_err(e),
     }
 }

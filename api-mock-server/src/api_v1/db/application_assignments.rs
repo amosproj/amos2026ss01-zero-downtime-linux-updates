@@ -1,7 +1,7 @@
 use amos_common::entities::ApplicationAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
 
 use super::db;
 
@@ -11,9 +11,11 @@ pub async fn list_application_assignments(
     application_config_id: Option<i32>,
     device_id: Option<i32>,
     group_id: Option<i32>,
-) -> Result<Vec<ApplicationAssignment::Model>, DbErr> {
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<ApplicationAssignment::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = ApplicationAssignment::Entity::find();
+    let mut query = ApplicationAssignment::Entity::find().order_by_asc(ApplicationAssignment::Column::Id);
     if let Some(id) = application_config_id {
         query = query.filter(ApplicationAssignment::Column::ApplicationConfigId.eq(id));
     }
@@ -23,7 +25,10 @@ pub async fn list_application_assignments(
     if let Some(id) = group_id {
         query = query.filter(ApplicationAssignment::Column::GroupId.eq(id));
     }
-    query.all(&db).await
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((data, total_items))
 }
 
 pub async fn get_application_assignment(
