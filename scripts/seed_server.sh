@@ -22,6 +22,9 @@ api() {
 # sha1: `head -c 32 /dev/urandom | sha1sum`
 
 api "/tenants" POST '{ "id": 0, "name": "Weber-Lager", "description": "Meta-Ort für initialisierte unverschickte Geräte" }'
+api "/tenants" POST '{ "id": 0, "name": "Kaufland-Fabrik-Erlangen", "description": "Stammkunde in Deutschland" }'
+api "/tenants" POST '{ "id": 0, "name": "7-Eleven-Fabrik-Tokyo", "description": "Zentrale Stelle in Chiyoda für Tokyo" }'
+api "/tenants" POST '{ "id": 0, "name": "Foodland-Fabrik-Bangkok", "description": "Hauptlagerort in Bangkok" }'
 api "/devices" POST '{ "id": 0, "uuid": "8b722f94-6852-42cf-9722-98446499a457", "hostname": "x38974", "tenant_id": 1 }'
 
 api "/os-versions" POST '{ "id": 0, "commit_hash": "092599a804d5169ae2a0a306bcb4b213b7646d28", "orchestrator_version": "0.1.0", "description": "First stable release, tested intensively" }'
