@@ -2,7 +2,11 @@ use crate::dtos;
 use amos_common::entities::Device;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::sea_query::Expr;
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter,
+    QueryOrder,
+};
 
 use super::db;
 
@@ -11,19 +15,31 @@ use super::db;
 pub async fn list_devices(
     group_id: Option<i32>,
     tenant_id: Option<i32>,
-) -> Result<Vec<Device::Model>, DbErr> {
+    uuid_filter: Option<String>,
+    hostname_filter: Option<String>,
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<Device::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = dtos::Device::Entity::find();
+    let mut query = dtos::Device::Entity::find().order_by_asc(dtos::Device::Column::Id);
     if let Some(id) = group_id {
         query = query.filter(dtos::Device::Column::GroupId.eq(id));
     }
     if let Some(id) = tenant_id {
         query = query.filter(dtos::Device::Column::TenantId.eq(id));
     }
-    query
-        .all(&db)
-        .await
-        .map(|v| v.into_iter().map(|m| m.into_api()).collect())
+    if let Some(uuid) = uuid_filter {
+        query =
+            query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
+    }
+    if let Some(hostname) = hostname_filter {
+        query = query
+            .filter(Expr::col(dtos::Device::Column::Hostname).like(format!("%{}%", hostname)));
+    }
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
 }
 
 pub async fn get_device(id: i32) -> Result<Option<Device::Model>, DbErr> {

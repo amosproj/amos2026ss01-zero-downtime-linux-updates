@@ -1,5 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, not_found};
+use crate::api_v1::routes::{
+    db_err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -29,14 +33,25 @@ struct ReportedAppAssignmentQuery {
 }
 
 /// GET /reported-app-assignments — List reported app assignments (current device state).
-/// Optional query: `?device_id=<i32>&application_config_id=<i32>`
+/// Optional query: `?device_id=<i32>&application_config_id=<i32>&page=1&page_size=20`
 async fn list_reported_application_assignments(
+    Query(page): Query<PageParams>,
     Query(params): Query<ReportedAppAssignmentQuery>,
 ) -> Response {
-    match db::list_reported_application_assignments(params.device_id, params.application_config_id)
-        .await
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_reported_application_assignments(
+        params.device_id,
+        params.application_config_id,
+        page.to_db_page(),
+        page.page_size,
+    )
+    .await
     {
-        Ok(assignments) => Json(assignments).into_response(),
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

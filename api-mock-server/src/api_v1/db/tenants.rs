@@ -2,18 +2,30 @@ use crate::dtos;
 use amos_common::entities::Tenant;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
+use sea_orm::sea_query::Expr;
+use sea_orm::{
+    ActiveModelTrait, DbErr, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter, QueryOrder,
+};
 
 use super::db;
 
 // --Tenants--
 
-pub async fn list_tenants() -> Result<Vec<Tenant::Model>, DbErr> {
+pub async fn list_tenants(
+    name_filter: Option<String>,
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<Tenant::Model>, u64), DbErr> {
     let db = db!();
-    dtos::Tenant::Entity::find()
-        .all(&db)
-        .await
-        .map(|v| v.into_iter().map(|m| m.into_api()).collect())
+    let mut query = dtos::Tenant::Entity::find().order_by_asc(dtos::Tenant::Column::Id);
+    if let Some(name) = name_filter {
+        query =
+            query.filter(Expr::col(dtos::Tenant::Column::Name).like(format!("%{}%", name)));
+    }
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
 }
 
 pub async fn get_tenant(id: i32) -> Result<Option<Tenant::Model>, DbErr> {

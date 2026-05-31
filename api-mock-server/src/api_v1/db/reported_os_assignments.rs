@@ -2,7 +2,9 @@ use crate::dtos;
 use amos_common::entities::ReportedOsAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+};
 
 use super::db;
 
@@ -11,19 +13,22 @@ use super::db;
 pub async fn list_reported_os_assignments(
     device_id: Option<i32>,
     os_version_id: Option<i32>,
-) -> Result<Vec<ReportedOsAssignment::Model>, DbErr> {
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<ReportedOsAssignment::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = dtos::ReportedOsAssignment::Entity::find();
+    let mut query = dtos::ReportedOsAssignment::Entity::find()
+        .order_by_asc(dtos::ReportedOsAssignment::Column::Id);
     if let Some(id) = device_id {
         query = query.filter(dtos::ReportedOsAssignment::Column::DeviceId.eq(id));
     }
     if let Some(id) = os_version_id {
         query = query.filter(dtos::ReportedOsAssignment::Column::OsVersionId.eq(id));
     }
-    query
-        .all(&db)
-        .await
-        .map(|v| v.into_iter().map(|m| m.into_api()).collect())
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
 }
 
 pub async fn get_reported_os_assignment(

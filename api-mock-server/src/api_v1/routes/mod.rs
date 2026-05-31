@@ -5,6 +5,7 @@ pub mod devices;
 pub mod groups;
 pub mod os_assignments;
 pub mod os_versions;
+pub mod pagination;
 pub mod pings;
 pub mod reported_application_assignments;
 pub mod reported_os_assignments;
@@ -41,6 +42,10 @@ pub(super) fn db_err(e: sea_orm::DbErr) -> Response {
         StatusCode::INTERNAL_SERVER_ERROR,
         format!("Database error: {}", e),
     )
+}
+
+pub(super) fn pagination_err(msg: &str) -> Response {
+    err(StatusCode::UNPROCESSABLE_ENTITY, msg)
 }
 
 pub fn routes() -> Router {
@@ -127,10 +132,38 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_list_tenants_returns_200_and_empty_array() {
+    async fn test_list_tenants_returns_200_with_page_envelope() {
         let (status, body) = get(test_app().await, "/v1/tenants").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, "[]");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_tenants_name_filter_returns_matching_items() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Acme Corp","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Acme Ltd","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Other","description":null}"#,
+        )
+        .await;
+        let (_, body) = get(app, "/v1/tenants?name=Acme").await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["total_items"], 2);
     }
 
     #[tokio::test]
@@ -198,10 +231,40 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_list_groups_returns_200_and_empty_array() {
+    async fn test_list_groups_returns_200_with_page_envelope() {
         let (status, body) = get(test_app().await, "/v1/groups").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, "[]");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+    #[tokio::test]
+    #[serial]
+    async fn test_list_groups_page_metadata_defaults() {
+        let (_, body) = get(test_app().await, "/v1/groups").await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["page"], 1);
+        assert_eq!(json["page_size"], 20);
+        assert_eq!(json["total_items"], 0);
+        assert_eq!(json["total_pages"], 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_groups_paging_total_items_correct() {
+        let app = test_app().await;
+        post(app.clone(), "/v1/groups", r#"{"id":0,"name":"G1"}"#).await;
+        post(app.clone(), "/v1/groups", r#"{"id":0,"name":"G2"}"#).await;
+        post(app.clone(), "/v1/groups", r#"{"id":0,"name":"G3"}"#).await;
+        let (_, body) = get(app, "/v1/groups?page_size=2").await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["total_items"], 3);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_groups_page_zero_returns_422() {
+        let (status, _) = get(test_app().await, "/v1/groups?page=0").await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     }
 
     #[tokio::test]
@@ -232,10 +295,38 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_list_devices_returns_200_and_empty_array() {
+    async fn test_list_devices_returns_200_with_page_envelope() {
         let (status, body) = get(test_app().await, "/v1/devices").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, "[]");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_devices_page_size_one_returns_first_item_only() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u2","hostname":"h2","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        let (_, body) = get(app, "/v1/devices?page_size=1").await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"].as_array().unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -266,9 +357,38 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_list_device_summaries_returns_200() {
-        let (status, _) = get(test_app().await, "/v1/devices/summary").await;
+    async fn test_list_device_summaries_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/devices/summary").await;
         assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_device_summaries_total_items_correct() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u2","hostname":"h2","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        let (_, body) = get(app, "/v1/devices/summary").await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["total_items"], 2);
     }
 
     #[tokio::test]
@@ -284,10 +404,38 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_list_applications_returns_200_and_empty_array() {
+    async fn test_list_applications_returns_200_with_page_envelope() {
         let (status, body) = get(test_app().await, "/v1/applications").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, "[]");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_applications_name_filter_returns_matching_items() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"nginx","description":"web server"}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"postgres","description":"database"}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"nginx-exporter","description":"metrics"}"#,
+        )
+        .await;
+        let (_, body) = get(app, "/v1/applications?name=nginx").await;
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["total_items"], 2);
     }
 
     #[tokio::test]
@@ -333,9 +481,34 @@ mod tests {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     }
 
+    #[tokio::test]
+    #[serial]
+    async fn test_list_app_configs_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/app-configs").await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
     // --- OS Versions ---
     // OsVersion::Model: { id: i32, commit_hash: String, orchestrator_version: String, description: Option<String> }
     // description IS optional here (unlike Application).
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_os_versions_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/os-versions").await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_os_versions_page_zero_returns_422() {
+        let (status, _) = get(test_app().await, "/v1/os-versions?page=0").await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    }
 
     #[tokio::test]
     #[serial]
@@ -404,6 +577,24 @@ mod tests {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     }
 
+    #[tokio::test]
+    #[serial]
+    async fn test_list_app_assignments_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/app-assignments").await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_os_assignments_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/os-assignments").await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
     // --- Reported assignments ---
     // ReportedApplicationAssignment::Model: { id: i32, application_config_id: i32, device_id: i32, updated_at: DateTimeUtc }
     // ReportedOsAssignment::Model:          { id: i32, os_version_id: i32, device_id: i32, updated_at: DateTimeUtc }
@@ -425,18 +616,20 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_list_reported_app_assignments_returns_200() {
-        let (status, body) = get(test_app().await, "/v1/reported-app-assignments").await;
+    async fn test_list_reported_os_assignments_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/reported-os-assignments").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, "[]");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
     }
 
     #[tokio::test]
     #[serial]
-    async fn test_list_reported_os_assignments_returns_200() {
-        let (status, body) = get(test_app().await, "/v1/reported-os-assignments").await;
+    async fn test_list_reported_app_assignments_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/reported-app-assignments").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body, "[]");
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
     }
 
     #[tokio::test]
