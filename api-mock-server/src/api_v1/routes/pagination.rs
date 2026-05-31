@@ -1,26 +1,25 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Query params: `?page=1&page_size=20`
 /// Index 1 is the first page
-#[derive(Debug, Clone, Copy)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 pub struct PageParams {
+    #[serde(default = "default_page")]
     pub page: u64,
+    #[serde(default = "default_page_size")]
     pub page_size: u64,
 }
 /// Default values for page and page_size used in query structs with
 /// `#[serde(default = "pagination::default_page")]` and `#[serde(default = "pagination::default_page_size")]`
-pub fn default_page() -> u64 {
+fn default_page() -> u64 {
     1
 }
 
-pub fn default_page_size() -> u64 {
+fn default_page_size() -> u64 {
     20
 }
 
 impl PageParams {
-    pub fn new(page: u64, page_size: u64) -> Self {
-        Self { page, page_size }
-    }
     /// Convert 1-based page index to 0-based offset
     pub fn to_db_page(self) -> u64 {
         self.page - 1

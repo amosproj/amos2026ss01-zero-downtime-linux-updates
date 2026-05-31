@@ -1,7 +1,7 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::{
     db_err, not_found,
-    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination::{Page, PageParams},
     pagination_err,
 };
 use axum::{
@@ -30,30 +30,26 @@ pub fn routes() -> Router {
 struct ReportedAppAssignmentQuery {
     device_id: Option<i32>,
     application_config_id: Option<i32>,
-    #[serde(default = "default_page")]
-    page: u64,
-    #[serde(default = "default_page_size")]
-    page_size: u64,
 }
 
 /// GET /reported-app-assignments — List reported app assignments (current device state).
 /// Optional query: `?device_id=<i32>&application_config_id=<i32>&page=1&page_size=20`
 async fn list_reported_application_assignments(
+    Query(page): Query<PageParams>,
     Query(params): Query<ReportedAppAssignmentQuery>,
 ) -> Response {
-    let page_params = PageParams::new(params.page, params.page_size);
-    if let Err(e) = page_params.validate() {
+    if let Err(e) = page.validate() {
         return pagination_err(e);
     }
     match db::list_reported_application_assignments(
         params.device_id,
         params.application_config_id,
-        page_params.to_db_page(),
-        page_params.page_size,
+        page.to_db_page(),
+        page.page_size,
     )
     .await
     {
-        Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
+        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
         Err(e) => db_err(e),
     }
 }

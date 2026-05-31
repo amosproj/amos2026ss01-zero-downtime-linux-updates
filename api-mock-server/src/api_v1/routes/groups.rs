@@ -1,7 +1,7 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::{
     db_err, err, not_found,
-    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination::{Page, PageParams},
     pagination_err,
 };
 use amos_common::entities::Group;
@@ -25,21 +25,16 @@ pub fn routes() -> Router {
 #[derive(serde::Deserialize)]
 struct GroupQuery {
     name: Option<String>,
-    #[serde(default = "default_page")]
-    page: u64,
-    #[serde(default = "default_page_size")]
-    page_size: u64,
 }
 
 /// GET /groups — List groups.
 /// Optional query: `?name=<string>&page=1&page_size=20`
-async fn list_groups(Query(params): Query<GroupQuery>) -> Response {
-    let page_params = PageParams::new(params.page, params.page_size);
-    if let Err(e) = page_params.validate() {
+async fn list_groups(Query(page): Query<PageParams>, Query(params): Query<GroupQuery>) -> Response {
+    if let Err(e) = page.validate() {
         return pagination_err(e);
     }
-    match db::list_groups(params.name, page_params.to_db_page(), page_params.page_size).await {
-        Ok((data, total_items)) => Json(Page::new(data, page_params, total_items)).into_response(),
+    match db::list_groups(params.name, page.to_db_page(), page.page_size).await {
+        Ok((data, total_items)) => Json(Page::new(data, page, total_items)).into_response(),
         Err(e) => db_err(e),
     }
 }

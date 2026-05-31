@@ -1,7 +1,7 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::{
     db_err, err, not_found,
-    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination::{Page, PageParams},
     pagination_err,
 };
 use amos_common::entities::ApplicationConfig;
@@ -31,27 +31,22 @@ pub fn routes() -> Router {
 #[derive(Deserialize)]
 struct AppConfigQuery {
     application_id: Option<i32>,
-    #[serde(default = "default_page")]
-    page: u64,
-    #[serde(default = "default_page_size")]
-    page_size: u64,
 }
 
 /// GET /app-configs — List app configs.
 /// Optional query: `?application_id=<i32>&page=1&page_size=20`
-async fn list_application_configs(Query(params): Query<AppConfigQuery>) -> Response {
-    let page_params = PageParams::new(params.page, params.page_size);
-    if let Err(e) = page_params.validate() {
+async fn list_application_configs(Query(page): Query<PageParams>, Query(params): Query<AppConfigQuery>) -> Response {
+    if let Err(e) = page.validate() {
         return pagination_err(e);
     }
     match db::list_application_configs(
         params.application_id,
-        page_params.to_db_page(),
-        page_params.page_size,
+        page.to_db_page(),
+        page.page_size,
     )
     .await
     {
-        Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
+        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
         Err(e) => db_err(e),
     }
 }

@@ -1,7 +1,7 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::{
     db_err, err, not_found,
-    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination::{Page, PageParams},
     pagination_err,
 };
 use amos_common::entities::OsVersion;
@@ -27,23 +27,15 @@ pub fn routes() -> Router {
         )
 }
 
-#[derive(serde::Deserialize)]
-struct OsVersionQuery {
-    #[serde(default = "default_page")]
-    page: u64,
-    #[serde(default = "default_page_size")]
-    page_size: u64,
-}
 
 /// GET /os-versions — List OS versions.
 /// Optional query: `?page=1&page_size=20`
-async fn list_os_versions(Query(params): Query<OsVersionQuery>) -> Response {
-    let page_params = PageParams::new(params.page, params.page_size);
-    if let Err(e) = page_params.validate() {
+async fn list_os_versions(Query(page): Query<PageParams>) -> Response {
+    if let Err(e) = page.validate() {
         return pagination_err(e);
     }
-    match db::list_os_versions(page_params.to_db_page(), page_params.page_size).await {
-        Ok((data, total)) => Json(Page::new(data, page_params, total)).into_response(),
+    match db::list_os_versions(page.to_db_page(), page.page_size).await {
+        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
         Err(e) => db_err(e),
     }
 }

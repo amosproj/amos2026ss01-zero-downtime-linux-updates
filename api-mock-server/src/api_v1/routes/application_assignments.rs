@@ -1,7 +1,7 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::{
     db_err, err, not_found,
-    pagination::{Page, PageParams, default_page, default_page_size},
+    pagination::{Page, PageParams},
     pagination_err,
 };
 use amos_common::entities::ApplicationAssignment;
@@ -33,30 +33,25 @@ struct AppAssignmentQuery {
     application_config_id: Option<i32>,
     device_id: Option<i32>,
     group_id: Option<i32>,
-    #[serde(default = "default_page")]
-    page: u64,
-    #[serde(default = "default_page_size")]
-    page_size: u64,
 }
 
 /// GET /app-assignments — List app assignments.
 /// Optional query: `?application_config_id=<i32>&device_id=<i32>&group_id=<i32>&page=1&page_size=20`
-async fn list_application_assignments(Query(params): Query<AppAssignmentQuery>) -> Response {
-    let page_params = PageParams::new(params.page, params.page_size);
-    if let Err(e) = page_params.validate() {
+async fn list_application_assignments(Query(page): Query<PageParams>, Query(params): Query<AppAssignmentQuery>) -> Response {
+    if let Err(e) = page.validate() {
         return pagination_err(e);
     }
     match db::list_application_assignments(
         params.application_config_id,
         params.device_id,
         params.group_id,
-        page_params.to_db_page(),
-        page_params.page_size,
+        page.to_db_page(),
+        page.page_size,
     )
     .await
     {
         Ok((assignments, total)) => {
-            Json(Page::new(assignments, page_params, total)).into_response()
+            Json(Page::new(assignments, page, total)).into_response()
         }
         Err(e) => db_err(e),
     }
