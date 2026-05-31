@@ -6,6 +6,7 @@ readonly script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly server_dir="$(cd "$script_dir/../api-mock-server" && pwd)"
 
 failed_tests=()
+server_pid=
 
 api() {
     local path="$1"
@@ -48,17 +49,30 @@ print_results() {
         for msg in "${failed_tests[@]}"; do
             echo "  $msg"
         done
-        exit 1
+        return 1
     fi
 }
 
-# Start the server
+cleanup() {
+    # Kill first — print_results may exit 1, so kill must happen before it.
+    # Kill the entire process group so cargo's child (the server binary) is also
+    # terminated; just killing cargo leaves the binary orphaned on the port.
+    if [ -n "$server_pid" ]; then
+        echo "Stopping server (pid $server_pid)..."
+        kill -- "-$server_pid" 2>/dev/null || true
+        wait "$server_pid" 2>/dev/null || true
+    fi
+    print_results
+}
+trap cleanup EXIT
+
+# Start the server in its own process group (set -m) so that kill -- -$pid
+# reaches both cargo and the server binary it spawns.
 echo "Starting api-mock-server..."
+set -m
 APP_DATABASE_URL="sqlite::memory:" cargo run --manifest-path "$server_dir/Cargo.toml" -- -dd &
 server_pid=$!
-
-# Ensure server is killed on exit and results are printed
-trap 'print_results; echo "Stopping server (pid $server_pid)..."; kill "$server_pid" 2>/dev/null; wait "$server_pid" 2>/dev/null || true' EXIT
+set +m
 
 # Wait for the server to be ready
 echo "Waiting for server to be ready..."
