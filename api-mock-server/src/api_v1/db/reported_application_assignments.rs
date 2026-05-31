@@ -1,5 +1,5 @@
-use amos_common::entities::ReportedApplicationAssignment;
 use crate::dtos;
+use amos_common::entities::ReportedApplicationAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
@@ -18,8 +18,8 @@ pub async fn list_reported_application_assignments(
         query = query.filter(dtos::ReportedApplicationAssignment::Column::DeviceId.eq(id));
     }
     if let Some(id) = application_config_id {
-        query = query
-            .filter(dtos::ReportedApplicationAssignment::Column::ApplicationConfigId.eq(id));
+        query =
+            query.filter(dtos::ReportedApplicationAssignment::Column::ApplicationConfigId.eq(id));
     }
     query
         .all(&db)

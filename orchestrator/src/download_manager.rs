@@ -1,5 +1,5 @@
-use amos_common::entities::{OsAssignment, OsVersion};
 use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
+use amos_common::entities::{OsAssignment, OsVersion};
 use anyhow::{Context, Result};
 use log::{info, warn};
 use reqwest::Client;

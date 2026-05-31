@@ -1,5 +1,5 @@
-use amos_common::entities::Ping;
 use crate::dtos;
+use amos_common::entities::Ping;
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::sea_query::prelude::chrono;

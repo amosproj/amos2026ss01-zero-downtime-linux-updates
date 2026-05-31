@@ -1,5 +1,5 @@
-use amos_common::entities::OsAssignment;
 use crate::dtos;
+use amos_common::entities::OsAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
@@ -81,6 +81,8 @@ pub async fn update_os_assignment(
 
 pub async fn delete_os_assignment(id: i32) -> Result<u64, DbErr> {
     let db = db!();
-    let del = dtos::OsAssignment::Entity::delete_by_id(id).exec(&db).await?;
+    let del = dtos::OsAssignment::Entity::delete_by_id(id)
+        .exec(&db)
+        .await?;
     Ok(del.rows_affected)
 }

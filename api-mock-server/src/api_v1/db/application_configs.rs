@@ -1,5 +1,5 @@
-use amos_common::entities::ApplicationConfig;
 use crate::dtos;
+use amos_common::entities::ApplicationConfig;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};

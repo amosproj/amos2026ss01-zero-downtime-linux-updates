@@ -1,5 +1,5 @@
-use amos_common::entities::Application;
 use crate::dtos;
+use amos_common::entities::Application;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
@@ -60,6 +60,8 @@ pub async fn update_application(
 
 pub async fn delete_application(id: i32) -> Result<u64, DbErr> {
     let db = db!();
-    let del = dtos::Application::Entity::delete_by_id(id).exec(&db).await?;
+    let del = dtos::Application::Entity::delete_by_id(id)
+        .exec(&db)
+        .await?;
     Ok(del.rows_affected)
 }
