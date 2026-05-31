@@ -29,7 +29,10 @@ pub async fn list_reported_application_assignments(
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn get_reported_application_assignment(

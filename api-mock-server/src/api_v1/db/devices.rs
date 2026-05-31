@@ -29,17 +29,19 @@ pub async fn list_devices(
         query = query.filter(dtos::Device::Column::TenantId.eq(id));
     }
     if let Some(uuid) = uuid_filter {
-        query =
-            query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
+        query = query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
     }
     if let Some(hostname) = hostname_filter {
-        query = query
-            .filter(Expr::col(dtos::Device::Column::Hostname).like(format!("%{}%", hostname)));
+        query =
+            query.filter(Expr::col(dtos::Device::Column::Hostname).like(format!("%{}%", hostname)));
     }
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn get_device(id: i32) -> Result<Option<Device::Model>, DbErr> {

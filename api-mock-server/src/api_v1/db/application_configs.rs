@@ -16,15 +16,18 @@ pub async fn list_application_configs(
     page_size: u64,
 ) -> Result<(Vec<ApplicationConfig::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = dtos::ApplicationConfig::Entity::find()
-        .order_by_asc(dtos::ApplicationConfig::Column::Id);
+    let mut query =
+        dtos::ApplicationConfig::Entity::find().order_by_asc(dtos::ApplicationConfig::Column::Id);
     if let Some(id) = application_id {
         query = query.filter(dtos::ApplicationConfig::Column::ApplicationId.eq(id));
     }
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn get_application_config(id: i32) -> Result<Option<ApplicationConfig::Model>, DbErr> {

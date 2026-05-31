@@ -17,16 +17,18 @@ pub async fn list_applications(
     page_size: u64,
 ) -> Result<(Vec<Application::Model>, u64), DbErr> {
     let db = db!();
-    let mut query =
-        dtos::Application::Entity::find().order_by_asc(dtos::Application::Column::Id);
+    let mut query = dtos::Application::Entity::find().order_by_asc(dtos::Application::Column::Id);
     if let Some(name) = name_filter {
-        query = query
-            .filter(Expr::col(dtos::Application::Column::Name).like(format!("%{}%", name)));
+        query =
+            query.filter(Expr::col(dtos::Application::Column::Name).like(format!("%{}%", name)));
     }
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn get_application(id: i32) -> Result<Option<Application::Model>, DbErr> {

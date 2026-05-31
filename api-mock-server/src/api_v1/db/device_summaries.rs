@@ -55,12 +55,11 @@ pub async fn assemble_device_summary(
         query = query.filter(dtos::Device::Column::TenantId.eq(id));
     }
     if let Some(uuid) = uuid_filter {
-        query =
-            query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
+        query = query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
     }
     if let Some(hostname) = hostname_filter {
-        query = query
-            .filter(Expr::col(dtos::Device::Column::Hostname).like(format!("%{}%", hostname)));
+        query =
+            query.filter(Expr::col(dtos::Device::Column::Hostname).like(format!("%{}%", hostname)));
     }
 
     let paginator = query.paginate(&db, page_size);

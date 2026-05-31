@@ -18,8 +18,7 @@ pub async fn list_os_assignments(
     page_size: u64,
 ) -> Result<(Vec<OsAssignment::Model>, u64), DbErr> {
     let db = db!();
-    let mut query =
-        dtos::OsAssignment::Entity::find().order_by_asc(dtos::OsAssignment::Column::Id);
+    let mut query = dtos::OsAssignment::Entity::find().order_by_asc(dtos::OsAssignment::Column::Id);
     if let Some(id) = os_version_id {
         query = query.filter(dtos::OsAssignment::Column::OsVersionId.eq(id));
     }
@@ -32,7 +31,10 @@ pub async fn list_os_assignments(
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn get_os_assignment(id: i32) -> Result<Option<OsAssignment::Model>, DbErr> {

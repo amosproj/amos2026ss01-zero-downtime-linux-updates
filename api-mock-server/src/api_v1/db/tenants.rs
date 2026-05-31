@@ -19,13 +19,15 @@ pub async fn list_tenants(
     let db = db!();
     let mut query = dtos::Tenant::Entity::find().order_by_asc(dtos::Tenant::Column::Id);
     if let Some(name) = name_filter {
-        query =
-            query.filter(Expr::col(dtos::Tenant::Column::Name).like(format!("%{}%", name)));
+        query = query.filter(Expr::col(dtos::Tenant::Column::Name).like(format!("%{}%", name)));
     }
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn get_tenant(id: i32) -> Result<Option<Tenant::Model>, DbErr> {

@@ -15,7 +15,10 @@ pub async fn list_pings(page: u64, page_size: u64) -> Result<(Vec<Ping::Model>, 
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data.into_iter().map(|m| m.into_api()).collect(), total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn upsert_ping(device_id: i32) -> Result<(), DbErr> {
