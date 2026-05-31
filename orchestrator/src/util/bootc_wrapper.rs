@@ -212,6 +212,10 @@ mod tests {
             .returning(|_, _| {
                 Ok(ExecResult {
                     stdout: r#"{
+                        "apiVersion": "org.containers.bootc/v1",
+                        "kind": "BootcHost",
+                        "metadata": {},
+                        "spec": {},
                         "status": {
                             "booted": {
                                 "ostree": { "checksum": "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443" },
