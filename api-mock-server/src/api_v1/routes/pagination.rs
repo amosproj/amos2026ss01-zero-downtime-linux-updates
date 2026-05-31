@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+pub use amos_common::Page;
+use serde::Deserialize;
 
 /// Query params: `?page=1&page_size=20`
 /// Index 1 is the first page
@@ -36,27 +37,5 @@ impl PageParams {
             return Err("page_size must be <= 200");
         }
         Ok(())
-    }
-}
-
-#[derive(Serialize)]
-pub struct Page<T: Serialize> {
-    pub page: u64,
-    pub page_size: u64,
-    pub total_items: u64,
-    pub total_pages: u64,
-    pub data: Vec<T>,
-}
-
-impl<T: Serialize> Page<T> {
-    pub fn new(data: Vec<T>, params: PageParams, total_items: u64) -> Self {
-        let total_pages = total_items.div_ceil(params.page_size.max(1));
-        Self {
-            page: params.page,
-            page_size: params.page_size,
-            total_items,
-            total_pages,
-            data,
-        }
     }
 }

@@ -45,7 +45,9 @@ async fn list_application_configs(
     match db::list_application_configs(params.application_id, page.to_db_page(), page.page_size)
         .await
     {
-        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

@@ -34,7 +34,9 @@ async fn list_os_versions(Query(page): Query<PageParams>) -> Response {
         return pagination_err(e);
     }
     match db::list_os_versions(page.to_db_page(), page.page_size).await {
-        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

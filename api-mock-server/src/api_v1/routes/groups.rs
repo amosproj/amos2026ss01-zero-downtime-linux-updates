@@ -34,7 +34,9 @@ async fn list_groups(Query(page): Query<PageParams>, Query(params): Query<GroupQ
         return pagination_err(e);
     }
     match db::list_groups(params.name, page.to_db_page(), page.page_size).await {
-        Ok((data, total_items)) => Json(Page::new(data, page, total_items)).into_response(),
+        Ok((data, total_items)) => {
+            Json(Page::new(data, page.page, page.page_size, total_items)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

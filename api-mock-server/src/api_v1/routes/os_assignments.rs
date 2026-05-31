@@ -70,7 +70,9 @@ async fn list_os_assignments(
     )
     .await
     {
-        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

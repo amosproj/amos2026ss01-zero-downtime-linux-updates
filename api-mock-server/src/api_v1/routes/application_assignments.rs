@@ -53,7 +53,9 @@ async fn list_application_assignments(
     )
     .await
     {
-        Ok((assignments, total)) => Json(Page::new(assignments, page, total)).into_response(),
+        Ok((assignments, total)) => {
+            Json(Page::new(assignments, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

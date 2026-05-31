@@ -52,7 +52,9 @@ async fn list_device_summaries(
     )
     .await
     {
-        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -85,7 +87,9 @@ async fn list_devices(
     )
     .await
     {
-        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

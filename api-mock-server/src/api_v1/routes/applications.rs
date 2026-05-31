@@ -42,7 +42,9 @@ async fn list_applications(
         return pagination_err(e);
     }
     match db::list_applications(params.name, page.to_db_page(), page.page_size).await {
-        Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
