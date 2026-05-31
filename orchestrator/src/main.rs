@@ -131,11 +131,12 @@ async fn main() {
         Arc::clone(&download_manager),
     ));
 
+    let mut healthcheck_interval = tokio::time::interval(std::time::Duration::from_secs(60));
     let download_manager_clone = Arc::clone(&download_manager);
     let _health_report_handle = tokio::spawn(async move {
         loop {
+            healthcheck_interval.tick().await;
             download_manager_clone.send_ping().await;
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
         }
     });
 
