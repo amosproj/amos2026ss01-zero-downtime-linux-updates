@@ -1,6 +1,6 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::ReportedOsAssignment;
+use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -53,10 +53,10 @@ async fn get_reported_os_assignment(Path(id): Path<i32>) -> Response {
 
 /// POST /reported-os-assignments — Create a reported OS assignment.
 /// Optional query: `?device_uuid=<str>` to resolve device_id from a device UUID.
-/// Body: `{ os_version_id: i32, device_id: i32, ... }` (ReportedOsAssignment::Model)
+/// Body: `{ os_version_id: i32, device_id: i32|null }` — device_id can be omitted when device_uuid query param is provided.
 async fn create_reported_os_assignment(
     Query(params): Query<CreateReportedOsAssignmentQuery>,
-    Json(body): Json<ReportedOsAssignment::Model>,
+    Json(body): Json<ReportedOsAssignmentCreate>,
 ) -> Response {
     let device_id = if let Some(uuid) = params.device_uuid {
         match db::get_device_by_uuid(uuid.clone()).await {
@@ -70,7 +70,15 @@ async fn create_reported_os_assignment(
             Err(e) => return db_err(e),
         }
     } else {
-        body.device_id
+        match body.device_id {
+            Some(id) => id,
+            None => {
+                return err(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "Either device_id in body or device_uuid query param must be provided",
+                );
+            }
+        }
     };
 
     match db::add_reported_os_assignment(body.os_version_id, device_id).await {

@@ -1,4 +1,5 @@
-use amos_common::entities::{OsAssignment, OsVersion, ReportedOsAssignment};
+use amos_common::entities::{OsAssignment, OsVersion};
+use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
 use anyhow::{Context, Result};
 use log::{info, warn};
 use reqwest::Client;
@@ -78,11 +79,9 @@ impl DownloadManager {
             self.config.cloud_url, self.config.device_uuid
         );
 
-        let body = ReportedOsAssignment::Model {
-            id: 0,
+        let body = ReportedOsAssignmentCreate {
             os_version_id,
-            device_id: 0,
-            updated_at: chrono::Utc::now(),
+            device_id: None,
         };
 
         let resp = self

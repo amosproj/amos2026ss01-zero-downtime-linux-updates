@@ -1,4 +1,5 @@
 use amos_common::entities::Ping;
+use crate::dtos;
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::sea_query::prelude::chrono;
@@ -10,22 +11,24 @@ use super::db;
 
 pub async fn list_pings() -> Result<Vec<Ping::Model>, DbErr> {
     let db = db!();
-
-    Ping::Entity::find().all(&db).await
+    dtos::Ping::Entity::find()
+        .all(&db)
+        .await
+        .map(|v| v.into_iter().map(|m| m.into_api()).collect())
 }
 
 pub async fn upsert_ping(device_id: i32) -> Result<(), DbErr> {
     let db = db!();
 
-    let ping = Ping::ActiveModel {
+    let ping = dtos::Ping::ActiveModel {
         device_id: Set(device_id),
         reported_at: Set(chrono::Utc::now()),
     };
 
-    Ping::Entity::insert(ping)
+    dtos::Ping::Entity::insert(ping)
         .on_conflict(
-            OnConflict::column(Ping::Column::DeviceId)
-                .update_column(Ping::Column::ReportedAt)
+            OnConflict::column(dtos::Ping::Column::DeviceId)
+                .update_column(dtos::Ping::Column::ReportedAt)
                 .to_owned(),
         )
         .exec(&db)

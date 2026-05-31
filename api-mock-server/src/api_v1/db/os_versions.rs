@@ -1,4 +1,5 @@
 use amos_common::entities::OsVersion;
+use crate::dtos;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait};
@@ -9,12 +10,18 @@ use super::db;
 
 pub async fn list_os_versions() -> Result<Vec<OsVersion::Model>, DbErr> {
     let db = db!();
-    OsVersion::Entity::find().all(&db).await
+    dtos::OsVersion::Entity::find()
+        .all(&db)
+        .await
+        .map(|v| v.into_iter().map(|m| m.into_api()).collect())
 }
 
 pub async fn get_os_version(id: i32) -> Result<Option<OsVersion::Model>, DbErr> {
     let db = db!();
-    OsVersion::Entity::find_by_id(id).one(&db).await
+    Ok(dtos::OsVersion::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .map(|m| m.into_api()))
 }
 
 pub async fn add_os_version(
@@ -22,7 +29,7 @@ pub async fn add_os_version(
     orchestrator_version: String,
     description: Option<String>,
 ) -> Result<OsVersion::Model, DbErr> {
-    let os_version = OsVersion::ActiveModel {
+    let os_version = dtos::OsVersion::ActiveModel {
         id: NotSet,
         commit_hash: Set(commit_hash),
         orchestrator_version: Set(orchestrator_version),
@@ -34,7 +41,7 @@ pub async fn add_os_version(
     let new_os_version = os_version.insert(&db).await?;
     debug!("Inserted new OS version: {:?}", new_os_version);
 
-    Ok(new_os_version)
+    Ok(new_os_version.into_api())
 }
 
 pub async fn update_os_version(
@@ -44,7 +51,7 @@ pub async fn update_os_version(
     description: Option<String>,
 ) -> Result<OsVersion::Model, DbErr> {
     let db = db!();
-    let os_version = OsVersion::ActiveModel {
+    let os_version = dtos::OsVersion::ActiveModel {
         id: Set(id),
         commit_hash: Set(commit_hash),
         orchestrator_version: Set(orchestrator_version),
@@ -52,11 +59,11 @@ pub async fn update_os_version(
     };
     let updated_os_version = os_version.update(&db).await?;
     debug!("Updated OS version: {:?}", updated_os_version);
-    Ok(updated_os_version)
+    Ok(updated_os_version.into_api())
 }
 
 pub async fn delete_os_version(id: i32) -> Result<u64, DbErr> {
     let db = db!();
-    let del = OsVersion::Entity::delete_by_id(id).exec(&db).await?;
+    let del = dtos::OsVersion::Entity::delete_by_id(id).exec(&db).await?;
     Ok(del.rows_affected)
 }

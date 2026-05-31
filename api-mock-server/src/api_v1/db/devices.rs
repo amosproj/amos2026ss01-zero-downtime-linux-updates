@@ -1,4 +1,5 @@
 use amos_common::entities::Device;
+use crate::dtos;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
@@ -12,29 +13,35 @@ pub async fn list_devices(
     tenant_id: Option<i32>,
 ) -> Result<Vec<Device::Model>, DbErr> {
     let db = db!();
-    let mut query = Device::Entity::find();
+    let mut query = dtos::Device::Entity::find();
     if let Some(id) = group_id {
-        query = query.filter(Device::Column::GroupId.eq(id));
+        query = query.filter(dtos::Device::Column::GroupId.eq(id));
     }
     if let Some(id) = tenant_id {
-        query = query.filter(Device::Column::TenantId.eq(id));
+        query = query.filter(dtos::Device::Column::TenantId.eq(id));
     }
-    query.all(&db).await
+    query
+        .all(&db)
+        .await
+        .map(|v| v.into_iter().map(|m| m.into_api()).collect())
 }
 
 pub async fn get_device(id: i32) -> Result<Option<Device::Model>, DbErr> {
     let db = db!();
-    Device::Entity::find_by_id(id).one(&db).await
+    Ok(dtos::Device::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .map(|m| m.into_api()))
 }
 
 /// Returns the Device for a given uuid, empty Option if the uuid does not exist
 pub async fn get_device_by_uuid(uuid: String) -> Result<Option<Device::Model>, DbErr> {
     let db = db!();
-
-    Device::Entity::find()
-        .filter(Device::Column::Uuid.eq(uuid))
+    Ok(dtos::Device::Entity::find()
+        .filter(dtos::Device::Column::Uuid.eq(uuid))
         .one(&db)
-        .await
+        .await?
+        .map(|m| m.into_api()))
 }
 
 pub async fn add_device(
@@ -43,7 +50,7 @@ pub async fn add_device(
     tenant_id: i32,
     group_id: Option<i32>,
 ) -> Result<Device::Model, DbErr> {
-    let device = Device::ActiveModel {
+    let device = dtos::Device::ActiveModel {
         id: NotSet,
         uuid: Set(uuid),
         hostname: Set(hostname),
@@ -56,7 +63,7 @@ pub async fn add_device(
     let new_device = device.insert(&db).await?;
     debug!("Inserted device: {:?}", new_device);
 
-    Ok(new_device)
+    Ok(new_device.into_api())
 }
 
 pub async fn update_device(
@@ -67,7 +74,7 @@ pub async fn update_device(
     group_id: Option<i32>,
 ) -> Result<Device::Model, DbErr> {
     let db = db!();
-    let device = Device::ActiveModel {
+    let device = dtos::Device::ActiveModel {
         id: Set(id),
         uuid: Set(uuid),
         hostname: Set(hostname),
@@ -76,11 +83,11 @@ pub async fn update_device(
     };
     let updated_device = device.update(&db).await?;
     debug!("Updated device: {:?}", updated_device);
-    Ok(updated_device)
+    Ok(updated_device.into_api())
 }
 
 pub async fn delete_device(id: i32) -> Result<u64, DbErr> {
     let db = db!();
-    let del = Device::Entity::delete_by_id(id).exec(&db).await?;
+    let del = dtos::Device::Entity::delete_by_id(id).exec(&db).await?;
     Ok(del.rows_affected)
 }

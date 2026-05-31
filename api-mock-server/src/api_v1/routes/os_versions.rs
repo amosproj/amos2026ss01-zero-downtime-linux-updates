@@ -1,6 +1,6 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::OsVersion;
+use amos_common::entities::os_version::CreateModel as OsVersionCreate;
 use axum::{
     Json, Router,
     extract::Path,
@@ -42,7 +42,7 @@ async fn get_os_version(Path(id): Path<i32>) -> Response {
 
 /// POST /os-versions — Create an OS version.
 /// Body: `{ commit_hash: string (required), orchestrator_version: string (required), description: string|null }`
-async fn create_os_version(Json(body): Json<OsVersion::Model>) -> Response {
+async fn create_os_version(Json(body): Json<OsVersionCreate>) -> Response {
     if body.commit_hash.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -69,7 +69,7 @@ async fn create_os_version(Json(body): Json<OsVersion::Model>) -> Response {
 
 /// PUT /os-versions/{id} — Replace an OS version by ID.
 /// Body: `{ commit_hash: string (required), orchestrator_version: string (required), description: string|null }`
-async fn update_os_version(Path(id): Path<i32>, Json(body): Json<OsVersion::Model>) -> Response {
+async fn update_os_version(Path(id): Path<i32>, Json(body): Json<OsVersionCreate>) -> Response {
     if body.commit_hash.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

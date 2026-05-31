@@ -1,6 +1,6 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::Device;
+use amos_common::entities::device::CreateModel as DeviceCreate;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -64,7 +64,7 @@ async fn get_device(Path(id): Path<i32>) -> Response {
 
 /// POST /devices — Create a device.
 /// Body: `{ uuid: string (required), hostname: string (required), tenant_id: i32, group_id: i32|null }`
-async fn create_device(Json(body): Json<Device::Model>) -> Response {
+async fn create_device(Json(body): Json<DeviceCreate>) -> Response {
     if body.uuid.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -85,7 +85,7 @@ async fn create_device(Json(body): Json<Device::Model>) -> Response {
 
 /// PUT /devices/{id} — Replace a device by ID.
 /// Body: `{ uuid: string (required), hostname: string (required), tenant_id: i32, group_id: i32|null }`
-async fn update_device(Path(id): Path<i32>, Json(body): Json<Device::Model>) -> Response {
+async fn update_device(Path(id): Path<i32>, Json(body): Json<DeviceCreate>) -> Response {
     if body.uuid.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

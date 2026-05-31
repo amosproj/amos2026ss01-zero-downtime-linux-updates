@@ -1,7 +1,7 @@
 use sea_orm::Schema;
 use sea_orm_migration::prelude::*;
 
-use amos_common::entities;
+use crate::dtos;
 
 use super::create_table;
 
@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let schema = Schema::new(manager.get_database_backend());
 
-        create_table(manager, &schema, entities::Ping::Entity).await?;
+        create_table(manager, &schema, dtos::Ping::Entity).await?;
 
         Ok(())
     }
