@@ -1,9 +1,13 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
 use amos_common::entities::OsVersion;
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -23,10 +27,16 @@ pub fn routes() -> Router {
         )
 }
 
-/// GET /os-versions — List all OS versions.
-async fn list_os_versions() -> Response {
-    match db::list_os_versions().await {
-        Ok(versions) => Json(versions).into_response(),
+/// GET /os-versions — List OS versions.
+/// Optional query: `?page=1&page_size=20`
+async fn list_os_versions(Query(page): Query<PageParams>) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_os_versions(page.to_db_page(), page.page_size).await {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

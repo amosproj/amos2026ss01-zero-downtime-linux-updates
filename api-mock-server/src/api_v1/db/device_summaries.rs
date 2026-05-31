@@ -3,7 +3,8 @@ use amos_common::entities::{
     ReportedOsAssignment, Tenant,
 };
 use sea_orm::DbErr;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::sea_query::Expr;
+use sea_orm::{ColumnTrait, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter, QueryOrder};
 use serde_json::json;
 
 use super::db;
@@ -11,33 +12,64 @@ use super::db;
 // --Device Summary--
 
 pub async fn get_device_summary(id: i32) -> Result<Option<serde_json::Value>, DbErr> {
-    let mut res = assemble_device_summary(Some(id), None).await?;
-    Ok(res.pop())
+    let mut res = assemble_device_summary(Some(id), None, None, None, None, 0, 1).await?;
+    Ok(res.0.pop())
 }
 
 pub async fn list_device_summaries(
+    group_id: Option<i32>,
     tenant_id: Option<i32>,
-) -> Result<Vec<serde_json::Value>, DbErr> {
-    assemble_device_summary(None, tenant_id).await
+    uuid_filter: Option<String>,
+    hostname_filter: Option<String>,
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<serde_json::Value>, u64), DbErr> {
+    assemble_device_summary(
+        None,
+        group_id,
+        tenant_id,
+        uuid_filter,
+        hostname_filter,
+        page,
+        page_size,
+    )
+    .await
 }
 
 pub async fn assemble_device_summary(
     device_id: Option<i32>,
+    group_id: Option<i32>,
     tenant_id: Option<i32>,
-) -> Result<Vec<serde_json::Value>, DbErr> {
+    uuid_filter: Option<String>,
+    hostname_filter: Option<String>,
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<serde_json::Value>, u64), DbErr> {
     let db = db!();
 
-    let mut query = Device::Entity::find();
+    let mut query = Device::Entity::find().order_by_asc(Device::Column::Id);
     if let Some(id) = device_id {
         query = query.filter(Device::Column::Id.eq(id));
+    }
+    if let Some(id) = group_id {
+        query = query.filter(Device::Column::GroupId.eq(id));
     }
     if let Some(id) = tenant_id {
         query = query.filter(Device::Column::TenantId.eq(id));
     }
+    if let Some(uuid) = uuid_filter {
+        query = query.filter(Expr::col(Device::Column::Uuid).like(format!("%{}%", uuid)));
+    }
+    if let Some(hostname) = hostname_filter {
+        query = query.filter(Expr::col(Device::Column::Hostname).like(format!("%{}%", hostname)));
+    }
 
-    let devices = query.all(&db).await?;
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let devices = paginator.fetch_page(page).await?;
+
     if devices.is_empty() {
-        return Ok(vec![]);
+        return Ok((vec![], total_items));
     }
 
     let device_ids: Vec<i32> = devices.iter().map(|d| d.id).collect();
@@ -138,5 +170,5 @@ pub async fn assemble_device_summary(
         })
         .collect();
 
-    Ok(summaries)
+    Ok((summaries, total_items))
 }

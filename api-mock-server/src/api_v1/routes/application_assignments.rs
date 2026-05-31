@@ -1,5 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
 use amos_common::entities::ApplicationAssignment;
 use axum::{
     Json, Router,
@@ -32,16 +36,26 @@ struct AppAssignmentQuery {
 }
 
 /// GET /app-assignments — List app assignments.
-/// Optional query: `?application_config_id=<i32>&device_id=<i32>&group_id=<i32>`
-async fn list_application_assignments(Query(params): Query<AppAssignmentQuery>) -> Response {
+/// Optional query: `?application_config_id=<i32>&device_id=<i32>&group_id=<i32>&page=1&page_size=20`
+async fn list_application_assignments(
+    Query(page): Query<PageParams>,
+    Query(params): Query<AppAssignmentQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
     match db::list_application_assignments(
         params.application_config_id,
         params.device_id,
         params.group_id,
+        page.to_db_page(),
+        page.page_size,
     )
     .await
     {
-        Ok(assignments) => Json(assignments).into_response(),
+        Ok((assignments, total)) => {
+            Json(Page::new(assignments, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

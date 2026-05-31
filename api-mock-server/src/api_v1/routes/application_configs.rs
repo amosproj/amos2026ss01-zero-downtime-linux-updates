@@ -1,5 +1,9 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
 use amos_common::entities::ApplicationConfig;
 use axum::{
     Json, Router,
@@ -29,10 +33,21 @@ struct AppConfigQuery {
     application_id: Option<i32>,
 }
 
-/// GET /app-configs — List app configs. Optional query: `?application_id=<i32>`
-async fn list_application_configs(Query(params): Query<AppConfigQuery>) -> Response {
-    match db::list_application_configs(params.application_id).await {
-        Ok(configs) => Json(configs).into_response(),
+/// GET /app-configs — List app configs.
+/// Optional query: `?application_id=<i32>&page=1&page_size=20`
+async fn list_application_configs(
+    Query(page): Query<PageParams>,
+    Query(params): Query<AppConfigQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_application_configs(params.application_id, page.to_db_page(), page.page_size)
+        .await
+    {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }

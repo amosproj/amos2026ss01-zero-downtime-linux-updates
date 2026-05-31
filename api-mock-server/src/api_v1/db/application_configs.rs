@@ -1,7 +1,9 @@
 use amos_common::entities::ApplicationConfig;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+};
 
 use super::db;
 
@@ -9,13 +11,18 @@ use super::db;
 
 pub async fn list_application_configs(
     application_id: Option<i32>,
-) -> Result<Vec<ApplicationConfig::Model>, DbErr> {
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<ApplicationConfig::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = ApplicationConfig::Entity::find();
+    let mut query = ApplicationConfig::Entity::find().order_by_asc(ApplicationConfig::Column::Id);
     if let Some(id) = application_id {
         query = query.filter(ApplicationConfig::Column::ApplicationId.eq(id));
     }
-    query.all(&db).await
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((data, total_items))
 }
 
 pub async fn get_application_config(id: i32) -> Result<Option<ApplicationConfig::Model>, DbErr> {

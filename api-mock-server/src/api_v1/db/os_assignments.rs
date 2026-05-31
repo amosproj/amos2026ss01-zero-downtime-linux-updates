@@ -1,7 +1,9 @@
 use amos_common::entities::OsAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+};
 
 use super::db;
 
@@ -11,9 +13,11 @@ pub async fn list_os_assignments(
     os_version_id: Option<i32>,
     device_id: Option<i32>,
     group_id: Option<i32>,
-) -> Result<Vec<OsAssignment::Model>, DbErr> {
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<OsAssignment::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = OsAssignment::Entity::find();
+    let mut query = OsAssignment::Entity::find().order_by_asc(OsAssignment::Column::Id);
     if let Some(id) = os_version_id {
         query = query.filter(OsAssignment::Column::OsVersionId.eq(id));
     }
@@ -23,7 +27,10 @@ pub async fn list_os_assignments(
     if let Some(id) = group_id {
         query = query.filter(OsAssignment::Column::GroupId.eq(id));
     }
-    query.all(&db).await
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((data, total_items))
 }
 
 pub async fn get_os_assignment(id: i32) -> Result<Option<OsAssignment::Model>, DbErr> {
