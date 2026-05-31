@@ -233,20 +233,20 @@ The catalog response from the mock server looks like:
 
 ### API Reference
 
-All routes are served under `/v1`. Fields marked `*` are required.
+All routes are served under `/v1`. Fields marked `*` are required. Pagination is available for all list routes with `?page=x&page_size=y`, defaulting to page 1 and page size 20.
 
 **Device Summaries** _(read-only)_
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/devices/summary` | List device summaries. Query options: `?group_id=<id>&tenant_id=<id>&uuid=<string>&hostname=<string>&page=1&page_size=20` |
+| `GET` | `/v1/devices/summary` | List device summaries. Query options: `?group_id=<id>&tenant_id=<id>&uuid=<string>&hostname=<string>` |
 | `GET` | `/v1/devices/{id}/summary` | Get a single device summary |
 
 **Tenants**
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/tenants` | List tenants. Query options: `?name=<string>&page=1&page_size=20` |
+| `GET` | `/v1/tenants` | List tenants. Query options: `?name=<string>` |
 | `POST` | `/v1/tenants` | Create — body: `{ name*, description }` |
 | `GET` | `/v1/tenants/{id}` | Get by ID |
 | `PUT` | `/v1/tenants/{id}` | Replace by ID |
@@ -256,7 +256,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/groups` | List groups. Query options: `?name=<string>&page=1&page_size=20` |
+| `GET` | `/v1/groups` | List groups. Query options: `?name=<string>` |
 | `POST` | `/v1/groups` | Create — body: `{ name* }` |
 | `GET` | `/v1/groups/{id}` | Get by ID |
 | `PUT` | `/v1/groups/{id}` | Replace by ID |
@@ -266,7 +266,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/devices` | List devices. Query options: `?group_id=<id>&tenant_id=<id>&uuid=<string>&hostname=<string>&page=1&page_size=20` |
+| `GET` | `/v1/devices` | List devices. Query options: `?group_id=<id>&tenant_id=<id>&uuid=<string>&hostname=<string>` |
 | `POST` | `/v1/devices` | Create — body: `{ uuid*, hostname*, tenant_id, group_id }` |
 | `GET` | `/v1/devices/{id}` | Get by ID |
 | `PUT` | `/v1/devices/{id}` | Replace by ID |
@@ -276,7 +276,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/applications` | List applications. Query options: `?name=<string>&page=1&page_size=20` |
+| `GET` | `/v1/applications` | List applications. Query options: `?name=<string>` |
 | `POST` | `/v1/applications` | Create — body: `{ name*, description }` |
 | `GET` | `/v1/applications/{id}` | Get by ID |
 | `PUT` | `/v1/applications/{id}` | Replace by ID |
@@ -286,7 +286,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/app-configs` | List configs. Query options: `?application_id=<id>&page=1&page_size=20` |
+| `GET` | `/v1/app-configs` | List configs. Query options: `?application_id=<id>` |
 | `POST` | `/v1/app-configs` | Create — body: `{ application_id, image*, config, comment }` |
 | `GET` | `/v1/app-configs/{id}` | Get by ID |
 | `PUT` | `/v1/app-configs/{id}` | Replace by ID |
@@ -296,7 +296,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/app-assignments` | List. Query: `?application_config_id=<id>&device_id=<id>&group_id=<id>&page=1&page_size=20` |
+| `GET` | `/v1/app-assignments` | List. Query options: `?application_config_id=<id>&device_id=<id>&group_id=<id>` |
 | `POST` | `/v1/app-assignments` | Create — body: `{ application_config_id, device_id, group_id }` — `device_id` or `group_id` required |
 | `GET` | `/v1/app-assignments/{id}` | Get by ID |
 | `PUT` | `/v1/app-assignments/{id}` | Replace by ID |
@@ -306,7 +306,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/reported-app-assignments` | List. Query options: `?application_config_id=<id>&device_id=<id>&page=1&page_size=20` |
+| `GET` | `/v1/reported-app-assignments` | List. Query options: `?application_config_id=<id>&device_id=<id>` |
 | `GET` | `/v1/reported-app-assignments/{id}` | Get by ID |
 | `DELETE` | `/v1/reported-app-assignments/{id}` | Delete — 204 on success |
 
@@ -314,7 +314,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/os-versions` | List OS versions. Query options: `?page=1&page_size=20` |
+| `GET` | `/v1/os-versions` | List OS versions. |
 | `POST` | `/v1/os-versions` | Create — body: `{ commit_hash*, orchestrator_version*, description }` |
 | `GET` | `/v1/os-versions/{id}` | Get by ID |
 | `PUT` | `/v1/os-versions/{id}` | Replace by ID |
@@ -324,7 +324,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/os-assignments` | List. Query options: `?os_version_id=<id>&device_id=<id>&device_uuid=<string>&group_id=<id>&page=1&page_size=20` |
+| `GET` | `/v1/os-assignments` | List. Query options: `?os_version_id=<id>&device_id=<id>&device_uuid=<string>&group_id=<id>` |
 | `POST` | `/v1/os-assignments` | Create — body: `{ os_version_id, device_id, group_id }` — `device_id` or `group_id` required |
 | `GET` | `/v1/os-assignments/{id}` | Get by ID |
 | `PUT` | `/v1/os-assignments/{id}` | Replace by ID |
@@ -334,7 +334,7 @@ All routes are served under `/v1`. Fields marked `*` are required.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/reported-os-assignments` | List. Query options: `?device_id=<id>&os_version_id=<id>&page=1&page_size=20` |
+| `GET` | `/v1/reported-os-assignments` | List. Query options: `?device_id=<id>&os_version_id=<id>` |
 | `POST` | `/v1/reported-os-assignments` | Create — body: `{ os_version_id*, device_id }` Device id can be replaced by Query option `?device_uuid=<string>` |
 | `GET` | `/v1/reported-os-assignments/{id}` | Get by ID |
 | `DELETE` | `/v1/reported-os-assignments/{id}` | Delete — 204 on success |
