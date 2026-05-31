@@ -4,7 +4,7 @@ use crate::api_v1::routes::{
     pagination::{Page, PageParams},
     pagination_err,
 };
-use amos_common::entities::Application;
+use amos_common::entities::{Application, CreateApplication};
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -60,7 +60,7 @@ async fn get_application(Path(id): Path<i32>) -> Response {
 
 /// POST /applications — Create an application.
 /// Body: `{ name: string (required), description: string }`
-async fn create_application(Json(body): Json<Application::Model>) -> Response {
+async fn create_application(Json(body): Json<CreateApplication>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

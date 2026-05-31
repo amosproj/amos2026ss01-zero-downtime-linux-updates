@@ -5,6 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use super::{Device, OsVersion};
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct CreateReportedOsAssignment {
+    pub os_version_id: i32,
+    pub device_id: Option<i32>,
+}
+
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "reported_os_assignments")]

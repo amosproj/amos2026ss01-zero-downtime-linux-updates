@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 
 use super::Device;
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct CreateTenant {
+    pub name: String,
+    pub description: Option<String>,
+}
+
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "tenants")]

@@ -4,7 +4,7 @@ use crate::api_v1::routes::{
     pagination::{Page, PageParams},
     pagination_err,
 };
-use amos_common::entities::ApplicationConfig;
+use amos_common::entities::{ApplicationConfig, CreateApplicationConfig};
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -63,7 +63,7 @@ async fn get_application_config(Path(id): Path<i32>) -> Response {
 
 /// POST /app-configs — Create an app config.
 /// Body: `{ application_id: i32, image: string (required), config: string|null, comment: string|null }`
-async fn create_application_config(Json(body): Json<ApplicationConfig::Model>) -> Response {
+async fn create_application_config(Json(body): Json<CreateApplicationConfig>) -> Response {
     if body.image.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

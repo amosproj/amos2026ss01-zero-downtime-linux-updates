@@ -4,7 +4,7 @@ use crate::api_v1::routes::{
     pagination::{Page, PageParams},
     pagination_err,
 };
-use amos_common::entities::Device;
+use amos_common::entities::{CreateDevice, Device};
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -105,7 +105,7 @@ async fn get_device(Path(id): Path<i32>) -> Response {
 
 /// POST /devices — Create a device.
 /// Body: `{ uuid: string (required), hostname: string (required), tenant_id: i32, group_id: i32|null }`
-async fn create_device(Json(body): Json<Device::Model>) -> Response {
+async fn create_device(Json(body): Json<CreateDevice>) -> Response {
     if body.uuid.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

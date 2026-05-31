@@ -4,7 +4,7 @@ use crate::api_v1::routes::{
     pagination::{Page, PageParams},
     pagination_err,
 };
-use amos_common::entities::Group;
+use amos_common::entities::{CreateGroup, Group};
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -52,7 +52,7 @@ async fn get_group(Path(id): Path<i32>) -> Response {
 
 /// POST /groups — Create a group.
 /// Body: `{ name: string (required) }`
-async fn create_group(Json(body): Json<Group::Model>) -> Response {
+async fn create_group(Json(body): Json<CreateGroup>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

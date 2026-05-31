@@ -4,7 +4,7 @@ use crate::api_v1::routes::{
     pagination::{Page, PageParams},
     pagination_err,
 };
-use amos_common::entities::ReportedOsAssignment;
+use amos_common::entities::CreateReportedOsAssignment;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -72,10 +72,10 @@ async fn get_reported_os_assignment(Path(id): Path<i32>) -> Response {
 
 /// POST /reported-os-assignments — Create a reported OS assignment.
 /// Optional query: `?device_uuid=<str>` to resolve device_id from a device UUID.
-/// Body: `{ os_version_id: i32, device_id: i32, ... }` (ReportedOsAssignment::Model)
+/// Body: `{ os_version_id: i32, device_id: i32, ... }` (CreateReportedOsAssignment)
 async fn create_reported_os_assignment(
     Query(params): Query<CreateReportedOsAssignmentQuery>,
-    Json(body): Json<ReportedOsAssignment::Model>,
+    Json(body): Json<CreateReportedOsAssignment>,
 ) -> Response {
     let device_id = if let Some(uuid) = params.device_uuid {
         match db::get_device_by_uuid(uuid.clone()).await {
@@ -89,7 +89,15 @@ async fn create_reported_os_assignment(
             Err(e) => return db_err(e),
         }
     } else {
-        body.device_id
+        match body.device_id {
+            Some(id) => id,
+            None => {
+                return err(
+                    StatusCode::BAD_REQUEST,
+                    "Either device uuid or device id must be given"
+                );
+            }
+        }
     };
 
     match db::add_reported_os_assignment(body.os_version_id, device_id).await {

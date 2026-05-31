@@ -3,6 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use super::Device;
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct CreateGroup {
+    pub name: String,
+}
+
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "groups")]

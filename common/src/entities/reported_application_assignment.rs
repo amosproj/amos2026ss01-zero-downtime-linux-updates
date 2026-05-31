@@ -5,6 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use super::{ApplicationConfig, Device};
 
+pub struct CreateReportedApplicationAssignment {
+    pub application_config_id: i32,
+    pub device_id: i32,
+}
+
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "reported_application_assignments")]

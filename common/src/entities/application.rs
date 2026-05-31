@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 
 use super::ApplicationConfig;
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct CreateApplication {
+    pub name: String,
+    pub description: String,
+}
+
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "applications")]

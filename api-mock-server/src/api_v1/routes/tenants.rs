@@ -5,6 +5,7 @@ use crate::api_v1::routes::{
     pagination_err,
 };
 use amos_common::entities::Tenant;
+use amos_common::entities::tenant::{CreateTenant};
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -55,7 +56,7 @@ async fn get_tenant(Path(id): Path<i32>) -> Response {
 
 /// POST /tenants — Create a tenant.
 /// Body: `{ name: string (required), description: string|null }`
-async fn create_tenant(Json(body): Json<Tenant::Model>) -> Response {
+async fn create_tenant(Json(body): Json<CreateTenant>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
