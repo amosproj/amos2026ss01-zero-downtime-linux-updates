@@ -34,12 +34,14 @@ struct ApplicationQuery {
 
 /// GET /applications — List applications.
 /// Optional query: `?name=<string>&page=1&page_size=20`
-async fn list_applications(Query(page): Query<PageParams>, Query(params): Query<ApplicationQuery>) -> Response {
+async fn list_applications(
+    Query(page): Query<PageParams>,
+    Query(params): Query<ApplicationQuery>,
+) -> Response {
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
-    match db::list_applications(params.name, page.to_db_page(), page.page_size).await
-    {
+    match db::list_applications(params.name, page.to_db_page(), page.page_size).await {
         Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
         Err(e) => db_err(e),
     }

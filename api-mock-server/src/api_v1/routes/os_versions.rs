@@ -27,7 +27,6 @@ pub fn routes() -> Router {
         )
 }
 
-
 /// GET /os-versions — List OS versions.
 /// Optional query: `?page=1&page_size=20`
 async fn list_os_versions(Query(page): Query<PageParams>) -> Response {

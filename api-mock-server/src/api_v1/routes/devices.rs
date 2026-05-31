@@ -35,7 +35,10 @@ struct DeviceQuery {
 
 /// GET /devices/summary — List device summaries (reported state).
 /// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
-async fn list_device_summaries(Query(page): Query<PageParams>, Query(params): Query<DeviceQuery>) -> Response {
+async fn list_device_summaries(
+    Query(page): Query<PageParams>,
+    Query(params): Query<DeviceQuery>,
+) -> Response {
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
@@ -65,7 +68,10 @@ async fn get_device_summary(Path(id): Path<i32>) -> Response {
 
 /// GET /devices — List devices.
 /// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
-async fn list_devices(Query(page): Query<PageParams>, Query(params): Query<DeviceQuery>) -> Response {
+async fn list_devices(
+    Query(page): Query<PageParams>,
+    Query(params): Query<DeviceQuery>,
+) -> Response {
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }

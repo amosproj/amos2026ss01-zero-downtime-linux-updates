@@ -29,7 +29,10 @@ struct TenantQuery {
 
 /// GET /tenants — List tenants.
 /// Optional query: `?name=<string>&page=1&page_size=20`
-async fn list_tenants(Query(page): Query<PageParams>, Query(params): Query<TenantQuery>) -> Response {
+async fn list_tenants(
+    Query(page): Query<PageParams>,
+    Query(params): Query<TenantQuery>,
+) -> Response {
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }

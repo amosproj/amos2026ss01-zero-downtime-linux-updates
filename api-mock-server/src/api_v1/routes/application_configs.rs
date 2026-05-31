@@ -35,16 +35,15 @@ struct AppConfigQuery {
 
 /// GET /app-configs — List app configs.
 /// Optional query: `?application_id=<i32>&page=1&page_size=20`
-async fn list_application_configs(Query(page): Query<PageParams>, Query(params): Query<AppConfigQuery>) -> Response {
+async fn list_application_configs(
+    Query(page): Query<PageParams>,
+    Query(params): Query<AppConfigQuery>,
+) -> Response {
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
-    match db::list_application_configs(
-        params.application_id,
-        page.to_db_page(),
-        page.page_size,
-    )
-    .await
+    match db::list_application_configs(params.application_id, page.to_db_page(), page.page_size)
+        .await
     {
         Ok((data, total)) => Json(Page::new(data, page, total)).into_response(),
         Err(e) => db_err(e),

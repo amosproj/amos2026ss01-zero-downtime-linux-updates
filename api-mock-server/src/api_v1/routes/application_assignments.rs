@@ -37,7 +37,10 @@ struct AppAssignmentQuery {
 
 /// GET /app-assignments — List app assignments.
 /// Optional query: `?application_config_id=<i32>&device_id=<i32>&group_id=<i32>&page=1&page_size=20`
-async fn list_application_assignments(Query(page): Query<PageParams>, Query(params): Query<AppAssignmentQuery>) -> Response {
+async fn list_application_assignments(
+    Query(page): Query<PageParams>,
+    Query(params): Query<AppAssignmentQuery>,
+) -> Response {
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
@@ -50,9 +53,7 @@ async fn list_application_assignments(Query(page): Query<PageParams>, Query(para
     )
     .await
     {
-        Ok((assignments, total)) => {
-            Json(Page::new(assignments, page, total)).into_response()
-        }
+        Ok((assignments, total)) => Json(Page::new(assignments, page, total)).into_response(),
         Err(e) => db_err(e),
     }
 }

@@ -39,7 +39,10 @@ struct CreateReportedOsAssignmentQuery {
 
 /// GET /reported-os-assignments — List reported OS assignments (current device state).
 /// Optional query: `?device_id=<i32>&os_version_id=<i32>&page=1&page_size=20`
-async fn list_reported_os_assignments(Query(page): Query<PageParams>, Query(params): Query<ReportedOsAssignmentQuery>) -> Response {
+async fn list_reported_os_assignments(
+    Query(page): Query<PageParams>,
+    Query(params): Query<ReportedOsAssignmentQuery>,
+) -> Response {
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }

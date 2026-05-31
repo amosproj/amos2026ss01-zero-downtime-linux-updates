@@ -38,7 +38,10 @@ struct OsAssignmentQuery {
 
 /// GET /os-assignments — List OS assignments (target state).
 /// Optional query: `?os_version_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>&page=1&page_size=20`
-async fn list_os_assignments(Query(page): Query<PageParams>, Query(params): Query<OsAssignmentQuery>) -> Response {
+async fn list_os_assignments(
+    Query(page): Query<PageParams>,
+    Query(params): Query<OsAssignmentQuery>,
+) -> Response {
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
