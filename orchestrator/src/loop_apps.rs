@@ -91,7 +91,7 @@ async fn report_running_configs(
     target: &[ApplicationConfig::Model],
 ) {
     for cfg in target {
-        if let Err(e) = download_manager.report_application_assignment(cfg.id).await {
+        if let Err(e) = download_manager.report_current_application_assignment(cfg.id).await {
             warn!(
                 "Failed to report application assignment for config #{}: {:?}",
                 cfg.id, e
