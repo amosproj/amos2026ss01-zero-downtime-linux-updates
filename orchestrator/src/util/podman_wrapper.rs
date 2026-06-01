@@ -1,3 +1,6 @@
+// TODO: Remove this once this is integrated
+#![allow(dead_code)]
+
 // Control Podman
 // This assumes full ownership of the Podman instance
 
@@ -8,7 +11,7 @@ use podman_api::{
     models::LibpodImagesPullReport,
     opts::{
         ContainerCreateOpts, ContainerDeleteOpts, ContainerListOpts, ContainerStopOpts,
-        ImageListOpts, ImagePruneOpts, PullOpts,
+        ImagePruneOpts, PullOpts,
     },
 };
 
@@ -40,6 +43,25 @@ impl Podman {
         Ok((instance, containers))
     }
 
+    #[cfg(test)]
+    async fn list_images<'a>(&'a mut self) -> PodmanErr<Vec<PodmanImage<'a>>> {
+        let images = self
+            .podman
+            .images()
+            .list(&podman_api::opts::ImageListOpts::default())
+            .await?
+            .into_iter()
+            .filter_map(|i| {
+                Some(PodmanImage {
+                    podman: self,
+                    id: i.id?,
+                    reference: i.names?.pop()?,
+                })
+            })
+            .collect();
+        Ok(images)
+    }
+
     async fn list_containers(&mut self) -> PodmanErr<Vec<PodmanContainer>> {
         let containers = self
             .podman
@@ -57,24 +79,6 @@ impl Podman {
             })
             .collect();
         Ok(containers)
-    }
-
-    async fn list_images<'a>(&'a mut self) -> PodmanErr<Vec<PodmanImage<'a>>> {
-        let images = self
-            .podman
-            .images()
-            .list(&ImageListOpts::default())
-            .await?
-            .into_iter()
-            .filter_map(|i| {
-                Some(PodmanImage {
-                    podman: self,
-                    id: i.id?,
-                    reference: i.names?.pop()?,
-                })
-            })
-            .collect();
-        Ok(images)
     }
 
     pub async fn image<'a>(
@@ -146,12 +150,6 @@ impl Podman {
             .prune(&ImagePruneOpts::builder().all(true).build())
             .await?;
         Ok(())
-    }
-}
-
-impl Drop for Podman {
-    fn drop(&mut self) {
-        INSTANCE_TAKEN.store(false, Ordering::Relaxed);
     }
 }
 
