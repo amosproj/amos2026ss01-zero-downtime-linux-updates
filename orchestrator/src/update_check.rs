@@ -53,7 +53,7 @@ impl CheckForUpdate for UpdateChecker {
         &self,
         bootc_status: &BootcStatus,
     ) -> Result<UpdateDecision<OsVersion::Model>> {
-        let target = self.download_manager.get_expected_os_version().await?;
+        let target = self.download_manager.get_target_os_version().await?;
         Ok(compare_os(&bootc_status.booted.checksum, target))
     }
 
@@ -63,7 +63,7 @@ impl CheckForUpdate for UpdateChecker {
     ) -> Result<Option<UpdateDecision<Vec<ApplicationConfig::Model>>>> {
         let target = self
             .download_manager
-            .get_expected_application_configs()
+            .get_target_application_configs()
             .await?;
         Ok(compare_apps(current, target))
     }

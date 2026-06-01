@@ -24,7 +24,7 @@ impl DownloadManager {
 
     /// Fetches the OS version assigned to this device from the API.
     /// Queries `/os-assignments?device_uuid=<uuid>` then `/os-versions/<id>`.
-    pub async fn get_expected_os_version(&self) -> Result<OsVersion::Model> {
+    pub async fn get_target_os_version(&self) -> Result<OsVersion::Model> {
         let assignment = self.get_os_assignment().await?;
         self.get_os_version(assignment.os_version_id).await
     }
@@ -112,7 +112,7 @@ impl DownloadManager {
     /// Fetches the application configs assigned to this device from the API.
     /// Resolves `/app-assignments?device_uuid=<uuid>` to the referenced
     /// `ApplicationConfig` records via `/app-configs/<id>`.
-    pub async fn get_expected_application_configs(&self) -> Result<Vec<ApplicationConfig::Model>> {
+    pub async fn get_target_application_configs(&self) -> Result<Vec<ApplicationConfig::Model>> {
         let assignments = self.get_application_assignments().await?;
         let mut configs = Vec::with_capacity(assignments.len());
         for assignment in assignments {

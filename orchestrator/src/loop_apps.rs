@@ -29,6 +29,7 @@ pub async fn run_apps_main_loop(
     ));
 
     loop {
+        // run loop only as often as defined in the config
         update_interval.tick().await;
 
         let inventory = match collect_inventory(&bootc, exec.as_ref()).await {
@@ -40,6 +41,7 @@ pub async fn run_apps_main_loop(
         };
 
         {
+            // set the current_app_state to the global app_state
             let mut current_state = agent_state.apps_state.lock().await;
             *current_state = apps_state_from_inventory(&inventory.applications);
         }

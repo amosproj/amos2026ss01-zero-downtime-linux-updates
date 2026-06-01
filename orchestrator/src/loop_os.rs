@@ -37,7 +37,8 @@ pub async fn run_os_tree_main_loop(
         };
 
         let booted_checksum = bootc_status.booted.checksum.clone();
-        let host_os_state = OsState {
+
+        let current_os_state = OsState {
             update_pending: bootc_status.staged.is_some(),
             booted_image: booted_checksum.clone(),
             update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
@@ -45,7 +46,7 @@ pub async fn run_os_tree_main_loop(
 
         {
             let mut current_state = agent_state.os_state.lock().await;
-            *current_state = host_os_state;
+            *current_state = current_os_state;
         }
 
         match decision {
