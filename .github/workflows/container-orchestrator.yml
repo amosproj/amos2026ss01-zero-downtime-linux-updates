@@ -62,7 +62,7 @@ jobs:
           context: .
           file: rootc-build/Containerfile
           platforms: linux/amd64
-          push: ${{ github.ref_type == 'tag' }} || github.event_name == 'workflow_dispatch' }}
+          push: "${{ github.ref_type == 'tag' }} || github.event_name == 'workflow_dispatch' }}"
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
