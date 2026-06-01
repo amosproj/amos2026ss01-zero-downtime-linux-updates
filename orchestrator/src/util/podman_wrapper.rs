@@ -118,7 +118,7 @@ impl Podman {
             Some(Err(e)) => return Err(e.into()),
             _ => return Err("Invalid response".into()),
         };
-        if matches!(events.next().await, Some(_)) {
+        if events.next().await.is_some() {
             return Err("Too many response entries".into());
         }
         let image_id = match images.as_slice() {
