@@ -6,7 +6,7 @@
   ],
   "transports": {
     "docker": {
-      "ghcr.io/amosproj/amos2025ss08-cloudless-updates-system": [
+      "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system": [
         {
           "type": "sigstoreSigned",
           "keyPath": "/usr/share/pki/containers/cosign.pub",
