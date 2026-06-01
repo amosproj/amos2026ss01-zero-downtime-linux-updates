@@ -1,0 +1,46 @@
+Title	URL	Assignees	Status	Estimated size	Real size
+Create test setup	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/84		Product Backlog		
+Create Integration tests	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/85		Product Backlog		
+Authentication for User API	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/86		Product Backlog		
+Log timestamp and user information for database changes	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/87		Product Backlog		
+Provide device logging function for storing logs in database	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/88		Product Backlog		
+Store application logs in database	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/89		Product Backlog		
+TPM-based Device Indentity Verification at Edge IPC-Cloud API	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/38		Product Backlog		
+Retrieve device logs	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/90		Product Backlog		
+Retrieve Podman application logs	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/91		Product Backlog		
+Stream device information for debugging	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/92		Product Backlog		
+Stream Podman application logs	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/93		Product Backlog		
+OS Image creation of different versions	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/58	KathiAurina, uzantome	Sprint Backlog	3	
+Research: Log timestamp and user information for database changes	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/72	IFrey	In Progress	3	
+Orchestrator check for update	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/45	uzantome	In Progress	3	
+Application Stack Controller	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/21	patridu	In Progress	3	
+Refactor: Orchestrator initiates update	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/48	KathiAurina	In Progress	3	
+Signature verification of image delivery	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/49	Jerry1098	In Progress	3	
+Refactor: Introduce DTO	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/78	Jerry1098, moritz-reinel	In Progress	3	
+Add Heartbeats	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/71	moritz-reinel	Awaiting Review	1	
+Add paging to device/group/application information	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/73	Beambamacrys	Awaiting Review	2	
+Setup demo review	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/57	uzantome	Feature Archive	5	5
+Edge IPC-to-Cloud API for Database Updates	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/55	IFrey, Jerry1098	Feature Archive	3	3
+User-to-Cloud API for Database Updates	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/56	Beambamacrys	Feature Archive	3	5
+Update Documentation and Architecture	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/43	KathiAurina	Feature Archive	3	3
+Refactor: Folder structure	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/59	moritz-reinel	Feature Archive	1	1
+Create scheme for Database and API calls	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/62	moritz-reinel	Feature Archive	3	3
+Setup Inventory Database	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/44	Jerry1098, moritz-reinel	Feature Archive	5	5
+rpm-ostree OS Update Controller	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/28	IFrey	Feature Archive	2	2
+Build Process Video	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/42	Beambamacrys	Feature Archive	2	2
+Refactor: bootc wrapper	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/47	IFrey	Feature Archive	3	3
+Containerized Image Delivery	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/29	IFrey, KathiAurina, patridu, uzantome	Feature Archive	8	5
+Setup Cargo Workspace	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/27	uzantome	Feature Archive	2	2
+Post-Update Health Checks	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/31	Jerry1098, moritz-reinel	Feature Archive	5	3
+Device Inventory MVP	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/32	Beambamacrys	Feature Archive	3	3
+Setup shared dev environment	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/10	patridu	Feature Archive	2	2
+Review how a TPM can be used	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/3	Beambamacrys, uzantome	Feature Archive	2	2
+Signature Verification	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/19	IFrey	Feature Archive	2	1
+Review options for zero downtime update	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/2	IFrey	Feature Archive	2	2
+Initialize SBOM and Software Architecture	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/9	KathiAurina	Feature Archive	1	1
+Setup DCO & CI Pipeline	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/14	KathiAurina, uzantome	Feature Archive	3	5
+Edge IPC Orchestrator	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/16	Jerry1098, moritz-reinel	Feature Archive	5	5
+API Protocoll & Mock Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/15	patridu	Feature Archive	3	5
+Review Backup options	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/4	uzantome	Feature Archive	2	2
+Review different Linux Distros	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/1	Jerry1098, moritz-reinel	Feature Archive	3	3
+HTTPS Download Manager	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/18	Beambamacrys	Feature Archive	3	3
