@@ -126,22 +126,20 @@ impl Podman {
             _ => return Err(format!("Pulled {} images, which is weird", images.len()).into()),
         };
 
+        // e.g. "alpine" -> "docker.io/library/alpine:latest"
         let full_reference = pi
-            .get(image_id)
+            .get(&image_id)
             .inspect()
             .await?
             .names_history
             .and_then(|mut v| v.pop())
             .unwrap_or(reference);
 
-        match images.as_slice() {
-            [id] => Ok(Some(PodmanImage {
-                podman: self,
-                id: id.to_owned(),
-                reference: full_reference,
-            })),
-            _ => Err(format!("Pulled {} images, which is weird", images.len()).into()),
-        }
+        Ok(Some(PodmanImage {
+            podman: self,
+            id: image_id,
+            reference: full_reference,
+        }))
     }
 
     pub async fn prune_images(&mut self) -> PodmanErr<()> {
@@ -168,13 +166,18 @@ pub struct PodmanImage<'a> {
 }
 
 impl<'a> PodmanImage<'a> {
-    pub async fn create_container(&self, name: String) -> PodmanErr<PodmanContainer> {
+    pub async fn create_container(
+        &self,
+        name: String,
+        environment: impl IntoIterator<Item = (&str, &str)>,
+    ) -> PodmanErr<PodmanContainer> {
         let pc = self.podman.podman.containers();
         let output = pc
             .create(
                 &ContainerCreateOpts::builder()
                     .name(&name)
                     .image(&self.id)
+                    .env(environment)
                     .build(),
             )
             .await?;
@@ -333,7 +336,7 @@ mod tests {
             .unwrap();
 
         let container = img
-            .create_container("test-container".to_owned())
+            .create_container("test-container".to_owned(), vec![])
             .await
             .unwrap();
 
