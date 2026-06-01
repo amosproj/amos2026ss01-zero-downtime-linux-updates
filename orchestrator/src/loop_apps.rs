@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -91,10 +92,13 @@ async fn report_running_configs(
     target: &[ApplicationConfig::Model],
 ) {
     for cfg in target {
-        if let Err(e) = download_manager.report_current_application_assignment(cfg.id).await {
+        if let Err(e) = download_manager
+            .report_current_application_assignment(cfg.id)
+            .await
+        {
             warn!(
-                "Failed to report application assignment for config #{}: {:?}",
-                cfg.id, e
+                "Failed to report application assignment for config #{}: {e:?}",
+                cfg.id
             );
         }
     }
@@ -104,20 +108,22 @@ async fn reconcile_containers(
     current: &CollectionResult<Vec<ApplicationInfo>>,
     target: &[ApplicationConfig::Model],
 ) {
-    let current_images: Vec<String> = match current {
+    let current_images: HashSet<String> = match current {
         CollectionResult::Ok(apps) => apps.iter().map(image_key).collect(),
-        CollectionResult::Unavailable { .. } => Vec::new(),
+        CollectionResult::Unavailable { .. } => HashSet::new(),
     };
 
+    let target_images: HashSet<&String> = target.iter().map(|c| &c.image).collect();
+
     for cfg in target {
-        if !current_images.iter().any(|img| img == &cfg.image) {
+        if !current_images.contains(&cfg.image) {
             info!("Creating container for image {}", cfg.image);
             create_container(&cfg.image).await;
         }
     }
 
     for img in &current_images {
-        if !target.iter().any(|c| c.image == *img) {
+        if !target_images.contains(img) {
             info!("Deleting container for image {}", img);
             delete_container(img).await;
         }

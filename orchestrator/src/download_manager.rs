@@ -3,6 +3,7 @@ use amos_common::entities::{
     ReportedApplicationAssignment, ReportedOsAssignment,
 };
 use anyhow::{Context, Result};
+use futures_util::future::join_all;
 use reqwest::Client;
 use std::sync::Arc;
 
@@ -114,17 +115,25 @@ impl DownloadManager {
     /// `ApplicationConfig` records via `/app-configs/<id>`.
     pub async fn get_target_application_configs(&self) -> Result<Vec<ApplicationConfig::Model>> {
         let assignments = self.get_target_application_assignments().await?;
-        let mut configs = Vec::with_capacity(assignments.len());
+
+        let mut fetch_futures = Vec::with_capacity(assignments.len());
         for assignment in assignments {
-            configs.push(
-                self.get_application_config_by_id(assignment.application_config_id)
-                    .await?,
-            );
+            fetch_futures.push(self.get_application_config_by_id(assignment.application_config_id));
         }
+
+        let results = join_all(fetch_futures).await;
+
+        let mut configs = Vec::with_capacity(results.len());
+        for result in results {
+            configs.push(result?);
+        }
+
         Ok(configs)
     }
 
-    async fn get_target_application_assignments(&self) -> Result<Vec<ApplicationAssignment::Model>> {
+    async fn get_target_application_assignments(
+        &self,
+    ) -> Result<Vec<ApplicationAssignment::Model>> {
         let url = format!(
             "{}/app-assignments?device_uuid={}",
             self.config.cloud_url, self.config.device_uuid
@@ -167,7 +176,10 @@ impl DownloadManager {
 
     /// Reports the current running application config for this device to the API.
     /// POSTs to `/reported-app-assignments?device_uuid=<uuid>`.
-    pub async fn report_current_application_assignment(&self, application_config_id: i32) -> Result<()> {
+    pub async fn report_current_application_assignment(
+        &self,
+        application_config_id: i32,
+    ) -> Result<()> {
         let url = format!(
             "{}/reported-app-assignments?device_uuid={}",
             self.config.cloud_url, self.config.device_uuid

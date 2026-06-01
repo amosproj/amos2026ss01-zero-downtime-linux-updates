@@ -55,7 +55,10 @@ pub async fn run_os_tree_main_loop(
                     "OS is up to date (target #{} {})",
                     target.id, target.commit_hash
                 );
-                if let Err(e) = download_manager.report_current_os_assignment(target.id).await {
+                if let Err(e) = download_manager
+                    .report_current_os_assignment(target.id)
+                    .await
+                {
                     warn!("Failed to report OS assignment: {:?}", e);
                 }
             }
