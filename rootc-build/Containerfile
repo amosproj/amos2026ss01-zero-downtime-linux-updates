@@ -17,3 +17,13 @@ RUN systemctl enable orchestrator.service
 # Install Greenboot health checks
 RUN dnf -y install greenboot greenboot-default-health-checks && \
     dnf clean all
+
+# Embed the Cosign public key and container policy so podman enforces
+# signature verification when pulling future OS updates.
+# Policy goes to both paths: /usr (immutable, tamper-resistant) and /etc
+# (mutable, takes precedence — keeps both in sync via the image).
+# Key goes to /usr only so it cannot be replaced by a local root user.
+RUN mkdir -p /usr/share/pki/containers /usr/share/containers
+COPY cosign.pub /usr/share/pki/containers/cosign.pub
+COPY container-policy.json /usr/share/containers/policy.json
+COPY container-policy.json /etc/containers/policy.json
