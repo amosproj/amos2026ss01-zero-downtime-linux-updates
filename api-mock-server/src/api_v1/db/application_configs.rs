@@ -1,3 +1,4 @@
+use crate::dtos;
 use amos_common::entities::ApplicationConfig;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -15,19 +16,26 @@ pub async fn list_application_configs(
     page_size: u64,
 ) -> Result<(Vec<ApplicationConfig::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = ApplicationConfig::Entity::find().order_by_asc(ApplicationConfig::Column::Id);
+    let mut query =
+        dtos::ApplicationConfig::Entity::find().order_by_asc(dtos::ApplicationConfig::Column::Id);
     if let Some(id) = application_id {
-        query = query.filter(ApplicationConfig::Column::ApplicationId.eq(id));
+        query = query.filter(dtos::ApplicationConfig::Column::ApplicationId.eq(id));
     }
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data, total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn get_application_config(id: i32) -> Result<Option<ApplicationConfig::Model>, DbErr> {
     let db = db!();
-    ApplicationConfig::Entity::find_by_id(id).one(&db).await
+    Ok(dtos::ApplicationConfig::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .map(|m| m.into_api()))
 }
 
 pub async fn add_application_config(
@@ -36,7 +44,7 @@ pub async fn add_application_config(
     config: Option<String>,
     comment: Option<String>,
 ) -> Result<ApplicationConfig::Model, DbErr> {
-    let app_config = ApplicationConfig::ActiveModel {
+    let app_config = dtos::ApplicationConfig::ActiveModel {
         id: NotSet,
         application_id: Set(app_id),
         image: Set(image),
@@ -49,7 +57,7 @@ pub async fn add_application_config(
     let new_app_config = app_config.insert(&db).await?;
     debug!("Inserted new application config: {:?}", new_app_config);
 
-    Ok(new_app_config)
+    Ok(new_app_config.into_api())
 }
 
 pub async fn update_application_config(
@@ -60,7 +68,7 @@ pub async fn update_application_config(
     comment: Option<String>,
 ) -> Result<ApplicationConfig::Model, DbErr> {
     let db = db!();
-    let app_config = ApplicationConfig::ActiveModel {
+    let app_config = dtos::ApplicationConfig::ActiveModel {
         id: Set(id),
         application_id: Set(app_id),
         image: Set(image),
@@ -69,12 +77,12 @@ pub async fn update_application_config(
     };
     let updated_group = app_config.update(&db).await?;
     debug!("Updated application config: {:?}", updated_group);
-    Ok(updated_group)
+    Ok(updated_group.into_api())
 }
 
 pub async fn delete_application_config(id: i32) -> Result<u64, DbErr> {
     let db = db!();
-    let del = ApplicationConfig::Entity::delete_by_id(id)
+    let del = dtos::ApplicationConfig::Entity::delete_by_id(id)
         .exec(&db)
         .await?;
     Ok(del.rows_affected)

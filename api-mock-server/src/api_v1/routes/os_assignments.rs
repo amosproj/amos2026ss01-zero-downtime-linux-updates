@@ -4,7 +4,7 @@ use crate::api_v1::routes::{
     pagination::{Page, PageParams},
     pagination_err,
 };
-use amos_common::entities::OsAssignment;
+use amos_common::entities::os_assignment::CreateModel as OsAssignmentCreate;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -89,7 +89,7 @@ async fn get_os_assignment(Path(id): Path<i32>) -> Response {
 /// POST /os-assignments — Create an OS assignment.
 /// Body: `{ os_version_id: i32, device_id: i32|null, group_id: i32|null }`
 /// Exactly one of device_id or group_id must be set.
-async fn create_os_assignment(Json(body): Json<OsAssignment::Model>) -> Response {
+async fn create_os_assignment(Json(body): Json<OsAssignmentCreate>) -> Response {
     if body.device_id.is_none() && body.group_id.is_none() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -113,7 +113,7 @@ async fn create_os_assignment(Json(body): Json<OsAssignment::Model>) -> Response
 /// Exactly one of device_id or group_id must be set.
 async fn update_os_assignment(
     Path(id): Path<i32>,
-    Json(body): Json<OsAssignment::Model>,
+    Json(body): Json<OsAssignmentCreate>,
 ) -> Response {
     if body.device_id.is_none() && body.group_id.is_none() {
         return err(

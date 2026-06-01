@@ -1,7 +1,7 @@
 use sea_orm::Schema;
 use sea_orm_migration::prelude::*;
 
-use amos_common::entities;
+use crate::dtos;
 
 use super::create_table;
 
@@ -16,10 +16,10 @@ impl MigrationTrait for Migration {
         create_table(
             manager,
             &schema,
-            entities::ReportedApplicationAssignment::Entity,
+            dtos::ReportedApplicationAssignment::Entity,
         )
         .await?;
-        create_table(manager, &schema, entities::ReportedOsAssignment::Entity).await?;
+        create_table(manager, &schema, dtos::ReportedOsAssignment::Entity).await?;
 
         Ok(())
     }

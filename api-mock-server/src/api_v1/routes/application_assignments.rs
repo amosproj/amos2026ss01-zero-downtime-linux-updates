@@ -4,7 +4,7 @@ use crate::api_v1::routes::{
     pagination::{Page, PageParams},
     pagination_err,
 };
-use amos_common::entities::ApplicationAssignment;
+use amos_common::entities::application_assignment::CreateModel as ApplicationAssignmentCreate;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -72,7 +72,7 @@ async fn get_application_assignment(Path(id): Path<i32>) -> Response {
 /// POST /app-assignments — Create an app assignment.
 /// Body: `{ application_config_id: i32, device_id: i32|null, group_id: i32|null }`
 /// Exactly one of device_id or group_id must be set.
-async fn create_application_assignment(Json(body): Json<ApplicationAssignment::Model>) -> Response {
+async fn create_application_assignment(Json(body): Json<ApplicationAssignmentCreate>) -> Response {
     if body.device_id.is_some() && body.group_id.is_some() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -108,7 +108,7 @@ async fn create_application_assignment(Json(body): Json<ApplicationAssignment::M
 /// Exactly one of device_id or group_id must be set.
 async fn update_application_assignment(
     Path(id): Path<i32>,
-    Json(body): Json<ApplicationAssignment::Model>,
+    Json(body): Json<ApplicationAssignmentCreate>,
 ) -> Response {
     if body.device_id.is_none() && body.group_id.is_none() {
         return err(

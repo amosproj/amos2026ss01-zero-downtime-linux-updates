@@ -1,3 +1,4 @@
+use crate::dtos;
 use amos_common::entities::ReportedOsAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -16,36 +17,42 @@ pub async fn list_reported_os_assignments(
     page_size: u64,
 ) -> Result<(Vec<ReportedOsAssignment::Model>, u64), DbErr> {
     let db = db!();
-    let mut query =
-        ReportedOsAssignment::Entity::find().order_by_asc(ReportedOsAssignment::Column::Id);
+    let mut query = dtos::ReportedOsAssignment::Entity::find()
+        .order_by_asc(dtos::ReportedOsAssignment::Column::Id);
     if let Some(id) = device_id {
-        query = query.filter(ReportedOsAssignment::Column::DeviceId.eq(id));
+        query = query.filter(dtos::ReportedOsAssignment::Column::DeviceId.eq(id));
     }
     if let Some(id) = os_version_id {
-        query = query.filter(ReportedOsAssignment::Column::OsVersionId.eq(id));
+        query = query.filter(dtos::ReportedOsAssignment::Column::OsVersionId.eq(id));
     }
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
-    Ok((data, total_items))
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
 }
 
 pub async fn get_reported_os_assignment(
     id: i32,
 ) -> Result<Option<ReportedOsAssignment::Model>, DbErr> {
     let db = db!();
-    ReportedOsAssignment::Entity::find_by_id(id).one(&db).await
+    Ok(dtos::ReportedOsAssignment::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .map(|m| m.into_api()))
 }
 
 pub async fn add_reported_os_assignment(
     os_version_id: i32,
     device_id: i32,
 ) -> Result<ReportedOsAssignment::Model, DbErr> {
-    let os_assignment = ReportedOsAssignment::ActiveModel {
+    let os_assignment = dtos::ReportedOsAssignment::ActiveModel {
         id: NotSet,
         os_version_id: Set(os_version_id),
         device_id: Set(device_id),
-        updated_at: NotSet, // update_at is automatically set in before_save
+        updated_at: NotSet, // updated_at is automatically set in before_save
     };
 
     let db = db!();
@@ -55,7 +62,7 @@ pub async fn add_reported_os_assignment(
         "Inserted new reported OS version assignment: {:?}",
         new_os_assignment
     );
-    Ok(new_os_assignment)
+    Ok(new_os_assignment.into_api())
 }
 
 #[allow(dead_code)]
@@ -65,23 +72,23 @@ pub async fn update_reported_os_assignment(
     device_id: i32,
 ) -> Result<ReportedOsAssignment::Model, DbErr> {
     let db = db!();
-    let os_assignment = ReportedOsAssignment::ActiveModel {
+    let os_assignment = dtos::ReportedOsAssignment::ActiveModel {
         id: Set(id),
         os_version_id: Set(os_version_id),
         device_id: Set(device_id),
-        updated_at: NotSet, // update_at is automatically set in before_save
+        updated_at: NotSet, // updated_at is automatically set in before_save
     };
     let updated_os_assignment = os_assignment.update(&db).await?;
     debug!(
         "Updated reported OS version assignment: {:?}",
         updated_os_assignment
     );
-    Ok(updated_os_assignment)
+    Ok(updated_os_assignment.into_api())
 }
 
 pub async fn delete_reported_os_assignment(id: i32) -> Result<u64, DbErr> {
     let db = db!();
-    let del = ReportedOsAssignment::Entity::delete_by_id(id)
+    let del = dtos::ReportedOsAssignment::Entity::delete_by_id(id)
         .exec(&db)
         .await?;
     Ok(del.rows_affected)
