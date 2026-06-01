@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # needed to push to GHCR
+      packages: write  # needed to push to GHCR and to attach signatures
 
     steps:
       - name: Checkout repository
@@ -47,7 +47,11 @@ jobs:
             type=ref,event=tag
             type=sha
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -59,4 +63,13 @@ jobs:
           # Cache layers in the GitHub Actions cache to speed up subsequent builds
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Sign image with Cosign
+        if: github.ref_type == 'tag'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cosign sign --key env://COSIGN_PRIVATE_KEY --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
 
