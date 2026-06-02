@@ -2,8 +2,10 @@ use amos_common::entities::{
     ApplicationAssignment, ApplicationConfig, OsAssignment, OsVersion,
     ReportedApplicationAssignment, ReportedOsAssignment,
 };
+use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
 use anyhow::{Context, Result};
 use futures_util::future::join_all;
+use log::{info, warn};
 use reqwest::Client;
 use std::sync::Arc;
 
@@ -21,6 +23,19 @@ impl DownloadManager {
             http_client,
             config,
         })
+    }
+
+    // Sends device pings to the API to indicate the orchestrator is still running
+    pub async fn send_ping(&self) {
+        let url = format!(
+            "{}/pings/{}",
+            self.config.cloud_url, self.config.device_uuid
+        );
+
+        let result = self.http_client.put(url).send().await;
+        if let Err(err) = result {
+            warn!("Aliveness report failed: {}", err);
+        }
     }
 
     /// Fetches the OS version assigned to this device from the API.
@@ -68,11 +83,9 @@ impl DownloadManager {
             self.config.cloud_url, self.config.device_uuid
         );
 
-        let body = ReportedOsAssignment::Model {
-            id: 0,
+        let body = ReportedOsAssignmentCreate {
             os_version_id,
-            device_id: 0,
-            updated_at: chrono::Utc::now(),
+            device_id: None,
         };
 
         let resp = self
@@ -214,12 +227,12 @@ fn build_http_client(settings: &Settings) -> Result<Client> {
     let mut builder = Client::builder();
 
     if let Some(proxy_url) = &settings.https_proxy {
-        println!("Using https proxy: {}", proxy_url);
+        info!("Using https proxy: {}", proxy_url);
         let proxy = reqwest::Proxy::https(proxy_url)
             .with_context(|| format!("Failed to set https proxy: {}", proxy_url))?;
         builder = builder.proxy(proxy);
     } else {
-        println!("No https proxy set, using environment variables if available");
+        info!("No https proxy set, using environment variables if available");
     }
 
     builder

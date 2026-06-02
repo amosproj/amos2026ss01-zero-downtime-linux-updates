@@ -1,9 +1,13 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::Group;
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
+use amos_common::entities::group::CreateModel as GroupCreate;
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -18,10 +22,21 @@ pub fn routes() -> Router {
         )
 }
 
-/// GET /groups — List all groups.
-async fn list_groups() -> Response {
-    match db::list_groups().await {
-        Ok(groups) => Json(groups).into_response(),
+#[derive(serde::Deserialize)]
+struct GroupQuery {
+    name: Option<String>,
+}
+
+/// GET /groups — List groups.
+/// Optional query: `?name=<string>&page=1&page_size=20`
+async fn list_groups(Query(page): Query<PageParams>, Query(params): Query<GroupQuery>) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_groups(params.name, page.to_db_page(), page.page_size).await {
+        Ok((data, total_items)) => {
+            Json(Page::new(data, page.page, page.page_size, total_items)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -37,7 +52,7 @@ async fn get_group(Path(id): Path<i32>) -> Response {
 
 /// POST /groups — Create a group.
 /// Body: `{ name: string (required) }`
-async fn create_group(Json(body): Json<Group::Model>) -> Response {
+async fn create_group(Json(body): Json<GroupCreate>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -52,7 +67,7 @@ async fn create_group(Json(body): Json<Group::Model>) -> Response {
 
 /// PUT /groups/{id} — Replace a group by ID.
 /// Body: `{ name: string (required) }`
-async fn update_group(Path(id): Path<i32>, Json(body): Json<Group::Model>) -> Response {
+async fn update_group(Path(id): Path<i32>, Json(body): Json<GroupCreate>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

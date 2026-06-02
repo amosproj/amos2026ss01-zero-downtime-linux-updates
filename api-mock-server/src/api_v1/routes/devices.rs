@@ -1,6 +1,10 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::Device;
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
+use amos_common::entities::device::CreateModel as DeviceCreate;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -25,13 +29,32 @@ pub fn routes() -> Router {
 struct DeviceQuery {
     group_id: Option<i32>,
     tenant_id: Option<i32>,
+    uuid: Option<String>,
+    hostname: Option<String>,
 }
 
-/// GET /devices/summary — List all device summaries (reported state).
-/// Optional query: `?tenant_id=<i32>`
-async fn list_device_summaries(Query(params): Query<DeviceQuery>) -> Response {
-    match db::list_device_summaries(params.tenant_id).await {
-        Ok(summaries) => Json(summaries).into_response(),
+/// GET /devices/summary — List device summaries (reported state).
+/// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
+async fn list_device_summaries(
+    Query(page): Query<PageParams>,
+    Query(params): Query<DeviceQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_device_summaries(
+        params.group_id,
+        params.tenant_id,
+        params.uuid,
+        params.hostname,
+        page.to_db_page(),
+        page.page_size,
+    )
+    .await
+    {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -45,10 +68,28 @@ async fn get_device_summary(Path(id): Path<i32>) -> Response {
     }
 }
 
-/// GET /devices — List devices. Optional query: `?group_id=<i32>&tenant_id=<i32>`
-async fn list_devices(Query(params): Query<DeviceQuery>) -> Response {
-    match db::list_devices(params.group_id, params.tenant_id).await {
-        Ok(devices) => Json(devices).into_response(),
+/// GET /devices — List devices.
+/// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
+async fn list_devices(
+    Query(page): Query<PageParams>,
+    Query(params): Query<DeviceQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_devices(
+        params.group_id,
+        params.tenant_id,
+        params.uuid,
+        params.hostname,
+        page.to_db_page(),
+        page.page_size,
+    )
+    .await
+    {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -64,7 +105,7 @@ async fn get_device(Path(id): Path<i32>) -> Response {
 
 /// POST /devices — Create a device.
 /// Body: `{ uuid: string (required), hostname: string (required), tenant_id: i32, group_id: i32|null }`
-async fn create_device(Json(body): Json<Device::Model>) -> Response {
+async fn create_device(Json(body): Json<DeviceCreate>) -> Response {
     if body.uuid.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -85,7 +126,7 @@ async fn create_device(Json(body): Json<Device::Model>) -> Response {
 
 /// PUT /devices/{id} — Replace a device by ID.
 /// Body: `{ uuid: string (required), hostname: string (required), tenant_id: i32, group_id: i32|null }`
-async fn update_device(Path(id): Path<i32>, Json(body): Json<Device::Model>) -> Response {
+async fn update_device(Path(id): Path<i32>, Json(body): Json<DeviceCreate>) -> Response {
     if body.uuid.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

@@ -54,7 +54,9 @@ impl CheckForUpdate for UpdateChecker {
         bootc_status: &BootcStatus,
     ) -> Result<UpdateDecision<OsVersion::Model>> {
         let target = self.download_manager.get_target_os_version().await?;
-        Ok(compare_os(&bootc_status.booted.checksum, target))
+        let booted = bootc_status.booted.as_ref().expect("No booted OS found");
+
+        Ok(compare_os(&booted.checksum, target))
     }
 
     async fn check_apps(

@@ -1,9 +1,13 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::Application;
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
+use amos_common::entities::application::CreateModel as ApplicationCreate;
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -23,10 +27,24 @@ pub fn routes() -> Router {
         )
 }
 
-/// GET /applications — List all applications.
-async fn list_applications() -> Response {
-    match db::list_applications().await {
-        Ok(apps) => Json(apps).into_response(),
+#[derive(serde::Deserialize)]
+struct ApplicationQuery {
+    name: Option<String>,
+}
+
+/// GET /applications — List applications.
+/// Optional query: `?name=<string>&page=1&page_size=20`
+async fn list_applications(
+    Query(page): Query<PageParams>,
+    Query(params): Query<ApplicationQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_applications(params.name, page.to_db_page(), page.page_size).await {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -42,7 +60,7 @@ async fn get_application(Path(id): Path<i32>) -> Response {
 
 /// POST /applications — Create an application.
 /// Body: `{ name: string (required), description: string }`
-async fn create_application(Json(body): Json<Application::Model>) -> Response {
+async fn create_application(Json(body): Json<ApplicationCreate>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -57,7 +75,7 @@ async fn create_application(Json(body): Json<Application::Model>) -> Response {
 
 /// PUT /applications/{id} — Replace an application by ID.
 /// Body: `{ name: string (required), description: string }`
-async fn update_application(Path(id): Path<i32>, Json(body): Json<Application::Model>) -> Response {
+async fn update_application(Path(id): Path<i32>, Json(body): Json<ApplicationCreate>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

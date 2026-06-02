@@ -100,7 +100,7 @@ async fn main() {
     });
     let os_state = OsState {
         update_pending: bootc_status.staged.is_some(),
-        booted_image: bootc_status.booted.checksum.clone(),
+        booted_image: bootc_status.booted.unwrap().checksum.clone(),
         update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
     };
 
@@ -142,6 +142,15 @@ async fn main() {
         Arc::clone(&download_manager),
         Arc::clone(&update_checker),
     ));
+
+    let mut healthcheck_interval = tokio::time::interval(std::time::Duration::from_secs(60));
+    let download_manager_clone = Arc::clone(&download_manager);
+    let _health_report_handle = tokio::spawn(async move {
+        loop {
+            healthcheck_interval.tick().await;
+            download_manager_clone.send_ping().await;
+        }
+    });
 
     tokio::signal::ctrl_c().await.unwrap();
 }

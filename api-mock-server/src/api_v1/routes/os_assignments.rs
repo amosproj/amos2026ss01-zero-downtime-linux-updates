@@ -1,6 +1,10 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::OsAssignment;
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
+use amos_common::entities::os_assignment::CreateModel as OsAssignmentCreate;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -33,8 +37,14 @@ struct OsAssignmentQuery {
 }
 
 /// GET /os-assignments — List OS assignments (target state).
-/// Optional query: `?os_version_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>`
-async fn list_os_assignments(Query(params): Query<OsAssignmentQuery>) -> Response {
+/// Optional query: `?os_version_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>&page=1&page_size=20`
+async fn list_os_assignments(
+    Query(page): Query<PageParams>,
+    Query(params): Query<OsAssignmentQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
     let mut device_id = params.device_id;
 
     // Resolve device_uuid
@@ -51,8 +61,18 @@ async fn list_os_assignments(Query(params): Query<OsAssignmentQuery>) -> Respons
         }
     }
 
-    match db::list_os_assignments(params.os_version_id, device_id, params.group_id).await {
-        Ok(assignments) => Json(assignments).into_response(),
+    match db::list_os_assignments(
+        params.os_version_id,
+        device_id,
+        params.group_id,
+        page.to_db_page(),
+        page.page_size,
+    )
+    .await
+    {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -69,7 +89,7 @@ async fn get_os_assignment(Path(id): Path<i32>) -> Response {
 /// POST /os-assignments — Create an OS assignment.
 /// Body: `{ os_version_id: i32, device_id: i32|null, group_id: i32|null }`
 /// Exactly one of device_id or group_id must be set.
-async fn create_os_assignment(Json(body): Json<OsAssignment::Model>) -> Response {
+async fn create_os_assignment(Json(body): Json<OsAssignmentCreate>) -> Response {
     if body.device_id.is_none() && body.group_id.is_none() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -93,7 +113,7 @@ async fn create_os_assignment(Json(body): Json<OsAssignment::Model>) -> Response
 /// Exactly one of device_id or group_id must be set.
 async fn update_os_assignment(
     Path(id): Path<i32>,
-    Json(body): Json<OsAssignment::Model>,
+    Json(body): Json<OsAssignmentCreate>,
 ) -> Response {
     if body.device_id.is_none() && body.group_id.is_none() {
         return err(

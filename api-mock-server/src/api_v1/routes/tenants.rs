@@ -1,9 +1,13 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::Tenant;
+use crate::api_v1::routes::{
+    db_err, err, not_found,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
+use amos_common::entities::tenant::CreateModel as TenantCreate;
 use axum::{
     Json, Router,
-    extract::Path,
+    extract::{Path, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -18,10 +22,24 @@ pub fn routes() -> Router {
         )
 }
 
-/// GET /tenants — List all tenants.
-async fn list_tenants() -> Response {
-    match db::list_tenants().await {
-        Ok(tenants) => Json(tenants).into_response(),
+#[derive(serde::Deserialize)]
+struct TenantQuery {
+    name: Option<String>,
+}
+
+/// GET /tenants — List tenants.
+/// Optional query: `?name=<string>&page=1&page_size=20`
+async fn list_tenants(
+    Query(page): Query<PageParams>,
+    Query(params): Query<TenantQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_tenants(params.name, page.to_db_page(), page.page_size).await {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -37,7 +55,7 @@ async fn get_tenant(Path(id): Path<i32>) -> Response {
 
 /// POST /tenants — Create a tenant.
 /// Body: `{ name: string (required), description: string|null }`
-async fn create_tenant(Json(body): Json<Tenant::Model>) -> Response {
+async fn create_tenant(Json(body): Json<TenantCreate>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -52,7 +70,7 @@ async fn create_tenant(Json(body): Json<Tenant::Model>) -> Response {
 
 /// PUT /tenants/{id} — Replace a tenant by ID.
 /// Body: `{ name: string (required), description: string|null }`
-async fn update_tenant(Path(id): Path<i32>, Json(body): Json<Tenant::Model>) -> Response {
+async fn update_tenant(Path(id): Path<i32>, Json(body): Json<TenantCreate>) -> Response {
     if body.name.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,

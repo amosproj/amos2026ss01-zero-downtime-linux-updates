@@ -6,6 +6,7 @@ pub mod devices;
 pub mod groups;
 pub mod os_assignments;
 pub mod os_versions;
+pub mod pings;
 pub mod reported_application_assignments;
 pub mod reported_os_assignments;
 pub mod tenants;
@@ -18,6 +19,7 @@ pub use devices::*;
 pub use groups::*;
 pub use os_assignments::*;
 pub use os_versions::*;
+pub use pings::*;
 pub use reported_application_assignments::*;
 pub use reported_os_assignments::*;
 pub use tenants::*;
@@ -183,7 +185,9 @@ mod tests {
         super::add_device("uuid-3".to_owned(), "host-3".to_owned(), t2.id, None)
             .await
             .unwrap();
-        let devices = super::list_devices(None, Some(t1.id)).await.unwrap();
+        let (devices, _total) = super::list_devices(None, Some(t1.id), None, None, 0, 20)
+            .await
+            .unwrap();
 
         assert_eq!(devices.len(), 2);
     }
@@ -206,7 +210,9 @@ mod tests {
         super::add_device("uuid-2".to_owned(), "host-2".to_owned(), tenant.id, None)
             .await
             .unwrap();
-        let devices = super::list_devices(Some(group.id), None).await.unwrap();
+        let (devices, _total) = super::list_devices(Some(group.id), None, None, None, 0, 20)
+            .await
+            .unwrap();
 
         assert_eq!(devices.len(), 1);
     }

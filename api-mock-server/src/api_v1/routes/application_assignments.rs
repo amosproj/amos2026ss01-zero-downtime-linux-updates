@@ -1,5 +1,6 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err};
+use crate::api_v1::routes::pagination::{Page, PageParams};
 use amos_common::entities::ApplicationAssignment;
 use axum::{
     Json, Router,
@@ -31,10 +32,24 @@ struct AppAssignmentQuery {
     device_uuid: Option<String>,
     group_id: Option<i32>,
 }
-
+#[derive(Deserialize)]
+pub struct ApplicationAssignmentCreate {
+    pub application_config_id: i32,
+    pub device_id: Option<i32>,
+    pub group_id: Option<i32>,
+}
 /// GET /app-assignments — List app assignments.
-/// Optional query: `?application_config_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>`
-async fn list_application_assignments(Query(params): Query<AppAssignmentQuery>) -> Response {
+/// Optional query: `?application_config_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>&page=1&page_size=20`
+async fn list_application_assignments(
+    Query(page): Query<PageParams>,
+    Query(params): Query<AppAssignmentQuery>,
+) -> Response {
+
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+
+
     let mut device_id = params.device_id;
 
     if let Some(device_uuid) = params.device_uuid {
@@ -50,10 +65,18 @@ async fn list_application_assignments(Query(params): Query<AppAssignmentQuery>) 
         }
     }
 
-    match db::list_application_assignments(params.application_config_id, device_id, params.group_id)
-        .await
-    {
-        Ok(assignments) => Json(assignments).into_response(),
+
+    match db::list_application_assignments(
+        params.application_config_id,
+        device_id,
+        params.group_id,
+        page.to_db_page(),
+        page.page_size,
+    )
+        .await    {
+        Ok((assignments, total)) => {
+            Json(Page::new(assignments, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -70,7 +93,7 @@ async fn get_application_assignment(Path(id): Path<i32>) -> Response {
 /// POST /app-assignments — Create an app assignment.
 /// Body: `{ application_config_id: i32, device_id: i32|null, group_id: i32|null }`
 /// Exactly one of device_id or group_id must be set.
-async fn create_application_assignment(Json(body): Json<ApplicationAssignment::Model>) -> Response {
+async fn create_application_assignment(Json(body): Json<ApplicationAssignmentCreate>) -> Response {
     if body.device_id.is_some() && body.group_id.is_some() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -106,7 +129,7 @@ async fn create_application_assignment(Json(body): Json<ApplicationAssignment::M
 /// Exactly one of device_id or group_id must be set.
 async fn update_application_assignment(
     Path(id): Path<i32>,
-    Json(body): Json<ApplicationAssignment::Model>,
+    Json(body): Json<ApplicationAssignmentCreate>,
 ) -> Response {
     if body.device_id.is_none() && body.group_id.is_none() {
         return err(

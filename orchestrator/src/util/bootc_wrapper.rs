@@ -7,7 +7,7 @@ use tracing::{error, info, instrument};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BootcStatus {
-    pub booted: BootcDeploymentInfo,
+    pub booted: Option<BootcDeploymentInfo>,
     pub staged: Option<BootcDeploymentInfo>,
     pub rollback: Option<BootcDeploymentInfo>,
     pub rollback_queued: bool,
@@ -30,8 +30,17 @@ pub struct BootcImageInfo {
 
 // Wire-transfer Deserialization Helpers for Serde
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct BootcStatusJsonWrapper {
-    status: BootcStatus,
+    #[expect(dead_code)]
+    pub api_version: String,
+    #[expect(dead_code)]
+    pub kind: String,
+    #[expect(dead_code)]
+    pub metadata: serde_json::Value,
+    #[expect(dead_code)]
+    pub spec: serde_json::Value,
+    pub status: BootcStatus,
 }
 
 #[derive(Deserialize)]
@@ -203,6 +212,10 @@ mod tests {
             .returning(|_, _| {
                 Ok(ExecResult {
                     stdout: r#"{
+                        "apiVersion": "org.containers.bootc/v1",
+                        "kind": "BootcHost",
+                        "metadata": {},
+                        "spec": {},
                         "status": {
                             "booted": {
                                 "ostree": { "checksum": "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443" },
@@ -220,9 +233,13 @@ mod tests {
 
         let bootc_client = Bootc::new(Box::new(mock_exec));
         let result = bootc_client.status().await.unwrap();
+        let booted_info = result
+            .booted
+            .as_ref()
+            .expect("Expected 'booted' deployment details to be populated");
 
         assert_eq!(
-            result.booted.checksum,
+            booted_info.checksum,
             "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443"
         );
         assert!(!result.rollback_queued);

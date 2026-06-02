@@ -1,9 +1,7 @@
-use amos_common::entities::{
-    Application, ApplicationConfig, Device, OsVersion, ReportedApplicationAssignment,
-    ReportedOsAssignment, Tenant,
-};
+use crate::dtos;
 use sea_orm::DbErr;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::sea_query::Expr;
+use sea_orm::{ColumnTrait, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter, QueryOrder};
 use serde_json::json;
 
 use super::db;
@@ -11,40 +9,72 @@ use super::db;
 // --Device Summary--
 
 pub async fn get_device_summary(id: i32) -> Result<Option<serde_json::Value>, DbErr> {
-    let mut res = assemble_device_summary(Some(id), None).await?;
-    Ok(res.pop())
+    let mut res = assemble_device_summary(Some(id), None, None, None, None, 0, 1).await?;
+    Ok(res.0.pop())
 }
 
 pub async fn list_device_summaries(
+    group_id: Option<i32>,
     tenant_id: Option<i32>,
-) -> Result<Vec<serde_json::Value>, DbErr> {
-    assemble_device_summary(None, tenant_id).await
+    uuid_filter: Option<String>,
+    hostname_filter: Option<String>,
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<serde_json::Value>, u64), DbErr> {
+    assemble_device_summary(
+        None,
+        group_id,
+        tenant_id,
+        uuid_filter,
+        hostname_filter,
+        page,
+        page_size,
+    )
+    .await
 }
 
 pub async fn assemble_device_summary(
     device_id: Option<i32>,
+    group_id: Option<i32>,
     tenant_id: Option<i32>,
-) -> Result<Vec<serde_json::Value>, DbErr> {
+    uuid_filter: Option<String>,
+    hostname_filter: Option<String>,
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<serde_json::Value>, u64), DbErr> {
     let db = db!();
 
-    let mut query = Device::Entity::find();
+    let mut query = dtos::Device::Entity::find().order_by_asc(dtos::Device::Column::Id);
     if let Some(id) = device_id {
-        query = query.filter(Device::Column::Id.eq(id));
+        query = query.filter(dtos::Device::Column::Id.eq(id));
+    }
+    if let Some(id) = group_id {
+        query = query.filter(dtos::Device::Column::GroupId.eq(id));
     }
     if let Some(id) = tenant_id {
-        query = query.filter(Device::Column::TenantId.eq(id));
+        query = query.filter(dtos::Device::Column::TenantId.eq(id));
+    }
+    if let Some(uuid) = uuid_filter {
+        query = query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
+    }
+    if let Some(hostname) = hostname_filter {
+        query =
+            query.filter(Expr::col(dtos::Device::Column::Hostname).like(format!("%{}%", hostname)));
     }
 
-    let devices = query.all(&db).await?;
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let devices = paginator.fetch_page(page).await?;
+
     if devices.is_empty() {
-        return Ok(vec![]);
+        return Ok((vec![], total_items));
     }
 
     let device_ids: Vec<i32> = devices.iter().map(|d| d.id).collect();
 
-    let os_rows = ReportedOsAssignment::Entity::find()
-        .filter(ReportedOsAssignment::Column::DeviceId.is_in(device_ids.clone()))
-        .find_also_related(OsVersion::Entity)
+    let os_rows = dtos::ReportedOsAssignment::Entity::find()
+        .filter(dtos::ReportedOsAssignment::Column::DeviceId.is_in(device_ids.clone()))
+        .find_also_related(dtos::OsVersion::Entity)
         .all(&db)
         .await?;
 
@@ -66,9 +96,9 @@ pub async fn assemble_device_summary(
         }
     }
 
-    let app_rows = ReportedApplicationAssignment::Entity::find()
-        .filter(ReportedApplicationAssignment::Column::DeviceId.is_in(device_ids.clone()))
-        .find_also_related(ApplicationConfig::Entity)
+    let app_rows = dtos::ReportedApplicationAssignment::Entity::find()
+        .filter(dtos::ReportedApplicationAssignment::Column::DeviceId.is_in(device_ids.clone()))
+        .find_also_related(dtos::ApplicationConfig::Entity)
         .all(&db)
         .await?;
 
@@ -79,13 +109,14 @@ pub async fn assemble_device_summary(
         .into_iter()
         .collect();
 
-    let app_by_id: std::collections::HashMap<i32, Application::Model> = Application::Entity::find()
-        .filter(Application::Column::Id.is_in(app_ids))
-        .all(&db)
-        .await?
-        .into_iter()
-        .map(|app| (app.id, app))
-        .collect();
+    let app_by_id: std::collections::HashMap<i32, dtos::Application::Model> =
+        dtos::Application::Entity::find()
+            .filter(dtos::Application::Column::Id.is_in(app_ids))
+            .all(&db)
+            .await?
+            .into_iter()
+            .map(|app| (app.id, app))
+            .collect();
 
     let mut apps_by_device: std::collections::HashMap<i32, Vec<serde_json::Value>> =
         std::collections::HashMap::new();
@@ -115,13 +146,14 @@ pub async fn assemble_device_summary(
         .into_iter()
         .collect();
 
-    let tenant_by_id: std::collections::HashMap<i32, Tenant::Model> = Tenant::Entity::find()
-        .filter(Tenant::Column::Id.is_in(tenant_ids))
-        .all(&db)
-        .await?
-        .into_iter()
-        .map(|tenant| (tenant.id, tenant))
-        .collect();
+    let tenant_by_id: std::collections::HashMap<i32, dtos::Tenant::Model> =
+        dtos::Tenant::Entity::find()
+            .filter(dtos::Tenant::Column::Id.is_in(tenant_ids))
+            .all(&db)
+            .await?
+            .into_iter()
+            .map(|tenant| (tenant.id, tenant))
+            .collect();
 
     let summaries = devices
         .into_iter()
@@ -130,13 +162,13 @@ pub async fn assemble_device_summary(
             let apps = apps_by_device.remove(&device.id).unwrap_or_default();
             let tenant = tenant_by_id.get(&device.tenant_id);
             json!({
-                "device": device,
-                "tenant": tenant,
+                "device": device.into_api(),
+                "tenant": tenant.map(|t| t.clone().into_api()),
                 "os_versions": os,
                 "applications": apps,
             })
         })
         .collect();
 
-    Ok(summaries)
+    Ok((summaries, total_items))
 }

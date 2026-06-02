@@ -1,7 +1,7 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found};
-use amos_common::entities::ReportedApplicationAssignment;
-use axum::{
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err};
+use crate::api_v1::routes::pagination::{Page, PageParams};
+use amos_common::entities::ReportedApplicationAssignment;use axum::{
     Json, Router,
     extract::{Path, Query},
     http::StatusCode,
@@ -11,6 +11,7 @@ use axum::{
 use serde::Deserialize;
 
 pub fn routes() -> Router {
+    // No POST or PUT — reported assignments should come from devices
     Router::new()
         .route(
             "/reported-app-assignments",
@@ -34,14 +35,25 @@ struct CreateReportedAppAssignmentQuery {
 }
 
 /// GET /reported-app-assignments — List reported app assignments (current device state).
-/// Optional query: `?device_id=<i32>&application_config_id=<i32>`
+/// Optional query: `?device_id=<i32>&application_config_id=<i32>&page=1&page_size=20`
 async fn list_reported_application_assignments(
+    Query(page): Query<PageParams>,
     Query(params): Query<ReportedAppAssignmentQuery>,
 ) -> Response {
-    match db::list_reported_application_assignments(params.device_id, params.application_config_id)
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+    match db::list_reported_application_assignments(
+        params.device_id,
+        params.application_config_id,
+        0,   // fallback for page.to_db_page()
+        100, // fallback for page.page_size
+    )
         .await
     {
-        Ok(assignments) => Json(assignments).into_response(),
+        Ok((data, total)) => { // Wenn die DB 4 Argumente nimmt, gibt sie meist auch (data, total) zurück
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
         Err(e) => db_err(e),
     }
 }
@@ -91,3 +103,4 @@ async fn delete_reported_application_assignment(Path(id): Path<i32>) -> Response
         Err(e) => db_err(e),
     }
 }
+
