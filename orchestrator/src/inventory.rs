@@ -56,6 +56,19 @@ pub struct ApplicationInfo {
     pub app_version: String,
 }
 
+impl ApplicationInfo {
+    // Image reference (`name:version`) used to match a running app against a
+    // target ApplicationConfig. Falls back to the bare name when no version is
+    // known.
+    pub(crate) fn image_key(&self) -> String {
+        if self.app_version.is_empty() {
+            self.app_name.clone()
+        } else {
+            format!("{}:{}", self.app_name, self.app_version)
+        }
+    }
+}
+
 // Collects the inventory and saves it to the given path in JSON format.
 // System info is required and if it fails, the entire function returns an error.
 // If collection of deployments or applications fails, the error is logged but the function still returns successfully
@@ -133,16 +146,25 @@ pub(crate) async fn collect_inventory(bootc: &Bootc, exec: &dyn Executer) -> Res
                 }
             }
         },
-        applications: match collect_applications() {
-            Ok(a) => CollectionResult::Ok(a),
-            Err(e) => {
-                warn!("Could not collect applications: {}", e);
-                CollectionResult::Unavailable {
-                    reason: e.to_string(),
-                }
-            }
-        },
+        applications: collect_application_inventory(),
     })
+}
+
+// Collects the application inventory, mapping a collection failure to
+// CollectionResult::Unavailable rather than a hard error. This lets callers
+// that only care about applications (e.g. the apps loop) avoid being coupled
+// to unrelated system-info collection, which is the only part of
+// collect_inventory that can fail the whole call.
+pub(crate) fn collect_application_inventory() -> CollectionResult<Vec<ApplicationInfo>> {
+    match collect_applications() {
+        Ok(a) => CollectionResult::Ok(a),
+        Err(e) => {
+            warn!("Could not collect applications: {}", e);
+            CollectionResult::Unavailable {
+                reason: e.to_string(),
+            }
+        }
+    }
 }
 
 pub async fn healthcheck_inventory(bootc: &Bootc, exec: &dyn Executer) -> Result<()> {

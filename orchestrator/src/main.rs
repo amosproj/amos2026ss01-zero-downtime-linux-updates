@@ -7,7 +7,7 @@ use crate::loop_os::run_os_tree_main_loop;
 use crate::state::OsState;
 use crate::update_check::{CheckForUpdate, UpdateChecker};
 use crate::util::bootc_wrapper::Bootc;
-use crate::util::executer::{Executer, RealExecuter};
+use crate::util::executer::RealExecuter;
 
 use crate::{
     inventory::collect_and_save_inventory,
@@ -127,14 +127,11 @@ async fn main() {
 
     let update_checker: Arc<dyn CheckForUpdate> =
         Arc::new(UpdateChecker::new(Arc::clone(&download_manager)));
-    let real_executer: Arc<dyn Executer> = Arc::new(RealExecuter);
 
     let _apps_handle = tokio::spawn(run_apps_main_loop(
         agent_state.clone(),
         Arc::clone(&download_manager),
         Arc::clone(&update_checker),
-        Arc::clone(&bootc_client),
-        Arc::clone(&real_executer),
     ));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
         agent_state.clone(),

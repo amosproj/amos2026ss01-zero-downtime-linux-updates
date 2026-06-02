@@ -43,11 +43,12 @@ async fn list_application_assignments(
         return pagination_err(e);
     }
 
-    let mut device_id = params.device_id;
-
+    // A device_uuid selects everything that applies to that device: its own
+    // direct assignments plus those of its group. Explicit device_id/group_id
+    // query params are ignored in this mode.
     if let Some(device_uuid) = params.device_uuid {
-        match db::get_device_by_uuid(device_uuid.clone()).await {
-            Ok(Some(device)) => device_id = Some(device.id),
+        let device = match db::get_device_by_uuid(device_uuid.clone()).await {
+            Ok(Some(device)) => device,
             Ok(None) => {
                 return err(
                     StatusCode::NOT_FOUND,
@@ -55,12 +56,27 @@ async fn list_application_assignments(
                 );
             }
             Err(e) => return db_err(e),
-        }
+        };
+
+        return match db::list_application_assignments_for_device(
+            device.id,
+            device.group_id,
+            params.application_config_id,
+            page.to_db_page(),
+            page.page_size,
+        )
+        .await
+        {
+            Ok((assignments, total)) => {
+                Json(Page::new(assignments, page.page, page.page_size, total)).into_response()
+            }
+            Err(e) => db_err(e),
+        };
     }
 
     match db::list_application_assignments(
         params.application_config_id,
-        device_id,
+        params.device_id,
         params.group_id,
         page.to_db_page(),
         page.page_size,

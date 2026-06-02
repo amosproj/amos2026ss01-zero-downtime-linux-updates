@@ -3,7 +3,8 @@ use amos_common::entities::ApplicationAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
+    QueryOrder,
 };
 
 use super::db;
@@ -29,6 +30,43 @@ pub async fn list_application_assignments(
     if let Some(id) = group_id {
         query = query.filter(dtos::ApplicationAssignment::Column::GroupId.eq(id));
     }
+    let paginator = query.paginate(&db, page_size);
+    let total_items = paginator.num_items().await?;
+    let data = paginator.fetch_page(page).await?;
+    Ok((
+        data.into_iter().map(|m| m.into_api()).collect(),
+        total_items,
+    ))
+}
+
+// Lists the application assignments that apply to a single device: those
+// assigned to the device directly plus those assigned to the device's group
+// (if it has one). Used to resolve the full target app set for a device.
+pub async fn list_application_assignments_for_device(
+    device_id: i32,
+    group_id: Option<i32>,
+    application_config_id: Option<i32>,
+    page: u64,
+    page_size: u64,
+) -> Result<(Vec<ApplicationAssignment::Model>, u64), DbErr> {
+    let db = db!();
+
+    // (device_id = X) OR (group_id = Y) — a single assignment targets either a
+    // device or a group, never both, so OR is the correct combinator here.
+    let mut applies_to_device =
+        Condition::any().add(dtos::ApplicationAssignment::Column::DeviceId.eq(device_id));
+    if let Some(gid) = group_id {
+        applies_to_device =
+            applies_to_device.add(dtos::ApplicationAssignment::Column::GroupId.eq(gid));
+    }
+
+    let mut query = dtos::ApplicationAssignment::Entity::find()
+        .order_by_asc(dtos::ApplicationAssignment::Column::Id)
+        .filter(applies_to_device);
+    if let Some(id) = application_config_id {
+        query = query.filter(dtos::ApplicationAssignment::Column::ApplicationConfigId.eq(id));
+    }
+
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;

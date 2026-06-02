@@ -110,23 +110,18 @@ pub fn compare_apps(
         }
     };
 
-    let current_images: Vec<String> = apps.iter().map(image_key).collect();
+    let current_images: Vec<String> = apps.iter().map(ApplicationInfo::image_key).collect();
+    let diff = diff_app_images(&current_images, &target);
 
     let mut reasons = Vec::new();
-
-    for cfg in &target {
-        if !current_images.iter().any(|img| img == &cfg.image) {
-            reasons.push(format!(
-                "Application image `{}` missing (config #{})",
-                cfg.image, cfg.id
-            ));
-        }
+    for cfg in &diff.to_create {
+        reasons.push(format!(
+            "Application image `{}` missing (config #{})",
+            cfg.image, cfg.id
+        ));
     }
-
-    for img in &current_images {
-        if !target.iter().any(|c| &c.image == img) {
-            reasons.push(format!("Application image `{}` should be removed", img));
-        }
+    for img in &diff.to_remove {
+        reasons.push(format!("Application image `{}` should be removed", img));
     }
 
     if reasons.is_empty() {
@@ -137,11 +132,31 @@ pub fn compare_apps(
     Some(UpdateDecision::UpdateRequired { reasons, target })
 }
 
-fn image_key(app: &ApplicationInfo) -> String {
-    if app.app_version.is_empty() {
-        app.app_name.clone()
-    } else {
-        format!("{}:{}", app.app_name, app.app_version)
+// The image-level changes needed to reconcile the running containers against
+// the target configs, keyed by image string. Shared by `compare_apps` (to
+// build human-readable reasons) and the apps loop's reconciliation so the two
+// can't drift apart.
+pub(crate) struct AppImageDiff<'a> {
+    pub to_create: Vec<&'a ApplicationConfig::Model>,
+    pub to_remove: Vec<String>,
+}
+
+pub(crate) fn diff_app_images<'a>(
+    current_images: &[String],
+    target: &'a [ApplicationConfig::Model],
+) -> AppImageDiff<'a> {
+    let to_create = target
+        .iter()
+        .filter(|cfg| !current_images.iter().any(|img| img == &cfg.image))
+        .collect();
+    let to_remove = current_images
+        .iter()
+        .filter(|img| !target.iter().any(|cfg| &cfg.image == *img))
+        .cloned()
+        .collect();
+    AppImageDiff {
+        to_create,
+        to_remove,
     }
 }
 
