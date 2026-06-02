@@ -8,8 +8,7 @@
     "features": {
         "ghcr.io/devcontainers/features/rust:1": {
             "version": "1.95.0"
-        },
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+        }
     },
 
     "onCreateCommand": ["/bin/sudo", "/bin/bash", ".devcontainer/install.sh"],

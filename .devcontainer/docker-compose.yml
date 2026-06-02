@@ -5,15 +5,17 @@ services:
     image: mcr.microsoft.com/devcontainers/base:ubuntu-24.04
     volumes:
       - ../..:/workspaces:cached
+      - podman_socket:/run/podman
     command: sleep infinity
 
   mock-api-container:
     build:
       context: ..
       dockerfile: .devcontainer/mock-api.Dockerfile
-    restart: unless-stopped
+    environment:
+      APP_DATABASE_URL: "sqlite::memory:"
 
-  postgres:
+  postgres-container:
     image: registry.access.redhat.com/hi/postgresql:18.3
     environment:
       POSTGRES_PASSWORD: dummy
@@ -21,7 +23,16 @@ services:
       - "./10_setup_app_db.sh:/docker-entrypoint-initdb.d/10_setup_amos.sh:ro,Z"
       - "postgres_data:/var/lib/postgresql/data:rw"
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
+
+  podman-container:
+    image: quay.io/podman/stable:v5.8
+    command: podman system service --time 0
+    privileged: true
+    volumes:
+      - podman_socket:/run/podman
+
 
 volumes:
   postgres_data:
+  podman_socket:
