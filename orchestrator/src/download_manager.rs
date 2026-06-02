@@ -1,8 +1,8 @@
+use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
 use amos_common::entities::{
     ApplicationAssignment, ApplicationConfig, OsAssignment, OsVersion,
-    ReportedApplicationAssignment, ReportedOsAssignment,
+    ReportedApplicationAssignment,
 };
-use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
 use anyhow::{Context, Result};
 use futures_util::future::join_all;
 use log::{info, warn};

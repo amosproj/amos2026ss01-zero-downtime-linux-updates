@@ -1,7 +1,6 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found, pagination_err};
 use crate::api_v1::routes::pagination::{Page, PageParams};
-use amos_common::entities::ApplicationAssignment;
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err};
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -44,11 +43,9 @@ async fn list_application_assignments(
     Query(page): Query<PageParams>,
     Query(params): Query<AppAssignmentQuery>,
 ) -> Response {
-
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
-
 
     let mut device_id = params.device_id;
 
@@ -65,7 +62,6 @@ async fn list_application_assignments(
         }
     }
 
-
     match db::list_application_assignments(
         params.application_config_id,
         device_id,
@@ -73,7 +69,8 @@ async fn list_application_assignments(
         page.to_db_page(),
         page.page_size,
     )
-        .await    {
+    .await
+    {
         Ok((assignments, total)) => {
             Json(Page::new(assignments, page.page, page.page_size, total)).into_response()
         }

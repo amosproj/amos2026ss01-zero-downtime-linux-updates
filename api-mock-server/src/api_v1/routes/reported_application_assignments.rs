@@ -1,7 +1,8 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{db_err, err, not_found, pagination_err};
 use crate::api_v1::routes::pagination::{Page, PageParams};
-use amos_common::entities::ReportedApplicationAssignment;use axum::{
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err};
+use amos_common::entities::ReportedApplicationAssignment;
+use axum::{
     Json, Router,
     extract::{Path, Query},
     http::StatusCode,
@@ -49,9 +50,10 @@ async fn list_reported_application_assignments(
         0,   // fallback for page.to_db_page()
         100, // fallback for page.page_size
     )
-        .await
+    .await
     {
-        Ok((data, total)) => { // Wenn die DB 4 Argumente nimmt, gibt sie meist auch (data, total) zurück
+        Ok((data, total)) => {
+            // Wenn die DB 4 Argumente nimmt, gibt sie meist auch (data, total) zurück
             Json(Page::new(data, page.page, page.page_size, total)).into_response()
         }
         Err(e) => db_err(e),
@@ -103,4 +105,3 @@ async fn delete_reported_application_assignment(Path(id): Path<i32>) -> Response
         Err(e) => db_err(e),
     }
 }
-

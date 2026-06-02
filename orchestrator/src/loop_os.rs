@@ -35,8 +35,12 @@ pub async fn run_os_tree_main_loop(
                 continue;
             }
         };
-        let booted_checksum = bootc_status.booted.as_ref().expect("No booted OS found").checksum.clone();
-        
+        let booted_checksum = bootc_status
+            .booted
+            .as_ref()
+            .expect("No booted OS found")
+            .checksum
+            .clone();
 
         let current_os_state = OsState {
             update_pending: bootc_status.staged.is_some(),
