@@ -54,7 +54,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
             type=sha
-            type=raw,value=${{ inputs.fedora_version }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=fedora-${{ inputs.fedora_version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
