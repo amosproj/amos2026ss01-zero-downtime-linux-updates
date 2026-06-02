@@ -1,6 +1,7 @@
 use crate::api_v1::db;
 use crate::api_v1::routes::pagination::{Page, PageParams};
 use crate::api_v1::routes::{db_err, err, not_found, pagination_err};
+use amos_common::entities::application_assignment::CreateModel as ApplicationAssignmentCreate;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -31,12 +32,7 @@ struct AppAssignmentQuery {
     device_uuid: Option<String>,
     group_id: Option<i32>,
 }
-#[derive(Deserialize)]
-pub struct ApplicationAssignmentCreate {
-    pub application_config_id: i32,
-    pub device_id: Option<i32>,
-    pub group_id: Option<i32>,
-}
+
 /// GET /app-assignments — List app assignments.
 /// Optional query: `?application_config_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>&page=1&page_size=20`
 async fn list_application_assignments(

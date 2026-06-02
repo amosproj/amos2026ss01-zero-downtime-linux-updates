@@ -8,3 +8,9 @@ pub struct Model {
     pub device_id: i32,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CreateModel {
+    pub application_config_id: i32,
+    pub device_id: Option<i32>,
+}

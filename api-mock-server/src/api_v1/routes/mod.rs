@@ -633,7 +633,7 @@ mod tests {
         let (status, body) = post(
             app,
             "/v1/reported-app-assignments?device_uuid=app-uuid-7",
-            r#"{"id":0,"application_config_id":1,"device_id":0,"updated_at":"2024-01-01T00:00:00Z"}"#,
+            r#"{"application_config_id":1}"#,
         )
         .await;
 

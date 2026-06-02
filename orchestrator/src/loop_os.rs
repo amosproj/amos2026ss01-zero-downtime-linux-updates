@@ -28,6 +28,14 @@ pub async fn run_os_tree_main_loop(
             }
         };
 
+        let booted_checksum = match bootc_status.booted.as_ref() {
+            Some(booted) => booted.checksum.clone(),
+            None => {
+                warn!("bootc status reports no booted deployment; skipping OS update cycle");
+                continue;
+            }
+        };
+
         let decision = match update_checker.check_os(&bootc_status).await {
             Ok(d) => d,
             Err(e) => {
@@ -35,12 +43,6 @@ pub async fn run_os_tree_main_loop(
                 continue;
             }
         };
-        let booted_checksum = bootc_status
-            .booted
-            .as_ref()
-            .expect("No booted OS found")
-            .checksum
-            .clone();
 
         let current_os_state = OsState {
             update_pending: bootc_status.staged.is_some(),

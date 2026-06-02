@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use amos_common::entities::{ApplicationConfig, OsVersion};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use log::debug;
 
@@ -54,7 +54,10 @@ impl CheckForUpdate for UpdateChecker {
         bootc_status: &BootcStatus,
     ) -> Result<UpdateDecision<OsVersion::Model>> {
         let target = self.download_manager.get_target_os_version().await?;
-        let booted = bootc_status.booted.as_ref().expect("No booted OS found");
+        let booted = bootc_status
+            .booted
+            .as_ref()
+            .context("bootc status reports no booted deployment")?;
 
         Ok(compare_os(&booted.checksum, target))
     }

@@ -1,8 +1,6 @@
+use amos_common::entities::reported_application_assignment::CreateModel as ReportedApplicationAssignmentCreate;
 use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
-use amos_common::entities::{
-    ApplicationAssignment, ApplicationConfig, OsAssignment, OsVersion,
-    ReportedApplicationAssignment,
-};
+use amos_common::entities::{ApplicationAssignment, ApplicationConfig, OsAssignment, OsVersion};
 use anyhow::{Context, Result};
 use futures_util::future::join_all;
 use log::{info, warn};
@@ -198,11 +196,9 @@ impl DownloadManager {
             self.config.cloud_url, self.config.device_uuid
         );
 
-        let body = ReportedApplicationAssignment::Model {
-            id: 0,
+        let body = ReportedApplicationAssignmentCreate {
             application_config_id,
-            device_id: 0,
-            updated_at: chrono::Utc::now(),
+            device_id: None,
         };
 
         let resp = self
