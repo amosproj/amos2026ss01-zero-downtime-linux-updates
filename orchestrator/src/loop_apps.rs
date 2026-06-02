@@ -1,19 +1,25 @@
-use std::{collections::HashMap, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 
-use log::{info, warn};
+use amos_common::entities::ApplicationConfig;
+use log::{debug, error, info, warn};
 use tokio::time::interval;
 
+use crate::download_manager::DownloadManager;
+use crate::inventory::{ApplicationInfo, CollectionResult, collect_application_inventory};
 use crate::state::{AgentState, AppState};
+use crate::update_check::{CheckForUpdate, UpdateDecision, diff_app_images};
 
 pub fn get_initial_apps_state() -> Vec<AppState> {
-    vec![AppState {
-        app_id: String::from("data_collector"),
-        version: String::from("v1.0.1"),
-        updating: false,
-    }]
+    // Real state is populated from the first inventory collection in the loop.
+    Vec::new()
 }
 
-pub async fn run_apps_main_loop(agent_state: AgentState) {
+pub async fn run_apps_main_loop(
+    agent_state: AgentState,
+    download_manager: Arc<DownloadManager>,
+    update_checker: Arc<dyn CheckForUpdate>,
+) {
     let mut update_interval = interval(Duration::from_secs(
         agent_state.config.poll_interval_secs.into(),
     ));
@@ -22,97 +28,105 @@ pub async fn run_apps_main_loop(agent_state: AgentState) {
         // run loop only as often as defined in the config
         update_interval.tick().await;
 
-        // TODO: Placeholder: get app information from api
-        let target_app_state = vec![AppState {
-            app_id: String::from("data_collector"),
-            version: String::from("v1.0.2"),
-            updating: false,
-        }];
-
-        // TODO: Placeholder: get app states from host (podman)
-        let host_app_state = vec![AppState {
-            app_id: String::from("data_collector"),
-            version: String::from("v1.0.1"),
-            updating: false,
-        }];
+        // Only the application inventory is relevant here; collecting it
+        // directly avoids coupling this loop to unrelated system-info collection
+        // (which would otherwise fail the whole cycle).
+        let applications = collect_application_inventory();
 
         {
-            // set the host_app_state to the global app_state
+            // set the current_app_state to the global app_state
             let mut current_state = agent_state.apps_state.lock().await;
-            *current_state = host_app_state;
+            *current_state = apps_state_from_inventory(&applications);
         }
 
-        handle_apps(agent_state.clone(), target_app_state).await;
+        let decision = match update_checker.check_apps(&applications).await {
+            Ok(Some(d)) => d,
+            Ok(None) => continue, // local inventory unavailable, skip cycle
+            Err(e) => {
+                error!("Apps update check failed: {:?}", e);
+                continue;
+            }
+        };
+
+        match decision {
+            UpdateDecision::UpToDate { target } => {
+                info!("Apps up to date ({} configs assigned)", target.len());
+                report_running_configs(&download_manager, &target).await;
+            }
+            UpdateDecision::UpdateRequired { reasons, target } => {
+                for reason in &reasons {
+                    info!("{}", reason);
+                }
+                reconcile_containers(&applications, &target).await;
+            }
+        }
     }
 }
 
-pub async fn handle_apps(agent_state: AgentState, target_state: Vec<AppState>) {
-    let current_state_snapshot = {
-        let current_state = agent_state.apps_state.lock().await;
-        current_state.clone()
+fn apps_state_from_inventory(
+    applications: &CollectionResult<Vec<ApplicationInfo>>,
+) -> Vec<AppState> {
+    match applications {
+        CollectionResult::Ok(apps) => apps
+            .iter()
+            .map(|a| AppState {
+                app_id: a.app_name.clone(),
+                version: a.app_version.clone(),
+                updating: false,
+            })
+            .collect(),
+        CollectionResult::Unavailable { .. } => Vec::new(),
+    }
+}
+
+async fn report_running_configs(
+    download_manager: &DownloadManager,
+    target: &[ApplicationConfig::Model],
+) {
+    for cfg in target {
+        if let Err(e) = download_manager
+            .report_current_application_assignment(cfg.id)
+            .await
+        {
+            warn!(
+                "Failed to report application assignment for config #{}: {e:?}",
+                cfg.id
+            );
+        }
+    }
+}
+
+async fn reconcile_containers(
+    current: &CollectionResult<Vec<ApplicationInfo>>,
+    target: &[ApplicationConfig::Model],
+) {
+    let current_images: Vec<String> = match current {
+        CollectionResult::Ok(apps) => apps.iter().map(ApplicationInfo::image_key).collect(),
+        CollectionResult::Unavailable { .. } => Vec::new(),
     };
 
-    let current_by_id = index_apps(current_state_snapshot, "current_state");
-    let target_by_id = index_apps(target_state, "target_state");
+    let diff = diff_app_images(&current_images, target);
 
-    // find missing/to_update containers and create/update them
-    for (app_id, target_app) in &target_by_id {
-        match current_by_id.get(app_id) {
-            Some(current_app) if current_app.version == target_app.version => {}
-            Some(current_app) => {
-                info!(
-                    "Updating container {} from {} to {}",
-                    app_id, current_app.version, target_app.version
-                );
-                update_container(
-                    app_id,
-                    Some(current_app.version.as_str()),
-                    target_app.version.as_str(),
-                )
-                .await;
-            }
-            None => {
-                info!(
-                    "Creating container {} at version {}",
-                    app_id, target_app.version
-                );
-                create_container(app_id, target_app.version.as_str()).await;
-            }
-        }
+    // NOTE: create_container / delete_container are still stubs (podman
+    // integration pending), so these are logged at debug to avoid implying work
+    // that hasn't actually happened. Promote to info once they really act.
+    for cfg in diff.to_create {
+        debug!("Would create container for image {}", cfg.image);
+        create_container(&cfg.image).await;
     }
 
-    // find containers to delete and delete them
-    for (app_id, current_app) in current_by_id {
-        if !target_by_id.contains_key(&app_id) {
-            info!(
-                "Deleting container {} at version {}",
-                app_id, current_app.version
-            );
-            delete_container(&app_id, current_app.version.as_str()).await;
-        }
+    for img in diff.to_remove {
+        debug!("Would delete container for image {}", img);
+        delete_container(&img).await;
     }
 }
 
-fn index_apps(apps: Vec<AppState>, label: &str) -> HashMap<String, AppState> {
-    let mut by_id = HashMap::new();
-    for app in apps {
-        if by_id.contains_key(&app.app_id) {
-            warn!("Duplicate app_id in {} ignored: {}", label, app.app_id);
-            continue;
-        }
-        by_id.insert(app.app_id.clone(), app);
-    }
-    by_id
+// TODO
+async fn create_container(image: &str) {
+    let _ = image;
 }
 
-async fn update_container(app_id: &str, from_version: Option<&str>, to_version: &str) {
-    let _ = (app_id, from_version, to_version);
-}
-
-async fn create_container(app_id: &str, to_version: &str) {
-    let _ = (app_id, to_version);
-}
-
-async fn delete_container(app_id: &str, from_version: &str) {
-    let _ = (app_id, from_version);
+// TODO
+async fn delete_container(image: &str) {
+    let _ = image;
 }

@@ -1,9 +1,6 @@
 use crate::api_v1::db;
-use crate::api_v1::routes::{
-    db_err, err, not_found,
-    pagination::{Page, PageParams},
-    pagination_err,
-};
+use crate::api_v1::routes::pagination::{Page, PageParams};
+use crate::api_v1::routes::{db_err, err, not_found, pagination_err};
 use amos_common::entities::application_assignment::CreateModel as ApplicationAssignmentCreate;
 use axum::{
     Json, Router,
@@ -32,11 +29,12 @@ pub fn routes() -> Router {
 struct AppAssignmentQuery {
     application_config_id: Option<i32>,
     device_id: Option<i32>,
+    device_uuid: Option<String>,
     group_id: Option<i32>,
 }
 
 /// GET /app-assignments — List app assignments.
-/// Optional query: `?application_config_id=<i32>&device_id=<i32>&group_id=<i32>&page=1&page_size=20`
+/// Optional query: `?application_config_id=<i32>&device_id=<i32>&device_uuid=<str>&group_id=<i32>&page=1&page_size=20`
 async fn list_application_assignments(
     Query(page): Query<PageParams>,
     Query(params): Query<AppAssignmentQuery>,
@@ -44,6 +42,38 @@ async fn list_application_assignments(
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
+
+    // A device_uuid selects everything that applies to that device: its own
+    // direct assignments plus those of its group. Explicit device_id/group_id
+    // query params are ignored in this mode.
+    if let Some(device_uuid) = params.device_uuid {
+        let device = match db::get_device_by_uuid(device_uuid.clone()).await {
+            Ok(Some(device)) => device,
+            Ok(None) => {
+                return err(
+                    StatusCode::NOT_FOUND,
+                    format!("No device with uuid {} found", device_uuid),
+                );
+            }
+            Err(e) => return db_err(e),
+        };
+
+        return match db::list_application_assignments_for_device(
+            device.id,
+            device.group_id,
+            params.application_config_id,
+            page.to_db_page(),
+            page.page_size,
+        )
+        .await
+        {
+            Ok((assignments, total)) => {
+                Json(Page::new(assignments, page.page, page.page_size, total)).into_response()
+            }
+            Err(e) => db_err(e),
+        };
+    }
+
     match db::list_application_assignments(
         params.application_config_id,
         params.device_id,

@@ -1,6 +1,8 @@
+use amos_common::entities::reported_application_assignment::CreateModel as ReportedApplicationAssignmentCreate;
 use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
-use amos_common::entities::{OsAssignment, OsVersion};
+use amos_common::entities::{ApplicationAssignment, ApplicationConfig, OsAssignment, OsVersion};
 use anyhow::{Context, Result};
+use futures_util::future::join_all;
 use log::{info, warn};
 use reqwest::Client;
 use std::sync::Arc;
@@ -36,12 +38,12 @@ impl DownloadManager {
 
     /// Fetches the OS version assigned to this device from the API.
     /// Queries `/os-assignments?device_uuid=<uuid>` then `/os-versions/<id>`.
-    pub async fn get_expected_os_version(&self) -> Result<OsVersion::Model> {
-        let assignment = self.get_os_assignment().await?;
-        self.get_os_version(assignment.os_version_id).await
+    pub async fn get_target_os_version(&self) -> Result<OsVersion::Model> {
+        let assignment = self.get_target_os_assignment().await?;
+        self.get_os_version_by_id(assignment.os_version_id).await
     }
 
-    async fn get_os_assignment(&self) -> Result<OsAssignment::Model> {
+    async fn get_target_os_assignment(&self) -> Result<OsAssignment::Model> {
         let url = format!(
             "{}/os-assignments?device_uuid={}",
             self.config.cloud_url, self.config.device_uuid
@@ -73,7 +75,7 @@ impl DownloadManager {
 
     /// Reports the current OS assignment for this device to the API.
     /// POSTs to `/reported-os-assignments?device_uuid=<uuid>`.
-    pub async fn report_os_assignment(&self, os_version_id: i32) -> Result<()> {
+    pub async fn report_current_os_assignment(&self, os_version_id: i32) -> Result<()> {
         let url = format!(
             "{}/reported-os-assignments?device_uuid={}",
             self.config.cloud_url, self.config.device_uuid
@@ -100,7 +102,7 @@ impl DownloadManager {
         Ok(())
     }
 
-    async fn get_os_version(&self, id: i32) -> Result<OsVersion::Model> {
+    async fn get_os_version_by_id(&self, id: i32) -> Result<OsVersion::Model> {
         let url = format!("{}/os-versions/{}", self.config.cloud_url, id);
         let resp = self
             .http_client
@@ -117,6 +119,102 @@ impl DownloadManager {
         resp.json::<OsVersion::Model>()
             .await
             .with_context(|| format!("Failed to parse OS version {} response", id))
+    }
+
+    /// Fetches the application configs assigned to this device from the API.
+    /// Resolves `/app-assignments?device_uuid=<uuid>` to the referenced
+    /// `ApplicationConfig` records via `/app-configs/<id>`.
+    pub async fn get_target_application_configs(&self) -> Result<Vec<ApplicationConfig::Model>> {
+        let assignments = self.get_target_application_assignments().await?;
+
+        let mut fetch_futures = Vec::with_capacity(assignments.len());
+        for assignment in assignments {
+            fetch_futures.push(self.get_application_config_by_id(assignment.application_config_id));
+        }
+
+        let results = join_all(fetch_futures).await;
+
+        let mut configs = Vec::with_capacity(results.len());
+        for result in results {
+            configs.push(result?);
+        }
+
+        Ok(configs)
+    }
+
+    async fn get_target_application_assignments(
+        &self,
+    ) -> Result<Vec<ApplicationAssignment::Model>> {
+        let url = format!(
+            "{}/app-assignments?device_uuid={}",
+            self.config.cloud_url, self.config.device_uuid
+        );
+        let resp = self
+            .http_client
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+            .with_context(|| format!("Failed to reach server at {}", &self.config.cloud_url))?;
+
+        if !resp.status().is_success() {
+            anyhow::bail!("Server responded with status {} for {}", resp.status(), url);
+        }
+
+        resp.json::<Vec<ApplicationAssignment::Model>>()
+            .await
+            .with_context(|| "Failed to parse application assignments response")
+    }
+
+    async fn get_application_config_by_id(&self, id: i32) -> Result<ApplicationConfig::Model> {
+        let url = format!("{}/app-configs/{}", self.config.cloud_url, id);
+        let resp = self
+            .http_client
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+            .with_context(|| format!("Failed to reach server at {}", &self.config.cloud_url))?;
+
+        if !resp.status().is_success() {
+            anyhow::bail!("Server responded with status {} for {}", resp.status(), url);
+        }
+
+        resp.json::<ApplicationConfig::Model>()
+            .await
+            .with_context(|| format!("Failed to parse application config {} response", id))
+    }
+
+    /// Reports the current running application config for this device to the API.
+    /// POSTs to `/reported-app-assignments?device_uuid=<uuid>`.
+    pub async fn report_current_application_assignment(
+        &self,
+        application_config_id: i32,
+    ) -> Result<()> {
+        let url = format!(
+            "{}/reported-app-assignments?device_uuid={}",
+            self.config.cloud_url, self.config.device_uuid
+        );
+
+        let body = ReportedApplicationAssignmentCreate {
+            application_config_id,
+            device_id: None,
+        };
+
+        let resp = self
+            .http_client
+            .post(&url)
+            .json(&body)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+            .with_context(|| format!("Failed to reach server at {}", &self.config.cloud_url))?;
+
+        if !resp.status().is_success() {
+            anyhow::bail!("Server responded with status {} for {}", resp.status(), url);
+        }
+
+        Ok(())
     }
 }
 

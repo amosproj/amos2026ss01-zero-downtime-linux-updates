@@ -588,6 +588,96 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_list_app_assignments_by_device_uuid_includes_group_assignments() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(app.clone(), "/v1/groups", r#"{"id":0,"name":"G1"}"#).await;
+        // device 1 belongs to group 1; device 2 has no group.
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"dev-grp-1","hostname":"h1","tenant_id":1,"group_id":1}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"dev-other","hostname":"h2","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"a","description":"d"}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/app-configs",
+            r#"{"id":0,"application_id":1,"image":"app:1","config":null,"comment":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/app-configs",
+            r#"{"id":0,"application_id":1,"image":"app:2","config":null,"comment":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/app-configs",
+            r#"{"id":0,"application_id":1,"image":"app:3","config":null,"comment":null}"#,
+        )
+        .await;
+        // config 1 -> device 1 (direct), config 2 -> group 1, config 3 -> device 2 (other).
+        post(
+            app.clone(),
+            "/v1/app-assignments",
+            r#"{"id":0,"application_config_id":1,"device_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/app-assignments",
+            r#"{"id":0,"application_config_id":2,"device_id":null,"group_id":1}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/app-assignments",
+            r#"{"id":0,"application_config_id":3,"device_id":2,"group_id":null}"#,
+        )
+        .await;
+
+        let (status, body) = get(app, "/v1/app-assignments?device_uuid=dev-grp-1").await;
+
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let data = json["data"].as_array().unwrap();
+        let config_ids: Vec<i64> = data
+            .iter()
+            .map(|a| a["application_config_id"].as_i64().unwrap())
+            .collect();
+        assert_eq!(
+            data.len(),
+            2,
+            "device_uuid should resolve direct + group assignments"
+        );
+        assert!(config_ids.contains(&1), "device-direct assignment missing");
+        assert!(config_ids.contains(&2), "group assignment missing");
+        assert!(
+            !config_ids.contains(&3),
+            "another device's assignment must be excluded"
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_list_os_assignments_returns_200_with_page_envelope() {
         let (status, body) = get(test_app().await, "/v1/os-assignments").await;
         assert_eq!(status, StatusCode::OK);
@@ -599,19 +689,48 @@ mod tests {
     // ReportedApplicationAssignment::Model: { id: i32, application_config_id: i32, device_id: i32, updated_at: DateTimeUtc }
     // ReportedOsAssignment::Model:          { id: i32, os_version_id: i32, device_id: i32, updated_at: DateTimeUtc }
     // device_id is NOT optional on reported assignments (i32, not Option<i32>).
-    // No POST/PUT routes for reported-app-assignments — only GET and DELETE.
-    // reported-os-assignments supports POST: body device_id or ?device_uuid=<str> query param.
+    // Both reported endpoints support POST from devices: body device_id or ?device_uuid=<str> query param.
 
     #[tokio::test]
     #[serial]
-    async fn test_post_reported_app_assignments_returns_405() {
-        let (status, _) = post(
-            test_app().await,
-            "/v1/reported-app-assignments",
-            r#"{"id":0,"application_config_id":1,"device_id":1,"updated_at":"2024-01-01T00:00:00Z"}"#,
+    async fn test_create_reported_app_assignment_with_device_uuid_returns_201() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
         )
         .await;
-        assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"app-uuid-7","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"my-app","description":"desc"}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/app-configs",
+            r#"{"id":0,"application_id":1,"image":"ghcr.io/example/app:1","config":null,"comment":null}"#,
+        )
+        .await;
+
+        let (status, body) = post(
+            app,
+            "/v1/reported-app-assignments?device_uuid=app-uuid-7",
+            r#"{"application_config_id":1}"#,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["application_config_id"], 1);
+        assert_eq!(json["device_id"], 1);
     }
 
     #[tokio::test]

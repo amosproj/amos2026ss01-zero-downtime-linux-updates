@@ -45,7 +45,6 @@ pub async fn get_reported_application_assignment(
         .map(|m| m.into_api()))
 }
 
-#[allow(dead_code)]
 pub async fn add_reported_application_assignment(
     application_config_id: i32,
     device_id: i32,
