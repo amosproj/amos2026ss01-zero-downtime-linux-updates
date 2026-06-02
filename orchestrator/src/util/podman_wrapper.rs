@@ -4,7 +4,7 @@
 // Control Podman
 // This assumes full ownership of the Podman instance
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::path::Path;
 
 use futures_util::StreamExt;
 use podman_api::{
@@ -17,22 +17,14 @@ use podman_api::{
 
 type PodmanErr<R> = Result<R, Box<dyn std::error::Error>>;
 
-const PODMAN_SOCKET_PATH: &str = "/run/podman/podman.sock";
-
-// Ensure only a single instance of this ever exists
-static INSTANCE_TAKEN: AtomicBool = AtomicBool::new(false);
-
 pub struct Podman {
     podman: podman_api::Podman,
 }
 
 impl Podman {
-    pub async fn take() -> PodmanErr<(Self, Vec<PodmanContainer>)> {
-        if INSTANCE_TAKEN.swap(true, Ordering::Relaxed) {
-            return Err("Cannot create multiple Podman wrapper instances".into());
-        }
-
-        let podman = podman_api::Podman::unix(PODMAN_SOCKET_PATH);
+    /// Assumes full ownership, do not call multiple times on the same socket!!
+    pub async fn connect(socket_path: &Path) -> PodmanErr<(Self, Vec<PodmanContainer>)> {
+        let podman = podman_api::Podman::unix(socket_path);
 
         let status = podman.ping().await?;
         log::debug!("Connected to Podman API {}", status.api_version);
@@ -189,6 +181,10 @@ impl<'a> PodmanImage<'a> {
             image_ref: self.reference.clone(),
         })
     }
+
+    pub fn reference(&self) -> &str {
+        &self.reference
+    }
 }
 
 pub struct PodmanContainer {
@@ -263,14 +259,18 @@ impl From<&str> for PodmanContainerState {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use crate::util::podman_wrapper::PodmanContainerState;
+
+    const PODMAN_SOCK: &str = "/run/podman/podman.sock";
 
     #[tokio::test]
     #[ignore = "has to have access to the Podman socket"]
     async fn test_podman_image_prune() {
-        let mut p = super::Podman {
-            podman: podman_api::Podman::unix(super::PODMAN_SOCKET_PATH),
-        };
+        let (mut p, _) = super::Podman::connect(Path::new(PODMAN_SOCK))
+            .await
+            .unwrap();
         let len_initial = p.list_images().await.unwrap().len();
 
         p.image(
@@ -290,9 +290,9 @@ mod tests {
     #[tokio::test]
     #[ignore = "has to have access to the Podman socket"]
     async fn test_podman_image_pull() {
-        let p = super::Podman {
-            podman: podman_api::Podman::unix(super::PODMAN_SOCKET_PATH),
-        };
+        let (p, _) = super::Podman::connect(Path::new(PODMAN_SOCK))
+            .await
+            .unwrap();
 
         let img = p
             .image(
@@ -316,9 +316,9 @@ mod tests {
     #[tokio::test]
     #[ignore = "has to have access to the Podman socket"]
     async fn test_podman_create_and_destroy() {
-        let mut p = super::Podman {
-            podman: podman_api::Podman::unix(super::PODMAN_SOCKET_PATH),
-        };
+        let (mut p, _) = super::Podman::connect(Path::new(PODMAN_SOCK))
+            .await
+            .unwrap();
         let lc = async |p: &mut super::Podman| p.list_containers().await.unwrap().into_iter();
 
         assert!(
