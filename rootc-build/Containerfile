@@ -1,7 +1,7 @@
 ARG FEDORA_VERSION=latest
 
 # Compile the orchestrator binary
-FROM rust:1.95-slim AS builder
+FROM docker.io/rust:1.95-slim AS builder
 COPY . /workspace
 WORKDIR /workspace
 RUN cargo build --package amos-orchestrator --release
