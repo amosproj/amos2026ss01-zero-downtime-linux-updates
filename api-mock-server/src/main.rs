@@ -1,10 +1,13 @@
 use clap::Parser;
 mod api_v1;
+mod auth;
 mod config;
 pub(crate) mod db_migration;
 pub(crate) mod dtos;
 use amos_common::{api, util};
-use axum::{Json, Router, extract::Request, middleware, routing::get};
+use axum::{Json, Router, extract::Request, middleware as axum_middleware, routing::get};
+mod middleware;
+use middleware::jwt_auth;
 use config::get_config;
 use log::{debug, error, info};
 use std::path::PathBuf;
@@ -74,10 +77,11 @@ async fn main() {
     let api_v1 = Router::new()
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
         .nest_service("/download", ServeDir::new("assets"))
-        .merge(api_v1::routes::routes());
+        .merge(api_v1::routes::routes())
+        .route_layer(axum_middleware::from_fn(jwt_auth));
 
-    let app = Router::new().nest("/v1", api_v1).layer(middleware::from_fn(
-        async |req: Request, next: middleware::Next| {
+    let app = Router::new().nest("/v1", api_v1).layer(axum_middleware::from_fn(
+        async |req: Request, next: axum_middleware::Next| {
             let uri = req.uri().to_string();
             let res = next.run(req).await;
             debug!("{} -> {}", uri, res.status());
