@@ -4,6 +4,7 @@ use sea_orm_migration::sea_orm::{EntityTrait, Schema};
 mod m20220101_000001_create_table;
 mod m20260523_000001_add_reported_assignments;
 mod m20260527_000001_add_device_pings;
+mod m20260607_000001_add_users;
 
 pub struct Migrator;
 
@@ -14,6 +15,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20220101_000001_create_table::Migration),
             Box::new(m20260523_000001_add_reported_assignments::Migration),
             Box::new(m20260527_000001_add_device_pings::Migration),
+            Box::new(m20260607_000001_add_users::Migration),
         ]
     }
 }
