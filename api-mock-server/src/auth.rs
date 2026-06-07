@@ -1,12 +1,12 @@
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Claims {
-    pub sub: String,   // subject - user ID
-    pub name: String,  // user display name
-    pub exp: usize,    // expiry timestamp (Unix time)
+    pub sub: String,  // subject - user ID
+    pub name: String, // user display name
+    pub exp: usize,   // expiry timestamp (Unix time)
 }
 
 const SIGN_PUBKEY: &[u8] = b"-----BEGIN PUBLIC KEY-----

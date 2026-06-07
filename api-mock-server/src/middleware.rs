@@ -1,6 +1,6 @@
 use axum::{
     extract::Request,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     middleware::Next,
     response::Response,
 };
@@ -8,11 +8,7 @@ use log::{debug, warn};
 
 use crate::{api_v1::db, auth::validate_token};
 
-pub async fn jwt_auth(
-    mut req: Request,
-    next: Next,
-) -> Result<Response, StatusCode> {
-
+pub async fn jwt_auth(mut req: Request, next: Next) -> Result<Response, StatusCode> {
     // 1. Get the Authorization header
     let auth_header = req
         .headers()
@@ -21,9 +17,7 @@ pub async fn jwt_auth(
 
     // 2. Make sure it starts with "Bearer "
     let token = match auth_header {
-        Some(header) if header.starts_with("Bearer ") => {
-            &header["Bearer ".len()..]
-        }
+        Some(header) if header.starts_with("Bearer ") => &header["Bearer ".len()..],
         _ => {
             // No token or wrong format — reject with 401
             return Err(StatusCode::UNAUTHORIZED);

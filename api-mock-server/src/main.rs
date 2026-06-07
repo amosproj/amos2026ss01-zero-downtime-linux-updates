@@ -7,9 +7,9 @@ pub(crate) mod dtos;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware as axum_middleware, routing::get};
 mod middleware;
-use middleware::jwt_auth;
 use config::get_config;
 use log::{debug, error, info};
+use middleware::jwt_auth;
 use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
@@ -80,14 +80,16 @@ async fn main() {
         .merge(api_v1::routes::routes())
         .route_layer(axum_middleware::from_fn(jwt_auth));
 
-    let app = Router::new().nest("/v1", api_v1).layer(axum_middleware::from_fn(
-        async |req: Request, next: axum_middleware::Next| {
-            let uri = req.uri().to_string();
-            let res = next.run(req).await;
-            debug!("{} -> {}", uri, res.status());
-            res
-        },
-    ));
+    let app = Router::new()
+        .nest("/v1", api_v1)
+        .layer(axum_middleware::from_fn(
+            async |req: Request, next: axum_middleware::Next| {
+                let uri = req.uri().to_string();
+                let res = next.run(req).await;
+                debug!("{} -> {}", uri, res.status());
+                res
+            },
+        ));
 
     let bind_address = format!("0.0.0.0:{}", config.http_port);
     let listener = TcpListener::bind(&bind_address)
