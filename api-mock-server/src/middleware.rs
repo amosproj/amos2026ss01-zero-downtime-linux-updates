@@ -4,9 +4,9 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use log::debug;
+use log::{debug, warn};
 
-use crate::auth::validate_token;
+use crate::{api_v1::db, auth::validate_token};
 
 pub async fn jwt_auth(
     mut req: Request,
@@ -33,6 +33,11 @@ pub async fn jwt_auth(
     // 3. Validate the token
     match validate_token(token) {
         Ok(claims) => {
+            if let Err(err) = db::upsert_user(claims.clone()).await {
+                warn!("Failed to upsert user into db: {:?}", err);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+
             // 4. Attach the claims to the request so handlers can use them
             req.extensions_mut().insert(claims);
             // 5. Pass the request to the next layer
