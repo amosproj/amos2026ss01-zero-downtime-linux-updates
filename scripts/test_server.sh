@@ -8,8 +8,6 @@ readonly server_dir="$(cd "$script_dir/../api-mock-server" && pwd)"
 failed_tests=()
 server_pid=
 
-# With secret
-# readonly jwt='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik1hcmMgV2ViZXIiLCJleHAiOjMzMzM3NjAxMDg2fQ.fMYxL8k4-svFDQ4ZAZLlFtEDkEXVRALD9qj5YBRalT4'
 # With eddsa
 readonly jwt='eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik1hcmMgV2ViZXIiLCJleHAiOjMzMzM3NjAxMDg2fQ.ojUwb9caLF_Ao0wT6DDChYam79ZqnlRPED0PA6XG5r42gFqKWSbRkDb12CuiLczwp5PpxOxXVCaLwLqFnQ13Dw'
 
