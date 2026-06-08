@@ -45,7 +45,7 @@ jobs:
         run: |
           mkdir -p dist
           sudo podman load -i /tmp/amos-edge.tar
-          sudo podman run --rm --privileged --pull=never \
+          sudo podman run --rm --privileged --pull=missing \
             --security-opt label=type:unconfined_t \
             -v "$PWD/dist":/output \
             quay.io/centos-bootc/bootc-image-builder:latest \
