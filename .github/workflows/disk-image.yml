@@ -19,6 +19,7 @@ jobs:
     name: Build disk image (${{ matrix.arch }})
     permissions:
       contents: write
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -77,7 +78,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Push disk image to GHCR via ORAS
         uses: oras-project/setup-oras@v1
 

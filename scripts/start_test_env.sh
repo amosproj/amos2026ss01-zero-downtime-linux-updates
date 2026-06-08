@@ -83,13 +83,38 @@ echo "$API_PID" > /tmp/amos-api-mock.pid
 # Otherwise Lima will use the local dist/ build (see dev-env/lima/edge-ipc.yaml).
 echo -e "${BLUE}Starting Edge IPC VM (Lima)...${NC}"
 LIMA_TEMPLATE="dev-env/lima/edge-ipc.yaml"
-BASE_URL="https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/releases/download"
+GHCR_BASE="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-disk"
+# BASE_URL="https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/releases/download"
 
 if [[ -n "$TAG" ]]; then
-    echo "Using release tag: ${TAG}"
+    echo "Pulling disk image for tag: ${TAG} via ORAS..."
+
+    # Check for oras
+    if ! command -v oras &> /dev/null; then
+        echo -e "${RED}Error: 'oras' is not installed.${NC}"
+        echo "  macOS: brew install oras"
+        echo "  Linux: https://oras.land/docs/installation"
+        exit 1
+    fi
+
+    # Determine arch
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        (x86_64)  LIMA_ARCH="amd64" ;;
+        (aarch64|arm64) LIMA_ARCH="arm64" ;;
+        (*) echo -e "${RED}Unsupported architecture: $ARCH${NC}"; exit 1 ;;
+    esac
+
+    mkdir -p dist/oras
+    oras pull \
+        "${GHCR_BASE}:${TAG}-${LIMA_ARCH}" \
+        --output dist/oras
+
+    # Decompress — Lima expects a plain .raw or .qcow2
+    xz -d dist/oras/*.xz
+
     limactl start --name edge-ipc \
-        --set ".images[0].location = \"${BASE_URL}/${TAG}/amos-edge-${TAG}-arm64.raw.xz\"" \
-        --set ".images[1].location = \"${BASE_URL}/${TAG}/amos-edge-${TAG}-amd64.qcow2.xz\"" \
+        --set ".images[0].location = \"$(pwd)/dist/oras/amos-edge-${TAG}-${LIMA_ARCH}.raw\"" \
         "$LIMA_TEMPLATE"
 else
     echo "No tag provided — using local dist/ build. Provide a tag with './scripts/start_test_env.sh test-setup-XX'"
