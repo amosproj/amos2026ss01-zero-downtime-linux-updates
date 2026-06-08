@@ -14,6 +14,11 @@ NC='\033[0m' # No Color
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$REPO_ROOT"
 
+# Optional release tag for the Edge IPC disk image.
+# If not provided, Lima will use the local dist/ build.
+# Example: ./scripts/start_test_env.sh test-setup-01
+TAG=${1:-}
+
 echo -e "${BLUE}Starting Zero-Downtime Update Test Environment...${NC}"
 
 # 1. Check for Docker or Podman (required for the PostgreSQL container)
@@ -74,12 +79,22 @@ fi
 echo "$API_PID" > /tmp/amos-api-mock.pid
 
 # 6. Start Edge IPC VM via Lima
-# Uses dev-env/lima/edge-ipc.yaml which boots the actual bootc disk image
-# (local dist/ build or the published GitHub Release artifact as fallback).
-# The orchestrator inside the VM is pre-configured to talk to
-# the mock API at http://host.lima.internal:8080.
+# If a tag is provided, override the fallback release URLs with the tagged artifacts.
+# Otherwise Lima will use the local dist/ build (see dev-env/lima/edge-ipc.yaml).
 echo -e "${BLUE}Starting Edge IPC VM (Lima)...${NC}"
-limactl start --name edge-ipc dev-env/lima/edge-ipc.yaml
+LIMA_TEMPLATE="dev-env/lima/edge-ipc.yaml"
+BASE_URL="https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/releases/download"
+
+if [[ -n "$TAG" ]]; then
+    echo "Using release tag: ${TAG}"
+    limactl start --name edge-ipc \
+        --set ".images[0].location = \"${BASE_URL}/${TAG}/amos-edge-${TAG}-arm64.raw.xz\"" \
+        --set ".images[1].location = \"${BASE_URL}/${TAG}/amos-edge-${TAG}-amd64.qcow2.xz\"" \
+        "$LIMA_TEMPLATE"
+else
+    echo "No tag provided — using local dist/ build. Provide a tag with './scripts/start_test_env.sh test-setup-XX'"
+    limactl start --name edge-ipc "$LIMA_TEMPLATE"
+fi
 
 # 7. Success Output
 echo -e "${GREEN}====================================================${NC}"

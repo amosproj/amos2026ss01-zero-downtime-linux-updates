@@ -71,23 +71,28 @@ jobs:
       # `location:` at the resulting HTTPS blob URL (no per-asset cap on GHCR).
       # Keep this commented so the switch is mechanical when needed.
       #
-      # - name: Log in to GHCR
-      #   uses: docker/login-action@v3
-      #   with:
-      #     registry: ghcr.io
-      #     username: ${{ github.actor }}
-      #     password: ${{ secrets.GITHUB_TOKEN }}
-      # - name: Push disk image to GHCR via ORAS
-      #   uses: oras-project/setup-oras@v1
-      #   - run: |
-      #       oras push \
-      #         ghcr.io/${{ github.repository }}-disk:${GITHUB_REF_NAME}-${{ matrix.arch }} \
-      #         dist/amos-edge-${GITHUB_REF_NAME}-${{ matrix.arch }}.raw.xz
-
-      - name: Attach to GitHub Release
-        if: startsWith(github.ref_name, 'test-setup-')
-        uses: softprops/action-gh-release@v2.6.2
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          files: dist/*.xz
-          draft: true
-          fail_on_unmatched_files: true
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Push disk image to GHCR via ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Push artifacts  
+        run: |
+            SAFE_REF="${GITHUB_REF_NAME//\//-}"
+            oras push \
+              ghcr.io/${{ github.repository }}-disk:${SAFE_REF}-${{ matrix.arch }} \
+              dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz \
+              dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz
+
+      #- name: Attach to GitHub Release
+      #  if: startsWith(github.ref_name, 'test-setup-')
+      #  uses: softprops/action-gh-release@v2.6.2
+      #  with:
+      #    files: dist/*.xz
+      #    draft: true
+      #    fail_on_unmatched_files: true
