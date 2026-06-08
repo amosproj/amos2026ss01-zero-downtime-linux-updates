@@ -23,7 +23,7 @@ RUN dnf -y install greenboot greenboot-default-health-checks && \
 # (consumed by Lima, libvirt, virt-install, and most cloud providers).
 RUN dnf -y install cloud-init && \
     dnf clean all && \
-    systemctl enable cloud-init.service cloud-init-local.service \
+    systemctl enable --root=/ cloud-init.service cloud-init-local.service \
                      cloud-config.service cloud-final.service
 
 # Embed the Cosign public key and container policy so podman enforces
