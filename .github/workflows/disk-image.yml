@@ -85,6 +85,7 @@ jobs:
       - name: Push artifacts  
         run: |
             SAFE_REF="${GITHUB_REF_NAME//\//-}"
+            cd "$GITHUB_WORKSPACE/dist"
             oras push \
               ghcr.io/${{ github.repository }}-disk:${SAFE_REF}-${{ matrix.arch }} \
               "amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz" \
