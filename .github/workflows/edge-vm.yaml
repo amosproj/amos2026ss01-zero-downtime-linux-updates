@@ -1,0 +1,44 @@
+# This is the Lima configuration for the Edge IPC VM.
+# It defines the hardware specs and the base operating system.
+
+# 1. Hardware Resources
+# Defaulting to 2 CPUs and 4GB RAM to keep it lightweight but capable.
+cpus: 2
+memory: "4GiB"
+disk: "20GiB"
+
+# 2. Base Operating System
+# Since `bootc` is a rpm-ostree/Red Hat technology, we use Fedora Cloud Base.
+# We define both x86_64 (Windows/Intel) and aarch64 (Mac M1/M2/M3) images
+# so this works seamlessly across all developers' machines.
+images:
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-AmazonEC2-40-1.14.x86_64.raw.xz"
+    arch: "x86_64"
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/aarch64/images/Fedora-Cloud-Base-AmazonEC2-40-1.14.aarch64.raw.xz"
+    arch: "aarch64"
+
+# 3. Mounts
+# By default, Lima mounts the host's home directory.
+# We disable this here to ensure the Edge VM is truly isolated,
+# just like a real Edge IPC would be.
+mounts: []
+
+# 4. Provisioning (Run on first boot)
+# This script runs as root when the VM is created.
+# It ensures that podman and bootc are installed and ready to use.
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -e
+      echo "Installing bootc and podman..."
+      dnf install -y podman bootc
+      
+      # Optional: Trust your local mock API if it uses self-signed certs later
+      # echo "Configuring trust for mock API..."
+
+# 5. Container Engine
+# We use podman as the container engine inside the VM, matching the Fedora ecosystem.
+containerd:
+  system: false
+  user: false
