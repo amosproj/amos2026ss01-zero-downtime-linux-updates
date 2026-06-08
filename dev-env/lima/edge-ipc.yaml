@@ -1,0 +1,48 @@
+# Lima template for the edge IPC VM.
+#
+# Boots the bootc disk image produced by `make image` (preferred — uses local
+# `dist/` if present) or the published release artifact (fallback for devs who
+# don't build locally).
+#
+# Quickstart:
+#   limactl start --name edge-ipc dev-env/lima/edge-ipc.yaml
+#   limactl shell edge-ipc -- journalctl -u orchestrator.service -f
+
+vmType: "vz"      # macOS arm64; Lima falls back to qemu on Linux/Windows-WSL2.
+arch: "default"
+cpus: 2
+memory: "4GiB"
+disk: "20GiB"
+
+images:
+  # 1. Local build first (raw works under both vz and qemu).
+  #    Lima resolves relative paths against the template file location.
+  - location: "../../dist/raw/disk.raw"
+    arch: "aarch64"
+  - location: "../../dist/qcow2/disk.qcow2"
+    arch: "x86_64"
+  # 2. Release fallback — Lima auto-decompresses .xz on fetch.
+  #    Bump the sprint tag in onboarding docs (or override via `limactl start --set`).
+  - location: "https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/releases/download/sprint-XX-release/amos-edge-sprint-XX-release-arm64.raw.xz"
+    arch: "aarch64"
+  - location: "https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/releases/download/sprint-XX-release/amos-edge-sprint-XX-release-amd64.qcow2.xz"
+    arch: "x86_64"
+
+mounts:
+  - location: "~"
+    writable: false
+
+# Cloud-init NoCloud seed injected by Lima. orchestrator.service is enabled at
+# image build time; cloud-init only writes the runtime config it needs to find.
+cloudInit:
+  ssh:
+    authorized_keys:
+      - "{{.SSHPubKey}}"
+  write_files:
+    - path: /etc/amos/config.toml
+      permissions: '0644'
+      content: |
+        cloud_url = "http://host.lima.internal:8080/api/v1"
+        poll_interval_secs = 5
+        inventory_path = "/var/lib/amos/inventory.json"
+        device_uuid = "00000000-0000-0000-0000-000000000001"

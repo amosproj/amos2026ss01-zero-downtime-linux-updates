@@ -1,4 +1,7 @@
-.PHONY: setup setup-template setup-hooks help
+.PHONY: setup setup-template setup-hooks help image image-clean
+
+IMAGE_TAG ?= localhost/amos-edge:dev
+DIST_DIR  ?= $(CURDIR)/dist
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -23,3 +26,17 @@ setup-hooks: ## Install git hooks
 	@cp scripts/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
 	@chmod +x .git/hooks/prepare-commit-msg
 	@echo "  Git hooks installed."
+
+image: ## Build bootc disk image (qcow2 + raw) into ./dist
+	podman build -f rootc-build/Containerfile -t $(IMAGE_TAG) .
+	mkdir -p $(DIST_DIR)
+	sudo podman run --rm --privileged --pull=newer \
+		--security-opt label=type:unconfined_t \
+		-v $(DIST_DIR):/output \
+		-v /var/lib/containers/storage:/var/lib/containers/storage \
+		quay.io/centos-bootc/bootc-image-builder:latest \
+		--type qcow2 --type raw \
+		$(IMAGE_TAG)
+
+image-clean: ## Remove locally built disk images
+	rm -rf $(DIST_DIR)
