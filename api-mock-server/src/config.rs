@@ -56,6 +56,7 @@ pub struct Settings {
     #[serde(default = "default_http_port")]
     pub http_port: u16,
 
+    #[serde(default)]
     pub jwt: JwtConfig,
 }
 
