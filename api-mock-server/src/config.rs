@@ -36,7 +36,7 @@ RwsluOuHZzbXjtbwKS9rJ5sCAwEAAQ==
     .into()
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct JwtConfig {
     #[serde(default = "default_subject_claim")]
     pub subject_claim: String,
