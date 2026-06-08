@@ -39,14 +39,15 @@ jobs:
             --build-arg FEDORA_VERSION=${{ inputs.fedora_version || 'latest' }} \
             -f rootc-build/Containerfile \
             -t ${IMAGE_TAG} .
-
+          podman save --format oci-archive -o /tmp/amos-edge.tar ${IMAGE_TAG}
+      
       - name: Build qcow2 + raw with bootc-image-builder
         run: |
           mkdir -p dist
-          sudo podman run --rm --privileged --pull=newer \
+          sudo podman load -i /tmp/amos-edge.tar
+          sudo podman run --rm --privileged --pull=never \
             --security-opt label=type:unconfined_t \
             -v "$PWD/dist":/output \
-            -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 --type raw \
             "${IMAGE_TAG}"
