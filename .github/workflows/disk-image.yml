@@ -61,9 +61,9 @@ jobs:
           SAFE_REF="${GITHUB_REF_NAME//\//-}"
           xz -T0 -9 dist/qcow2/disk.qcow2 dist/image/disk.raw
           mv dist/qcow2/disk.qcow2.xz \
-             "dist/amos-edge-${GITHUB_REF_NAME}-${{ matrix.arch }}.qcow2.xz"
+             "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz"
           mv dist/image/disk.raw.xz \
-             "dist/amos-edge-${GITHUB_REF_NAME}-${{ matrix.arch }}.raw.xz"
+             "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz"
           ls -lh dist/*.xz
 
       # If a compressed artifact still trips GitHub's 2 GB per-file release-asset
