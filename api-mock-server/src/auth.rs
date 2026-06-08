@@ -19,7 +19,7 @@ pub fn validate_token(
 ) -> Result<Claims, jsonwebtoken::errors::Error> {
     let token_data = decode::<Claims>(
         token,
-        &DecodingKey::from_rsa_pem(config.public_key.as_slice())?,
+        &DecodingKey::from_rsa_pem(config.public_key.as_bytes())?,
         &Validation::new(jsonwebtoken::Algorithm::RS512),
     )?;
     debug!("Extracted JWT data from request: {:?}", token_data);

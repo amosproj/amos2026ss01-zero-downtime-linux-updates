@@ -79,7 +79,7 @@ async fn main() {
         .nest_service("/download", ServeDir::new("assets"))
         .merge(api_v1::routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
-            config.jwt_config.clone(),
+            config.jwt.clone(),
             jwt_auth,
         ));
 
