@@ -58,6 +58,7 @@ jobs:
       - name: Compress and rename artifacts
         run: |
           set -euo pipefail
+          SAFE_REF="${GITHUB_REF_NAME//\//-}"
           xz -T0 -9 dist/qcow2/disk.qcow2 dist/image/disk.raw
           mv dist/qcow2/disk.qcow2.xz \
              "dist/amos-edge-${GITHUB_REF_NAME}-${{ matrix.arch }}.qcow2.xz"
