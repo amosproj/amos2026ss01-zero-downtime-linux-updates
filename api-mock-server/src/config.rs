@@ -23,8 +23,22 @@ impl Default for JwtConfig {
         JwtConfig {
             subject_claim: "sub".into(),
             name_claim: "name".into(),
-            public_key: b""
-                .into(),
+            public_key: b"-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzP3Oc7fe4hRq7wMKxyfS
+wiQclOzJIvoTLB0Tnxy6sEqUcg7WFV1Xcw25DuzIj6ZIlGhKIr6jKs+8G1rLymTZ
+tIdJEx2wcKTPfTezth2/nMT9E2Dct0Q9aM2Yi/LUyVBmGD3Go14KoXA8EZbDOQOW
+0wMREw5qsim6gI5Jm9O2XUUFwS+U28CoSqMKFNlJFdZodqa6mVsTQG6gmdtMbjyG
+kX8KjEPcShNTZePWFimk3hBuBwSLtsYG2Ws2eyVYTbYPuI9Prmbfboykm/L9OYFZ
+ZNyC/2bv7P9jJWIv6dwByKhcBZBHCxTYiPkTuxzN51JMyJA4okCPDoNJJRai5top
+4oWtf7VQJHyKHUIpCZNMUD9bo+wBccvsd+o9WcQg/l5JRuKYipz61tiwKdbExPUh
+RC6SgfDNg5YIPadLNbA+NGeFeXQtn+PYExcGkAcB/hbS6Ppj1Het67zuOGOZF8SE
+/HzbIAQ4lHcOLCXVfGrXwB7DvhYYgQ3DAypvVS67fyggzcule2jcTGbrGpjb4YIk
+eOovQuaa/ks1ymihNl18iJYZEDr/o/OhMiWaWOrLp/vnHeCIubgX6N1hMwopqgen
+Anm8E788IHh9EybwO/uEiDqfSXlR8cmeBhD3B+vrkjbCnz/p6o8nhOzVabJUkYGa
+RwsluOuHZzbXjtbwKS9rJ5sCAwEAAQ==
+-----END PUBLIC KEY-----
+"
+            .into(),
         }
     }
 }
