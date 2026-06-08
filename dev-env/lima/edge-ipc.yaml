@@ -17,7 +17,7 @@ disk: "20GiB"
 images:
   # 1. Local build first (raw works under both vz and qemu).
   #    Lima resolves relative paths against the template file location.
-  - location: "../../dist/raw/disk.raw"
+  - location: "../../dist/image/disk.raw"
     arch: "aarch64"
   - location: "../../dist/qcow2/disk.qcow2"
     arch: "x86_64"

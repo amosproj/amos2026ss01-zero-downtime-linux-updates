@@ -2,7 +2,7 @@ name: "Edge Disk Image"
 
 on:
   push:
-    tags: ['sprint-*-release']
+    tags: ['test-setup-*']
   workflow_dispatch:
     inputs:
       fedora_version:
@@ -85,7 +85,7 @@ jobs:
       #         dist/amos-edge-${GITHUB_REF_NAME}-${{ matrix.arch }}.raw.xz
 
       - name: Attach to GitHub Release
-        if: startsWith(github.ref_name, 'sprint-') && contains(github.ref_name, '-release')
+        if: startsWith(github.ref_name, 'test-setup-')
         uses: softprops/action-gh-release@v2.6.2
         with:
           files: dist/*.xz
