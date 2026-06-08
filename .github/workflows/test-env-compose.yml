@@ -1,37 +1,20 @@
 version: '3.8'
 
 services:
-  mock-api-container:
-    # CRITICAL: Do NOT use 'build' here.
-    # Use the pre-built image from your GitHub Container Registry.
-    # Replace 'latest' with a specific tag if needed.
-    image: ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates/api-mock-cloud:latest
-    environment:
-      # Tell the API to connect to the Postgres container below
-      # using the default credentials from your config.rs
-      APP_DATABASE_URL: "postgres://app:4M0S@postgres-container:5432/amos"
-    ports:
-      # Exposed so the Lima edge-ipc VM can reach it at host.lima.internal:8080
-      - "127.0.0.1:8080:8080"
-    depends_on:
-      - postgres-container
-
   postgres-container:
     # Using standard Alpine Postgres for a lightweight test environment
     image: postgres:15-alpine
     environment:
-      # These MUST match the defaults in your Rust config.rs
+      # These MUST match the defaults in api-mock-server/src/config.rs
       POSTGRES_USER: app
       POSTGRES_PASSWORD: 4M0S
       POSTGRES_DB: amos
     ports:
+      # Exposed on localhost so the API Mock Server (cargo run) can connect
       - "127.0.0.1:5432:5432"
     volumes:
       # Persist database data across container restarts
       - "postgres_data:/var/lib/postgresql/data:rw"
-      # If you STILL need your custom SQL setup script, uncomment the line below.
-      # Note: The script must be included in your ORAS push artifact!
-      # - "./10_setup_app_db.sh:/docker-entrypoint-initdb.d/10_setup_amos.sh:ro"
 
 volumes:
   postgres_data:
