@@ -87,13 +87,13 @@ jobs:
             SAFE_REF="${GITHUB_REF_NAME//\//-}"
             oras push \
               ghcr.io/${{ github.repository }}-disk:${SAFE_REF}-${{ matrix.arch }} \
-              dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz \
-              dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz
+              "amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz" \
+              "amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz"
 
       #- name: Attach to GitHub Release
       #  if: startsWith(github.ref_name, 'test-setup-')
       #  uses: softprops/action-gh-release@v2.6.2
       #  with:
-      #    files: dist/*.xz
+      #    files: *.xz
       #    draft: true
       #    fail_on_unmatched_files: true
