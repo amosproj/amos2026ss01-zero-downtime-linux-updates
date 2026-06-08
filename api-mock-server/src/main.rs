@@ -78,7 +78,10 @@ async fn main() {
         .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
         .nest_service("/download", ServeDir::new("assets"))
         .merge(api_v1::routes::routes())
-        .route_layer(axum_middleware::from_fn(jwt_auth));
+        .route_layer(axum::middleware::from_fn_with_state(
+            config.jwt_config.clone(),
+            jwt_auth,
+        ));
 
     let app = Router::new()
         .nest("/v1", api_v1)

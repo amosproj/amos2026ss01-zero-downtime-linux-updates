@@ -1,14 +1,18 @@
 use axum::{
-    extract::Request,
+    extract::{Request, State},
     http::{StatusCode, header},
     middleware::Next,
     response::Response,
 };
-use log::{debug, warn};
+use log::{debug, error};
 
-use crate::{api_v1::db, auth::validate_token};
+use crate::{api_v1::db, auth::validate_token, config::JwtConfig};
 
-pub async fn jwt_auth(mut req: Request, next: Next) -> Result<Response, StatusCode> {
+pub async fn jwt_auth(
+    State(jwt_config): State<JwtConfig>,
+    mut req: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
     // 1. Get the Authorization header
     let auth_header = req
         .headers()
@@ -25,10 +29,10 @@ pub async fn jwt_auth(mut req: Request, next: Next) -> Result<Response, StatusCo
     };
 
     // 3. Validate the token
-    match validate_token(token) {
+    match validate_token(token, &jwt_config) {
         Ok(claims) => {
             if let Err(err) = db::upsert_user(claims.clone()).await {
-                warn!("Failed to upsert user into db: {:?}", err);
+                error!("Failed to upsert user into db: {:?}", err);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
 

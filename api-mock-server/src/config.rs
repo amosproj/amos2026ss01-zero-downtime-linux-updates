@@ -10,12 +10,35 @@ fn default_http_port() -> u16 {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct JwtConfig {
+    pub subject_claim: String,
+
+    pub name_claim: String,
+
+    pub public_key: Vec<u8>,
+}
+
+impl Default for JwtConfig {
+    fn default() -> Self {
+        JwtConfig {
+            subject_claim: "sub".into(),
+            name_claim: "name".into(),
+            public_key: b""
+                .into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
     #[serde(default = "default_database_url")]
     pub database_url: String,
 
     #[serde(default = "default_http_port")]
     pub http_port: u16,
+
+    #[serde(default)]
+    pub jwt_config: JwtConfig,
 }
 
 pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::ConfigError> {
