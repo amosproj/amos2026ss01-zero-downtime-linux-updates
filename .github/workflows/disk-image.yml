@@ -48,6 +48,7 @@ jobs:
           sudo podman run --rm --privileged --pull=missing \
             --security-opt label=type:unconfined_t \
             -v "$PWD/dist":/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 --type raw \
             "${IMAGE_TAG}"
