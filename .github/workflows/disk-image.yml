@@ -1,0 +1,10 @@
+name: Disk Image Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "stub"
