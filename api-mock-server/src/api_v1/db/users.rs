@@ -14,7 +14,7 @@ pub async fn upsert_user(claims: Claims) -> Result<(), DbErr> {
 
     let user = dtos::User::ActiveModel {
         id: NotSet,
-        subject: Set(claims.sub),
+        subject: Set(claims.subject),
         name: Set(claims.name),
     };
 
