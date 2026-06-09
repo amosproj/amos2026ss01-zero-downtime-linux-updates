@@ -36,16 +36,23 @@ RwsluOuHZzbXjtbwKS9rJ5sCAwEAAQ==
     .into()
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct JwtConfig {
-    #[serde(default = "default_subject_claim")]
     pub subject_claim: String,
 
-    #[serde(default = "default_name_claim")]
     pub name_claim: String,
 
-    #[serde(default = "default_public_key")]
     pub public_key: String,
+}
+
+impl Default for JwtConfig {
+    fn default() -> Self {
+        JwtConfig {
+            subject_claim: default_subject_claim(),
+            name_claim: default_name_claim(),
+            public_key: default_public_key(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
