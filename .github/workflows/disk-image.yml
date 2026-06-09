@@ -42,6 +42,19 @@ jobs:
             -t ${IMAGE_TAG} .
           podman save --format oci-archive -o /tmp/amos-edge.tar ${IMAGE_TAG}
 
+      - name: Assert prod policy (no dev markers in image)
+        run: |
+          set -euo pipefail
+          cid=$(podman create "${IMAGE_TAG}")
+          trap "podman rm -f $cid >/dev/null" EXIT
+          podman cp "$cid:/etc/containers/policy.json" /tmp/policy.json
+          if grep -q insecureAcceptAnything /tmp/policy.json; then
+            echo "::error::dev policy leaked into a CI build"; exit 1
+          fi
+          if podman cp "$cid:/etc/amos-dev-image" /tmp/marker 2>/dev/null; then
+            echo "::error::dev marker present in CI build"; exit 1
+          fi
+
       - name: Load the bootc image into root storage
         run: sudo podman load -i /tmp/amos-edge.tar
 

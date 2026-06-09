@@ -1,4 +1,5 @@
 ARG FEDORA_VERSION=latest
+ARG DEV_MODE=false
 
 # Compile the orchestrator binary
 FROM docker.io/rust:1.95-slim AS builder
@@ -7,6 +8,7 @@ WORKDIR /workspace
 RUN cargo build --package amos-orchestrator --release
 
 FROM quay.io/fedora/fedora-bootc:${FEDORA_VERSION}
+ARG DEV_MODE
 
 # Copy the compiled binary from the build stage
 COPY --from=builder /workspace/target/release/amos-orchestrator /usr/local/bin/amos-orchestrator
@@ -35,5 +37,14 @@ RUN dnf clean all
 # Key goes to /usr only so it cannot be replaced by a local root user.
 RUN mkdir -p /usr/share/pki/containers /usr/share/containers
 COPY cosign.pub /usr/share/pki/containers/cosign.pub
-COPY container-policy.json /usr/share/containers/policy.json
-COPY container-policy.json /etc/containers/policy.json
+COPY container-policy.json     /usr/share/containers/policy.prod.json
+COPY container-policy.dev.json /usr/share/containers/policy.dev.json
+RUN set -eu; \
+    if [ "$DEV_MODE" = "true" ]; then src=policy.dev.json; touch /etc/amos-dev-image; \
+    else src=policy.prod.json; fi; \
+    cp /usr/share/containers/$src /usr/share/containers/policy.json; \
+    cp /usr/share/containers/$src /etc/containers/policy.json; \
+    rm /usr/share/containers/policy.prod.json /usr/share/containers/policy.dev.json
+
+COPY rootc-build/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
+RUN chmod 755 /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
