@@ -1,8 +1,11 @@
 [Unit]
 Description=Zero-Downtime Linux Update Orchestrator
 Documentation=https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates
-After=network-online.target cloud-config.service
-Wants=network-online.target
+# maybe makes problems when not using cloud-init??
+# https://docs.cloud-init.io/en/21.2/topics/boot.html
+After=network-online.target cloud-final.service
+Wants=network-online.target cloud-final.service
+
 
 [Service]
 Type=simple
@@ -13,4 +16,3 @@ Environment=RUST_LOG=info
 
 [Install]
 WantedBy=multi-user.target
-

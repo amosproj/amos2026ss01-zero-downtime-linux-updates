@@ -1,51 +1,75 @@
 # Lima template for the edge IPC VM.
 #
-# Boots the bootc disk image produced by `make image` (preferred — uses local
-# `dist/` if present) or the published release artifact (fallback for devs who
-# don't build locally).
+# Boots the bootc disk image in ./dist, produced by either `make image` (build
+# locally) or `make pull-image` (download the prebuilt image from GHCR, for devs
+# who don't build locally). See the images: block below.
 #
-# Quickstart:
+# Quickstart (in the project root directory):
 #   limactl start --name edge-ipc dev-env/lima/edge-ipc.yaml
 #   limactl shell edge-ipc -- journalctl -u orchestrator.service -f
+#
+#
+# for all .yaml options see:
+# https://github.com/lima-vm/lima/blob/master/templates/default.yaml
 
-# vmType: "vz"      # macOS arm64; Lima falls back to qemu on Linux/Windows-WSL2.
+vmType: "vz" # macOS arm64; Lima falls back to qemu on Linux/Windows-WSL2.
 arch: "default"
 cpus: 2
 memory: "4GiB"
 disk: "20GiB"
 
 images:
-  # 1. Local build first (raw works under both vz and qemu).
-  #    Lima resolves relative paths against the template file location.
-  - location: "../../dist/image/disk.raw"
+  # Local entries, populated either by `make image` (build locally) or by
+  # `make pull-image` (download the prebuilt image from GHCR — see below).
+  # raw works under both vz and qemu.
+  - location: "dist/image/disk.raw"
     arch: "aarch64"
-  - location: "../../dist/qcow2/disk.qcow2"
+  - location: "dist/qcow2/disk.qcow2"
     arch: "x86_64"
-  # 2. Release fallback — Lima auto-decompresses .xz on fetch.
-  #    Bump the sprint tag in onboarding docs (or override via `limactl start --set`).
-  # TODO CHANGE DEFAULTS OTHERWISE WE WILL SURELY AT SOME POINT ACCIDENTLY DOWNLOAD AN OLDER VERSION OOPSIE
-  #- location: "https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/releases/download/test-setup-01/amos-edge-test-setup-01-arm64.raw.xz"
-  #  arch: "aarch64"
-  # - location: "https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/releases/download/test-setup-01/amos-edge-test-setup-01-amd64.qcow2.xz"
-  #  arch: "x86_64"
+  #
+  # Why there is no GHCR URL here: CI publishes the disk image as an OCI artifact
+  # (ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-disk:<ref>-<arch>),
+  # and Lima's `location:` only accepts file paths and http(s) URLs — it can't
+  # consume an oras/OCI ref, and a raw GHCR blob URL needs an auth token Lima
+  # can't supply. So pull + decompress into the dist/ paths above instead:
+  #
+  #   make pull-image                              # host arch, latest main build
+  #   make pull-image PULL_REF=sprint-08-release   # pin a specific tagged build
+  #
+  # (equivalent to: oras pull ghcr.io/<repo>-disk:<ref>-<arch> && xz -d ...)
 
 mounts:
   - location: "~"
     writable: false
+  - location: "/tmp/lima"
+    writable: true
 
-# Cloud-init NoCloud seed injected by Lima. orchestrator.service is enabled at
-# image build time; cloud-init only writes the runtime config it needs to find.
+# /usr/local/bin is read-only, so let's point it to /var/usrlocal/bin instead.
 provision:
-  - mode: system
+  - mode: boot
     script: |
-      mkdir -p /etc/amos
-      cat > /etc/amos/config.toml << 'EOF'
+      #!/bin/bash
+      set -eux -o pipefail
+      mkdir -p /var/usrlocal/bin
+  # AMOS: write config file the orchestrator reads.
+  - mode: data
+    path: /etc/amos/config.toml
+    # owner: "root:root"
+    # permissions: "644"
+    content: |
       cloud_url = "http://host.lima.internal:8080/api/v1"
       poll_interval_secs = 5
       inventory_path = "/var/lib/amos/inventory.json"
       device_uuid = "00000000-0000-0000-0000-000000000001"
-      EOF
+# Extra environment variables that will be loaded into the VM at start up.
+# These variables are consumed by internal init scripts, and also added
+# to /etc/environment.
+env:
+  LIMA_CIDATA_GUEST_INSTALL_PREFIX: /var/usrlocal
+  # AMOS: path to config file for orchestrator.
+  APP_CONFIG_FILE: /etc/amos/config.toml
 
-ssh:
-  authorizedKeys:
-    - "{{.SSHPubKey}}"
+# Turn off containerd. https://lima-vm.io/docs/examples/containers/containerd/
+containerd:
+  system: false
+  user: false

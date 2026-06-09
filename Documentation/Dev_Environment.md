@@ -28,7 +28,7 @@ those code paths you need a real VM.
 We use [Lima](https://lima-vm.io/) as the cross-platform VM runner because a
 single template works on Linux (QEMU/KVM), macOS arm64 (Virtualization.framework),
 and Windows via WSL2 (QEMU). The disk image itself is built once by
-`bootc-image-builder` from `rootc-build/Containerfile`.
+`image-builder-cli` from `rootc-build/Containerfile`.
 
 ### Quickstart (no local image build)
 
@@ -66,12 +66,31 @@ make image                                              # ~5 min
 limactl start --reset --name edge-ipc dev-env/lima/edge-ipc.yaml
 ```
 
-`make image` runs `bootc-image-builder` and writes `dist/qcow2/disk.qcow2` and
-`dist/raw/disk.raw`. The Lima template prefers the local `dist/` paths over
+`make image` runs `image-builder-cli` and writes `dist/qcow2/disk.qcow2` and
+`dist/image/disk.raw`. The Lima template prefers the local `dist/` paths over
 the published release artifact.
 
 Requirements for `make image`: rootful `podman` on Linux (or
 `podman machine` with rootful mode on macOS), and ~10 GB free disk in `dist/`.
+
+#### Cross-architecture builds (optional)
+
+To produce a disk image for an arch other than your host (e.g. building amd64
+from an Apple Silicon machine), use the per-arch targets:
+
+```bash
+make image-amd64   # cross if host is arm64
+make image-arm64   # cross if host is amd64
+```
+
+These require `qemu-user-static` registered with binfmt. On Linux hosts (or
+inside the macOS `podman machine` VM) run the following once per host boot:
+
+```bash
+sudo podman run --rm --privileged docker.io/multiarch/qemu-user-static --reset -p yes
+```
+
+Cross-arch builds are noticeably slower than native builds.
 
 ### Windows
 
