@@ -30,6 +30,8 @@ pub struct Settings {
 }
 
 pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::ConfigError> {
+    let config_path =
+        config_path.or_else(|| std::env::var("APP_CONFIG_FILE").ok().map(PathBuf::from));
     let file_config = match config_path {
         Some(path) => File::from(path).required(true),
         None => File::with_name("config").required(false),
