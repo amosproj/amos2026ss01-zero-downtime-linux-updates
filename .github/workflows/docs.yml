@@ -1,7 +1,10 @@
 name: Docs
 
 # Build the rustdoc API documentation and publish it to GitHub Pages.
-# Pull requests build the docs as a breakage check; only pushes to main deploy.
+#   - push to main:      build + deploy
+#   - pull_request:      build only (breakage check)
+#   - workflow_dispatch: build + deploy from the chosen branch (manual publish),
+#                        e.g. `gh workflow run docs.yml --ref <branch>`
 on:
   push:
     branches: [main]
@@ -39,8 +42,9 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    # Only deploy from main; pull requests run the build job as a check only.
-    if: github.ref == 'refs/heads/main'
+    # Deploy on pushes to main, or on a manual workflow_dispatch from any branch.
+    # Pull requests run the build job as a check only.
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     environment:
