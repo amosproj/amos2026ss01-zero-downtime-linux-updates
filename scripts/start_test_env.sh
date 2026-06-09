@@ -106,15 +106,20 @@ if [[ -n "$TAG" ]]; then
     esac
 
     mkdir -p dist/oras
-    oras pull \
-        "${GHCR_BASE}:${TAG}-${LIMA_ARCH}" \
-        --output dist/oras
+    ARTIFACT="amos-edge-${TAG}-${LIMA_ARCH}.raw"
+    ARTIFACT_XZ="${ARTIFACT}.xz"
+    if [[ -f "dist/oras/${ARTIFACT}" ]]; then
+        echo "Disk image already present, skipping download."
+    else
+        (cd dist/oras && oras pull "${GHCR_BASE}:${TAG}-${LIMA_ARCH}")
+        xz -d "dist/oras/${ARTIFACT_XZ}"
+    fi
 
-    # Decompress — Lima expects a plain .raw or .qcow2
-    xz -d dist/oras/*.xz
+    
 
+    RAW_PATH="$(pwd)/dist/oras/amos-edge-${TAG}-${LIMA_ARCH}.raw"
     limactl start --name edge-ipc \
-        --set ".images[0].location = \"$(pwd)/dist/oras/amos-edge-${TAG}-${LIMA_ARCH}.raw\"" \
+        --set ".images = [{\"location\": \"${RAW_PATH}\", \"arch\": \"x86_64\"}, {\"location\": \"${RAW_PATH}\", \"arch\": \"aarch64\"}]" \
         "$LIMA_TEMPLATE"
 else
     echo "No tag provided — using local dist/ build. Provide a tag with './scripts/start_test_env.sh test-setup-XX'"

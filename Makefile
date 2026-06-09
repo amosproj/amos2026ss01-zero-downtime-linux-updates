@@ -29,14 +29,18 @@ setup-hooks: ## Install git hooks
 
 image: ## Build bootc disk image (qcow2 + raw) into ./dist
 	podman build -f rootc-build/Containerfile -t $(IMAGE_TAG) .
+	podman save --format oci-archive -o /tmp/amos-edge.tar $(IMAGE_TAG)
 	mkdir -p $(DIST_DIR)
-	sudo podman run --rm --privileged --pull=newer \
+	sudo podman load -i /tmp/amos-edge.tar
+	sudo podman run --rm --privileged --pull=missing \
 		--security-opt label=type:unconfined_t \
 		-v $(DIST_DIR):/output \
 		-v /var/lib/containers/storage:/var/lib/containers/storage \
 		quay.io/centos-bootc/bootc-image-builder:latest \
 		--type qcow2 --type raw \
+		--rootfs ext4 \
 		$(IMAGE_TAG)
+	sudo chown -R $$USER:$$USER $(DIST_DIR)
 
 image-clean: ## Remove locally built disk images
 	rm -rf $(DIST_DIR)

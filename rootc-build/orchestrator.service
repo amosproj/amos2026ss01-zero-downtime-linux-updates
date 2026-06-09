@@ -1,8 +1,8 @@
 [Unit]
 Description=Zero-Downtime Linux Update Orchestrator
 Documentation=https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates
-After=network-online.target cloud-final.service
-Wants=network-online.target cloud-final.service
+After=network-online.target cloud-config.service
+Wants=network-online.target
 
 [Service]
 Type=simple
