@@ -1,9 +1,11 @@
 name: Docs
 
 # Build the rustdoc API documentation and publish it to GitHub Pages.
+# Pull requests build the docs as a breakage check; only pushes to main deploy.
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 # Grant GITHUB_TOKEN the permissions required to deploy to GitHub Pages.
@@ -26,8 +28,8 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Build documentation
         run: cargo doc --no-deps --workspace --all-features --document-private-items
-      - name: Add index.html redirect to the orchestrator crate
-        run: echo '<meta http-equiv="refresh" content="0; url=amos_orchestrator/index.html">' > target/doc/index.html
+      - name: Add landing page
+        run: cp .github/pages/index.html target/doc/index.html
       - name: Remove cargo lock file from the artifact
         run: rm -f target/doc/.lock
       - uses: actions/configure-pages@v5
@@ -37,6 +39,8 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
+    # Only deploy from main; pull requests run the build job as a check only.
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
