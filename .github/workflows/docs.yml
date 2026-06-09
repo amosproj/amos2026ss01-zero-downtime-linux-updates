@@ -1,0 +1,48 @@
+name: Docs
+
+# Build the rustdoc API documentation and publish it to GitHub Pages.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Grant GITHUB_TOKEN the permissions required to deploy to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment; do not cancel an in-progress one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Build documentation
+        run: cargo doc --no-deps --workspace --all-features --document-private-items
+      - name: Add index.html redirect to the orchestrator crate
+        run: echo '<meta http-equiv="refresh" content="0; url=amos_orchestrator/index.html">' > target/doc/index.html
+      - name: Remove cargo lock file from the artifact
+        run: rm -f target/doc/.lock
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/doc
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
