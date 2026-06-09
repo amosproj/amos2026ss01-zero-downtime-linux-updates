@@ -18,6 +18,16 @@ pub struct Settings {
     pub http_port: u16,
 }
 
+/// Loads and validates the server configuration.
+///
+/// The config file is resolved in order of precedence:
+/// 1. `config_path` (the `--config` CLI flag), required if `Some`.
+/// 2. The `APP_CONFIG_FILE` environment variable, required if set.
+/// 3. `config.toml` in the current working directory (optional).
+///
+/// Individual settings can additionally be overridden with `APP_`-prefixed
+/// environment variables (e.g. `APP_DATABASE_URL`), which take precedence over
+/// the file.
 pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::ConfigError> {
     let config_path =
         config_path.or_else(|| std::env::var("APP_CONFIG_FILE").ok().map(PathBuf::from));
