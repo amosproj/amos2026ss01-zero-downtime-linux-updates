@@ -11,6 +11,7 @@ serde_json = { workspace = true }
 clap = { workspace = true }
 config = { workspace = true }
 env_logger = { workspace = true }
+jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 log = { workspace = true }
 sea-orm = { workspace = true }
 # Ensure to match version with sea-orm from workspace!
