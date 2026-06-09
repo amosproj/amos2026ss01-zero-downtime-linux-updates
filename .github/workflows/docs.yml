@@ -1,0 +1,56 @@
+name: Docs
+
+# Build the rustdoc API documentation and publish it to GitHub Pages.
+#   - push to main:      build + deploy
+#   - pull_request:      build only (breakage check)
+#   - workflow_dispatch: build + deploy from the chosen branch (manual publish),
+#                        e.g. `gh workflow run docs.yml --ref <branch>`
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Grant GITHUB_TOKEN the permissions required to deploy to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment; do not cancel an in-progress one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Build documentation
+        run: cargo doc --no-deps --workspace --all-features --document-private-items
+      - name: Add landing page
+        run: cp .github/pages/index.html target/doc/index.html
+      - name: Remove cargo lock file from the artifact
+        run: rm -f target/doc/.lock
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/doc
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # Deploy on pushes to main, or on a manual workflow_dispatch from any branch.
+    # Pull requests run the build job as a check only.
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
