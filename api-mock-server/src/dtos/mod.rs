@@ -30,3 +30,6 @@ pub use self::reported_os_assignment as ReportedOsAssignment;
 
 pub mod tenant;
 pub use self::tenant as Tenant;
+
+pub mod user;
+pub use self::user as User;

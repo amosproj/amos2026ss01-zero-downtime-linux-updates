@@ -9,6 +9,52 @@ fn default_http_port() -> u16 {
     8080
 }
 
+fn default_subject_claim() -> String {
+    "sub".into()
+}
+
+fn default_name_claim() -> String {
+    "name".into()
+}
+
+fn default_public_key() -> String {
+    "-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzP3Oc7fe4hRq7wMKxyfS
+wiQclOzJIvoTLB0Tnxy6sEqUcg7WFV1Xcw25DuzIj6ZIlGhKIr6jKs+8G1rLymTZ
+tIdJEx2wcKTPfTezth2/nMT9E2Dct0Q9aM2Yi/LUyVBmGD3Go14KoXA8EZbDOQOW
+0wMREw5qsim6gI5Jm9O2XUUFwS+U28CoSqMKFNlJFdZodqa6mVsTQG6gmdtMbjyG
+kX8KjEPcShNTZePWFimk3hBuBwSLtsYG2Ws2eyVYTbYPuI9Prmbfboykm/L9OYFZ
+ZNyC/2bv7P9jJWIv6dwByKhcBZBHCxTYiPkTuxzN51JMyJA4okCPDoNJJRai5top
+4oWtf7VQJHyKHUIpCZNMUD9bo+wBccvsd+o9WcQg/l5JRuKYipz61tiwKdbExPUh
+RC6SgfDNg5YIPadLNbA+NGeFeXQtn+PYExcGkAcB/hbS6Ppj1Het67zuOGOZF8SE
+/HzbIAQ4lHcOLCXVfGrXwB7DvhYYgQ3DAypvVS67fyggzcule2jcTGbrGpjb4YIk
+eOovQuaa/ks1ymihNl18iJYZEDr/o/OhMiWaWOrLp/vnHeCIubgX6N1hMwopqgen
+Anm8E788IHh9EybwO/uEiDqfSXlR8cmeBhD3B+vrkjbCnz/p6o8nhOzVabJUkYGa
+RwsluOuHZzbXjtbwKS9rJ5sCAwEAAQ==
+-----END PUBLIC KEY-----
+"
+    .into()
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct JwtConfig {
+    pub subject_claim: String,
+
+    pub name_claim: String,
+
+    pub public_key: String,
+}
+
+impl Default for JwtConfig {
+    fn default() -> Self {
+        JwtConfig {
+            subject_claim: default_subject_claim(),
+            name_claim: default_name_claim(),
+            public_key: default_public_key(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
     #[serde(default = "default_database_url")]
@@ -16,6 +62,9 @@ pub struct Settings {
 
     #[serde(default = "default_http_port")]
     pub http_port: u16,
+
+    #[serde(default)]
+    pub jwt: JwtConfig,
 }
 
 /// Loads and validates the server configuration.
@@ -35,7 +84,11 @@ pub fn get_config(config_path: Option<PathBuf>) -> Result<Settings, config::Conf
         Some(path) => File::from(path).required(true),
         None => File::with_name("config").required(false),
     };
-    let env_config = Environment::with_prefix("APP");
+
+    // Default separator is "." which is a PITA when working with Unix shells...
+    let env_config = Environment::with_prefix("APP")
+        .separator("__")
+        .prefix_separator("_");
 
     let settings = Config::builder()
         .add_source(file_config)
