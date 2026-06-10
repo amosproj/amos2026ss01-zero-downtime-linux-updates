@@ -2,17 +2,14 @@ name: "Edge Disk Image"
 
 on:
   push:
-    tags: ["test-setup-*"]
+    tags: ["**"]
   workflow_dispatch:
     inputs:
-      fedora_version:
-        description: "Fedora version to build with (e.g. 39, 40, latest)"
-        required: true
-        default: "latest"
+      image_ref:
+        description: "Bootc OCI image to build the disk from (defaults to the -system image built by container-orchestrator.yml)"
+        required: false
+        default: ""
         type: string
-
-env:
-  IMAGE_TAG: localhost/amos-edge:dev
 
 jobs:
   build-disk:
@@ -23,6 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # container-orchestrator.yml publishes a multi-arch manifest, so each
+        # runner pulls the matching arch of the -system image automatically.
         include:
           - arch: amd64
             runner: ubuntu-latest
@@ -31,32 +30,36 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Build the bootc OCI image
+      - name: Resolve bootc image reference
         run: |
-          podman build \
-            --build-arg FEDORA_VERSION=${{ inputs.fedora_version || 'latest' }} \
-            -f rootc-build/Containerfile \
-            -t ${IMAGE_TAG} .
-          podman save --format oci-archive -o /tmp/amos-edge.tar ${IMAGE_TAG}
+          set -euo pipefail
+          REF="${{ inputs.image_ref }}"
+          if [ -z "$REF" ]; then
+            REF="ghcr.io/${{ github.repository }}-system:latest"
+          fi
+          echo "IMAGE_REF=$REF" >> "$GITHUB_ENV"
+          echo "Using bootc image: $REF"
+
+      - name: Log in to GHCR (root podman, for pulling the bootc image)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull the bootc image into root storage
+        run: sudo podman pull "${IMAGE_REF}"
 
       - name: Assert prod policy (no dev markers in image)
         run: |
           set -euo pipefail
-          cid=$(podman create "${IMAGE_TAG}")
-          trap "podman rm -f $cid >/dev/null" EXIT
-          podman cp "$cid:/etc/containers/policy.json" /tmp/policy.json
+          cid=$(sudo podman create "${IMAGE_REF}")
+          trap "sudo podman rm -f $cid >/dev/null" EXIT
+          sudo podman cp "$cid:/etc/containers/policy.json" /tmp/policy.json
           if grep -q insecureAcceptAnything /tmp/policy.json; then
-            echo "::error::dev policy leaked into a CI build"; exit 1
+            echo "::error::dev policy leaked into the disk image"; exit 1
           fi
-          if podman cp "$cid:/etc/amos-dev-image" /tmp/marker 2>/dev/null; then
-            echo "::error::dev marker present in CI build"; exit 1
+          if sudo podman cp "$cid:/etc/amos-dev-image" /tmp/marker 2>/dev/null; then
+            echo "::error::dev marker present in the disk image"; exit 1
           fi
-
-      - name: Load the bootc image into root storage
-        run: sudo podman load -i /tmp/amos-edge.tar
 
       - name: Build qcow2 image
         run: |
@@ -67,7 +70,7 @@ jobs:
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             ghcr.io/osbuild/image-builder-cli:latest \
             build \
-              --bootc-ref "${IMAGE_TAG}" \
+              --bootc-ref "${IMAGE_REF}" \
               --bootc-default-fs ext4 \
               --output-dir /output \
               qcow2
@@ -81,7 +84,7 @@ jobs:
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             ghcr.io/osbuild/image-builder-cli:latest \
             build \
-              --bootc-ref "${IMAGE_TAG}" \
+              --bootc-ref "${IMAGE_REF}" \
               --bootc-default-fs ext4 \
               --output-dir /output \
               raw
