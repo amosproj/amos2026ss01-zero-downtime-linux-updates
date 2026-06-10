@@ -27,12 +27,16 @@ make image                         # OR build it locally from source
 
 # 2. Start the VM (boots the image from ./dist).
 limactl start --name edge-ipc dev-env/lima/edge-ipc.yaml
+# optionally: --arch x86_64 --vm-type qemu
+# vm-type: https://lima-vm.io/docs/config/vmtype/
 
 # 3. Watch the orchestrator do its thing.
 limactl shell edge-ipc -- journalctl -u orchestrator.service -f
 
 # 4. start the api-server and db on your host-machine (outside the vm)
 podman compose -f .devcontainer/docker-compose.yml up -d mock-api-container postgres-container
+# or 
+limactl shell edge-ipc
 ```
 
 The orchestrator starts automatically (it's a systemd service enabled in the
@@ -64,10 +68,12 @@ This is a bootc/ostree system, so the filesystem is split: `/usr` is a
 
 ## Troubleshooting
 
-- **Service inactive / never started:** `systemctl status orchestrator.service`.
-  If the journal mentions an *ordering cycle*, the unit is waiting on a service
-  it shouldn't — see the `[Unit]` ordering in
-  [`../../rootc-build/orchestrator.service`](../../rootc-build/orchestrator.service).
 - **Connection errors in the log:** the agent polls the cloud API at the
   `cloud_url` in `config.toml` (by default the mock server on the host's port
   8080). Start the mock server if you want successful polls.
+
+
+### TPM
+
+Lima/Virtualization.framework does **not** expose TPM. When the TPM-backed
+device identity work needs a target, a libvirt + swtpm profile could be added.

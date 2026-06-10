@@ -12,7 +12,7 @@
 # for all .yaml options see:
 # https://github.com/lima-vm/lima/blob/master/templates/default.yaml
 
-vmType: "vz" # macOS arm64; Lima falls back to qemu on Linux/Windows-WSL2.
+# vmType: "vz" # https://lima-vm.io/docs/config/vmtype/
 arch: "default"
 cpus: 2
 memory: "4GiB"
@@ -26,17 +26,6 @@ images:
     arch: "aarch64"
   - location: "dist/qcow2/disk.qcow2"
     arch: "x86_64"
-  #
-  # Why there is no GHCR URL here: CI publishes the disk image as an OCI artifact
-  # (ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-disk:<ref>-<arch>),
-  # and Lima's `location:` only accepts file paths and http(s) URLs — it can't
-  # consume an oras/OCI ref, and a raw GHCR blob URL needs an auth token Lima
-  # can't supply. So pull + decompress into the dist/ paths above instead:
-  #
-  #   make pull-image                              # host arch, latest main build
-  #   make pull-image PULL_REF=sprint-08-release   # pin a specific tagged build
-  #
-  # (equivalent to: oras pull ghcr.io/<repo>-disk:<ref>-<arch> && xz -d ...)
 
 mounts:
   - location: "~"
