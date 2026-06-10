@@ -8,9 +8,10 @@ HOST_ARCH     := $(shell uname -m | sed -e s/arm64/aarch64/ -e s/amd64/x86_64/)
 
 # Prebuilt disk image published by .github/workflows/disk-image.yml as an OCI
 # artifact (each tag bundles both <name>.raw.xz and <name>.qcow2.xz).
-# Override the tag for a pinned build, e.g. `make pull-image PULL_REF=sprint-08-release`.
+# PULL_REF is required: pass the branch/release tag (without the arch suffix),
+# e.g. `make pull-image PULL_REF=feat-create-test-setup` pulls feat-create-test-setup-amd64.
 GHCR_DISK     ?= ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-disk
-PULL_REF      ?= main
+PULL_REF      ?=
 
 # Shared image-builder-cli invocation; append the image type (qcow2 / raw).
 # Writes the disk straight into $(DIST_DIR) via --output-dir.
@@ -87,6 +88,10 @@ pull-image-arm64: _image-pull ## Download prebuilt arm64 disk image (raw) from G
 # edge-ipc.yaml template points at.
 _image-pull:
 	@set -eu; \
+	if [ -z "$(PULL_REF)" ]; then \
+	  echo "PULL_REF is required, e.g. make pull-image PULL_REF=feat-create-test-setup (pulls feat-create-test-setup-amd64)" >&2; \
+	  exit 1; \
+	fi; \
 	case "$(ARCH)" in \
 	  aarch64) gharch=arm64; fmt=raw;   dest=$(DIST_DIR)/image/disk.raw ;; \
 	  x86_64)  gharch=amd64; fmt=qcow2; dest=$(DIST_DIR)/qcow2/disk.qcow2 ;; \
