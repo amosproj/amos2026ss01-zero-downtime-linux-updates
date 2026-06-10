@@ -14,9 +14,7 @@
                         "type": "matchRepository"
                     }
                 }
-            ]
-        },
-        "containers-storage": {
+            ],
             "localhost/amos-edge": [
                 {
                     "type": "insecureAcceptAnything"
