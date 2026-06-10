@@ -16,7 +16,7 @@ agent run end to end, without any physical hardware.
 
 ## Run it
 
-Prerequisites (macOS): `limactl` and `podman` (`brew install lima podman`).
+Prerequisites (macOS): `limactl`, `oras`, and `podman` (`brew install lima oras podman`).
 
 ```bash
 # From the project root.
