@@ -19,6 +19,7 @@ mod healthcheck;
 mod inventory;
 mod loop_apps;
 mod loop_os;
+mod podman;
 mod state;
 mod update_check;
 mod util;
