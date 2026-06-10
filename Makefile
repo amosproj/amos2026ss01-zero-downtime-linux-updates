@@ -68,6 +68,7 @@ _image-build:
 	sudo podman load -i $(TMP_DIR)/amos-edge.tar
 	$(IB_RUN) qcow2
 	$(IB_RUN) raw
+	mkdir -p $(DIST_DIR)/qcow2 $(DIST_DIR)/image
 	mv $(DIST_DIR)/*.qcow2 $(DIST_DIR)/qcow2/disk.qcow2
 	mv $(DIST_DIR)/*.raw   $(DIST_DIR)/image/disk.raw
 	sudo chown -R $$USER:$$USER $(DIST_DIR)

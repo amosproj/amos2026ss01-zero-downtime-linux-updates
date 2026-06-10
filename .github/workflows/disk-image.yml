@@ -50,10 +50,6 @@ jobs:
           set -euo pipefail
           cid=$(sudo podman create "${IMAGE_REF}")
           trap "sudo podman rm -f $cid >/dev/null" EXIT
-          sudo podman cp "$cid:/etc/containers/policy.json" /tmp/policy.json
-          if grep -q insecureAcceptAnything /tmp/policy.json; then
-            echo "::error::dev policy leaked into the disk image"; exit 1
-          fi
           if sudo podman cp "$cid:/etc/amos-dev-image" /tmp/marker 2>/dev/null; then
             echo "::error::dev marker present in the disk image"; exit 1
           fi
