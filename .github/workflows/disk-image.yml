@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       image_ref:
-        description: "Bootc OCI image to build the disk from (defaults to the -system image built by container-orchestrator.yml)"
+        description: "tag of image to build the disk from (image built by container-orchestrator.yml)"
         required: false
-        default: ""
+        default: "latest"
         type: string
 
 jobs:
@@ -33,10 +33,7 @@ jobs:
       - name: Resolve bootc image reference
         run: |
           set -euo pipefail
-          REF="${{ inputs.image_ref }}"
-          if [ -z "$REF" ]; then
-            REF="ghcr.io/${{ github.repository }}-system:latest"
-          fi
+          REF="ghcr.io/${{ github.repository }}-system:${{ inputs.image_ref }}"
           echo "IMAGE_REF=$REF" >> "$GITHUB_ENV"
           echo "Using bootc image: $REF"
 
