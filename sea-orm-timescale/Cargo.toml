@@ -9,11 +9,11 @@ keywords = ["sea-orm", "timescaledb", "time-series", "postgresql"]
 categories = ["database"]
 
 [dependencies]
-sea-orm = { version = "2.0.0-rc", default-features = false }
-sea-query = "~1.0.0"
+sea-orm = { workspace = true }
+sea-query = "~1.0.1"
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-sea-orm = { version = "2.0.0-rc", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-chrono", "with-uuid"] }
+sea-orm = { workspace = true }
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "1", features = ["v4"] }
