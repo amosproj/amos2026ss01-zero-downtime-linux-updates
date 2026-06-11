@@ -2,10 +2,9 @@ use sea_orm::sea_query::{Alias, SimpleExpr};
 use sea_orm_timescale::functions::*;
 use sea_orm_timescale::types::*;
 
-/// Extract the SQL string from a SimpleExpr::Custom variant.
 fn custom_sql(expr: &SimpleExpr) -> &str {
     match expr {
-        SimpleExpr::Custom(s) => s.as_str(),
+        SimpleExpr::Custom(s) => s.as_ref(),
         _ => panic!("Expected SimpleExpr::Custom"),
     }
 }
@@ -54,7 +53,7 @@ fn test_last_aggregate() {
 
 #[test]
 fn test_locf_with_custom_expr() {
-    let inner = SimpleExpr::Custom("AVG(\"value\")".to_string());
+    let inner = SimpleExpr::Custom("AVG(\"value\")".into());
     let expr = locf(inner);
     assert_eq!(custom_sql(&expr), "locf(AVG(\"value\"))");
 }
@@ -114,7 +113,7 @@ fn test_interval_parse_errors() {
 
 #[test]
 fn test_interpolate_expression() {
-    let inner = SimpleExpr::Custom("AVG(\"value\")".to_string());
+    let inner = SimpleExpr::Custom("AVG(\"value\")".into());
     let expr = interpolate(inner);
     assert_eq!(custom_sql(&expr), "interpolate(AVG(\"value\"))");
 }

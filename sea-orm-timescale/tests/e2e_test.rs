@@ -34,7 +34,7 @@ fn unique_name(prefix: &str) -> String {
 
 fn expr_sql(expr: &SimpleExpr) -> &str {
     match expr {
-        SimpleExpr::Custom(s) => s.as_str(),
+        SimpleExpr::Custom(s) => s.as_ref(),
         _ => panic!("Expected SimpleExpr::Custom"),
     }
 }
@@ -117,7 +117,7 @@ async fn test_create_hypertable() {
 
     // Verify it appears in the TimescaleDB catalog
     let row = db
-        .query_one(Statement::from_string(
+        .query_one_raw(Statement::from_string(
             DbBackend::Postgres,
             format!(
                 "SELECT hypertable_name FROM timescaledb_information.hypertables \
@@ -144,7 +144,7 @@ async fn test_time_bucket_query() {
         bucket = expr_sql(&bucket)
     );
     let rows = db
-        .query_all(Statement::from_string(DbBackend::Postgres, sql))
+        .query_all_raw(Statement::from_string(DbBackend::Postgres, sql))
         .await
         .expect("time_bucket query failed");
 
@@ -169,7 +169,7 @@ async fn test_first_last_aggregates() {
     );
 
     let row = db
-        .query_one(Statement::from_string(DbBackend::Postgres, sql))
+        .query_one_raw(Statement::from_string(DbBackend::Postgres, sql))
         .await
         .expect("first/last query failed")
         .expect("Should return a row");
@@ -256,7 +256,7 @@ async fn test_continuous_aggregate() {
 
     // Verify data materialized in the view
     let rows = db
-        .query_all(Statement::from_string(
+        .query_all_raw(Statement::from_string(
             DbBackend::Postgres,
             format!(r#"SELECT * FROM "{view}""#),
         ))
@@ -300,7 +300,7 @@ async fn test_interpolate_query() {
     db.execute_unprepared(&sql).await.unwrap();
 
     let bucket = time_bucket_gapfill(&Interval::Hours(1), Alias::new("time"));
-    let avg_expr = SimpleExpr::Custom("AVG(value)".to_string());
+    let avg_expr = SimpleExpr::Custom("AVG(value)".into());
     let interp = interpolate(avg_expr);
     let sql = format!(
         r#"SELECT {bucket} AS bucket, {interp} AS interp_val
@@ -311,7 +311,7 @@ async fn test_interpolate_query() {
         interp = expr_sql(&interp)
     );
     let rows = db
-        .query_all(Statement::from_string(DbBackend::Postgres, sql))
+        .query_all_raw(Statement::from_string(DbBackend::Postgres, sql))
         .await
         .expect("interpolate query failed");
 
@@ -342,7 +342,7 @@ async fn test_time_bucket_with_origin_query() {
         bucket = expr_sql(&bucket)
     );
     let rows = db
-        .query_all(Statement::from_string(DbBackend::Postgres, sql))
+        .query_all_raw(Statement::from_string(DbBackend::Postgres, sql))
         .await
         .expect("time_bucket_with_origin query failed");
 
@@ -374,7 +374,7 @@ async fn test_time_bucket_with_offset_query() {
         bucket = expr_sql(&bucket)
     );
     let rows = db
-        .query_all(Statement::from_string(DbBackend::Postgres, sql))
+        .query_all_raw(Statement::from_string(DbBackend::Postgres, sql))
         .await
         .expect("time_bucket_with_offset query failed");
 
@@ -399,7 +399,7 @@ async fn test_time_bucket_tz_query() {
         bucket = expr_sql(&bucket)
     );
     let rows = db
-        .query_all(Statement::from_string(DbBackend::Postgres, sql))
+        .query_all_raw(Statement::from_string(DbBackend::Postgres, sql))
         .await
         .expect("time_bucket_tz query failed");
 
@@ -526,7 +526,7 @@ async fn test_drop_chunks() {
 
     // Count before dropping
     let before = db
-        .query_all(Statement::from_string(
+        .query_all_raw(Statement::from_string(
             DbBackend::Postgres,
             format!(r#"SELECT * FROM "{table}""#),
         ))
@@ -541,7 +541,7 @@ async fn test_drop_chunks() {
 
     // Count after dropping — old data should be gone
     let after = db
-        .query_all(Statement::from_string(
+        .query_all_raw(Statement::from_string(
             DbBackend::Postgres,
             format!(r#"SELECT * FROM "{table}""#),
         ))
