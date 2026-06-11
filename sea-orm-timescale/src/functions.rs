@@ -110,9 +110,7 @@ pub fn locf(inner: SimpleExpr) -> SimpleExpr {
 /// ```
 pub fn histogram(column: impl IntoIden, min: f64, max: f64, buckets: i32) -> SimpleExpr {
     let col_name = column.into_iden().to_string();
-    SimpleExpr::Custom(format!(
-        "histogram(\"{col_name}\", {min}, {max}, {buckets})"
-    ).into())
+    SimpleExpr::Custom(format!("histogram(\"{col_name}\", {min}, {max}, {buckets})").into())
 }
 
 /// Wraps a `SimpleExpr` with `interpolate()` (linear interpolation for gap filling).
@@ -166,9 +164,9 @@ pub fn time_bucket_with_origin(
 ) -> SimpleExpr {
     let col_name = column.into_iden().to_string();
     let origin_escaped = origin.replace('\'', "''");
-    SimpleExpr::Custom(format!(
-        "time_bucket('{interval}', \"{col_name}\", origin => '{origin_escaped}')"
-    ).into())
+    SimpleExpr::Custom(
+        format!("time_bucket('{interval}', \"{col_name}\", origin => '{origin_escaped}')").into(),
+    )
 }
 
 /// Generates a `time_bucket(interval, column, offset)` expression with a bucket offset.
@@ -193,9 +191,9 @@ pub fn time_bucket_with_offset(
     offset: &Interval,
 ) -> SimpleExpr {
     let col_name = column.into_iden().to_string();
-    SimpleExpr::Custom(format!(
-        "time_bucket('{interval}', \"{col_name}\", INTERVAL '{offset}')"
-    ).into())
+    SimpleExpr::Custom(
+        format!("time_bucket('{interval}', \"{col_name}\", INTERVAL '{offset}')").into(),
+    )
 }
 
 /// Generates a `time_bucket(interval, column, timezone => tz)` expression.
@@ -215,16 +213,12 @@ pub fn time_bucket_with_offset(
 /// );
 /// // SQL: time_bucket('1 days', "time", timezone => 'US/Eastern')
 /// ```
-pub fn time_bucket_tz(
-    interval: &Interval,
-    column: impl IntoIden,
-    timezone: &str,
-) -> SimpleExpr {
+pub fn time_bucket_tz(interval: &Interval, column: impl IntoIden, timezone: &str) -> SimpleExpr {
     let col_name = column.into_iden().to_string();
     let tz_escaped = timezone.replace('\'', "''");
-    SimpleExpr::Custom(format!(
-        "time_bucket('{interval}', \"{col_name}\", timezone => '{tz_escaped}')"
-    ).into())
+    SimpleExpr::Custom(
+        format!("time_bucket('{interval}', \"{col_name}\", timezone => '{tz_escaped}')").into(),
+    )
 }
 
 #[cfg(test)]
