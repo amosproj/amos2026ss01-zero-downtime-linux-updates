@@ -2,17 +2,14 @@ name: "Edge Disk Image"
 
 on:
   push:
-    tags: ['test-setup-*']
+    tags: ["**"]
   workflow_dispatch:
     inputs:
-      fedora_version:
-        description: 'Fedora version to build with (e.g. 39, 40, latest)'
-        required: true
-        default: 'latest'
+      image_ref:
+        description: "tag of image to build the disk from (image built by container-orchestrator.yml)"
+        required: false
+        default: "latest"
         type: string
-
-env:
-  IMAGE_TAG: localhost/amos-edge:dev
 
 jobs:
   build-disk:
@@ -23,6 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # container-orchestrator.yml publishes a multi-arch manifest, so each
+        # runner pulls the matching arch of the -system image automatically.
         include:
           - arch: amd64
             runner: ubuntu-latest
@@ -31,47 +30,69 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - name: Resolve bootc image reference
+        run: |
+          set -euo pipefail
+          REF="ghcr.io/${{ github.repository }}-system:${{ inputs.image_ref }}"
+          echo "IMAGE_REF=$REF" >> "$GITHUB_ENV"
+          echo "Using bootc image: $REF"
 
-      - name: Build the bootc OCI image
+      - name: Log in to GHCR (root podman, for pulling the bootc image)
         run: |
-          podman build \
-            --build-arg FEDORA_VERSION=${{ inputs.fedora_version || 'latest' }} \
-            -f rootc-build/Containerfile \
-            -t ${IMAGE_TAG} .
-          podman save --format oci-archive -o /tmp/amos-edge.tar ${IMAGE_TAG}
-      
-      - name: Build qcow2 + raw with bootc-image-builder
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull the bootc image into root storage
+        run: sudo podman pull "${IMAGE_REF}"
+
+      - name: Assert prod policy (no dev markers in image)
         run: |
-          mkdir -p dist
-          sudo podman load -i /tmp/amos-edge.tar
+          set -euo pipefail
+          cid=$(sudo podman create "${IMAGE_REF}")
+          trap "sudo podman rm -f $cid >/dev/null" EXIT
+          if sudo podman cp "$cid:/etc/amos-dev-image" /tmp/marker 2>/dev/null; then
+            echo "::error::dev marker present in the disk image"; exit 1
+          fi
+
+      - name: Build qcow2 image
+        run: |
+          mkdir -p "$PWD/output"
           sudo podman run --rm --privileged --pull=missing \
             --security-opt label=type:unconfined_t \
-            -v "$PWD/dist":/output \
+            -v "$PWD/output":/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
-            quay.io/centos-bootc/bootc-image-builder:latest \
-            --type qcow2 --type raw \
-            --rootfs ext4 \
-            "${IMAGE_TAG}"
-          sudo chown -R "$USER:$USER" dist
+            ghcr.io/osbuild/image-builder-cli:latest \
+            build \
+              --bootc-ref "${IMAGE_REF}" \
+              --bootc-default-fs ext4 \
+              --output-dir /output \
+              qcow2
+
+      - name: Build raw image
+        run: |
+          mkdir -p "$PWD/output"
+          sudo podman run --rm --privileged --pull=missing \
+            --security-opt label=type:unconfined_t \
+            -v "$PWD/output":/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            ghcr.io/osbuild/image-builder-cli:latest \
+            build \
+              --bootc-ref "${IMAGE_REF}" \
+              --bootc-default-fs ext4 \
+              --output-dir /output \
+              raw
 
       - name: Compress and rename artifacts
         run: |
           set -euo pipefail
+          sudo chown -R "$USER:$USER" output
+          mkdir -p dist
           SAFE_REF="${GITHUB_REF_NAME//\//-}"
-          xz -T0 -9 dist/qcow2/disk.qcow2 dist/image/disk.raw
-          mv dist/qcow2/disk.qcow2.xz \
-             "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz"
-          mv dist/image/disk.raw.xz \
-             "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz"
+          xz -T0 -9 output/*.qcow2 output/*.raw
+          mv output/*.qcow2.xz "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz"
+          mv output/*.raw.xz   "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz"
           ls -lh dist/*.xz
 
-      # If a compressed artifact still trips GitHub's 2 GB per-file release-asset
-      # cap, push to GHCR via ORAS instead and point the Lima template's
-      # `location:` at the resulting HTTPS blob URL (no per-asset cap on GHCR).
-      # Keep this commented so the switch is mechanical when needed.
-      #
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -82,19 +103,19 @@ jobs:
       - name: Push disk image to GHCR via ORAS
         uses: oras-project/setup-oras@v1
 
-      - name: Push artifacts  
+      - name: Push artifacts
         run: |
-            SAFE_REF="${GITHUB_REF_NAME//\//-}"
-            cd "$GITHUB_WORKSPACE/dist"
-            oras push \
-              ghcr.io/${{ github.repository }}-disk:${SAFE_REF}-${{ matrix.arch }} \
-              "amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz" \
-              "amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz"
+          SAFE_REF="${GITHUB_REF_NAME//\//-}"
+          cd dist
+          oras push \
+            ghcr.io/${{ github.repository }}-disk:${SAFE_REF}-${{ matrix.arch }} \
+            amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz \
+            amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz
 
       #- name: Attach to GitHub Release
       #  if: startsWith(github.ref_name, 'test-setup-')
       #  uses: softprops/action-gh-release@v2.6.2
       #  with:
-      #    files: *.xz
+      #    files: dist/*.xz
       #    draft: true
       #    fail_on_unmatched_files: true

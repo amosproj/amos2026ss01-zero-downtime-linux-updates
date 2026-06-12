@@ -2,6 +2,8 @@
 # Copy this file to config.toml and adjust values for your environment.
 # All keys can also be set via environment variables prefixed APP_
 # (e.g. APP_DATABASE_URL). Environment variables take precedence over this file.
+# The path to this file can be chosen with the --config flag or, if that is
+# not given, the APP_CONFIG_FILE environment variable.
 
 # Connection string to the database for storing device information, groups etc.
 # Env: APP_DATABASE_URL
