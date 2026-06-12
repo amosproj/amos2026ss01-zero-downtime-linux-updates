@@ -33,9 +33,10 @@ limactl start --name edge-ipc dev-env/lima/edge-ipc.yaml
 # 3. Watch the orchestrator do its thing.
 limactl shell edge-ipc -- journalctl -u orchestrator.service -f
 
-# 4. start the api-server and db on your host-machine (outside the vm)
+# 4. Start the api-server and db on your host-machine (outside the vm)
 podman compose -f .devcontainer/docker-compose.yml up -d mock-api-container postgres-container
-# or 
+
+# 5. Shell into the vm
 limactl shell edge-ipc
 ```
 
