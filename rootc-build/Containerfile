@@ -21,6 +21,9 @@ RUN systemctl enable orchestrator.service
 # Install Greenboot health checks
 RUN dnf -y install greenboot greenboot-default-health-checks
 
+# Install TPM tools for TPM testing
+RUN dnf install -y tpm2-tools
+
 # Install cloud-init so the resulting disk image is provisionable via NoCloud
 # + other lima dependencies
 RUN dnf -y install openssh-server cloud-init sshfs
