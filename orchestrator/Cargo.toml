@@ -20,6 +20,8 @@ tokio = { workspace = true }
 tracing = "0.1.44"
 futures-util = "0.3.32"
 reqwest = { version = "0.13.3", features = ["json"] }
+tss-esapi = "7.7.0"
+rsa = { version = "0.9.10", features = ["pem"] }
 
 [dev-dependencies]
 mockall = "0.14"

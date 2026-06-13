@@ -5,6 +5,8 @@ ARG DEV_MODE=false
 FROM docker.io/rust:1.95-slim AS builder
 COPY . /workspace
 WORKDIR /workspace
+# Headers needed for linking against TSS libs used for TPM communication (equiv. rpm package: tpm2-tss-devel)
+RUN apt install libtss2-dev
 RUN cargo build --package amos-orchestrator --release
 
 ARG FEDORA_VERSION=latest
@@ -21,8 +23,8 @@ RUN systemctl enable orchestrator.service
 # Install Greenboot health checks
 RUN dnf -y install greenboot greenboot-default-health-checks
 
-# Install TPM tools for TPM testing
-RUN dnf install -y tpm2-tools
+# Install TPM tools for TPM (latter only for debugging)
+RUN dnf -y install tpm2-tss tpm2-tools
 
 # Install cloud-init so the resulting disk image is provisionable via NoCloud
 # + other lima dependencies
