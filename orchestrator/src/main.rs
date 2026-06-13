@@ -60,6 +60,11 @@ async fn main() {
 
     let bootc_client = Arc::new(Bootc::new(Box::new(RealExecuter)));
 
+    if let Err(err) = util::tpm::tpm_init() {
+        error!("TPM init failed: {}", err);
+        std::process::exit(1);
+    }
+
     // run the selfcheck pipeline if --self-check is provided as commandline arg
     if cli.self_check {
         if let Err(err) =
