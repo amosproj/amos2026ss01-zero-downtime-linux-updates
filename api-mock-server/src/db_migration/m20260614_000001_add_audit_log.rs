@@ -33,20 +33,16 @@ impl MigrationTrait for Migration {
 
         let db = manager.get_connection();
 
-        db.execute_unprepared(
-            "ALTER TABLE audit_log ALTER COLUMN changed_at SET DEFAULT now()",
-        )
-        .await?;
+        db.execute_unprepared("ALTER TABLE audit_log ALTER COLUMN changed_at SET DEFAULT now()")
+            .await?;
 
         db.execute_unprepared(
             "CREATE INDEX idx_audit_log_table_record ON audit_log (table_name, record_id)",
         )
         .await?;
 
-        db.execute_unprepared(
-            "CREATE INDEX idx_audit_log_changed_at ON audit_log (changed_at)",
-        )
-        .await?;
+        db.execute_unprepared("CREATE INDEX idx_audit_log_changed_at ON audit_log (changed_at)")
+            .await?;
 
         db.execute_unprepared(
             r#"
@@ -112,10 +108,8 @@ impl MigrationTrait for Migration {
 
         for table in ID_PK_TABLES {
             let trigger_name = format!("audit_{}", table);
-            db.execute_unprepared(&format!(
-                "DROP TRIGGER IF EXISTS {trigger_name} ON {table}"
-            ))
-            .await?;
+            db.execute_unprepared(&format!("DROP TRIGGER IF EXISTS {trigger_name} ON {table}"))
+                .await?;
             db.execute_unprepared(&format!(
                 "CREATE TRIGGER {trigger_name}
                      AFTER INSERT OR UPDATE OR DELETE ON {table}
@@ -142,10 +136,8 @@ impl MigrationTrait for Migration {
 
             for table in ID_PK_TABLES {
                 let trigger_name = format!("audit_{}", table);
-                db.execute_unprepared(&format!(
-                    "DROP TRIGGER IF EXISTS {trigger_name} ON {table}"
-                ))
-                .await?;
+                db.execute_unprepared(&format!("DROP TRIGGER IF EXISTS {trigger_name} ON {table}"))
+                    .await?;
             }
 
             db.execute_unprepared("DROP TRIGGER IF EXISTS audit_pings ON pings")

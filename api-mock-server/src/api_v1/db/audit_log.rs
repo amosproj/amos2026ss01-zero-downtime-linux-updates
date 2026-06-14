@@ -2,10 +2,10 @@
 
 use crate::dtos;
 use amos_common::entities::AuditLog;
+use sea_orm::sea_query::Expr;
 use sea_orm::{
     ColumnTrait, DbErr, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
-use sea_orm::sea_query::Expr;
 
 use super::db;
 
@@ -31,8 +31,7 @@ pub async fn list_audit_logs(
     page_size: u64,
 ) -> Result<(Vec<AuditLog::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = dtos::AuditLog::Entity::find()
-        .order_by_desc(dtos::AuditLog::Column::ChangedAt);
+    let mut query = dtos::AuditLog::Entity::find().order_by_desc(dtos::AuditLog::Column::ChangedAt);
 
     if let Some(tn) = table_name {
         query = query.filter(dtos::AuditLog::Column::TableName.eq(tn));
@@ -98,14 +97,10 @@ pub async fn get_audit_logs_for_device(
         .eq(Expr::val("devices"))
         .and(Expr::col(dtos::AuditLog::Column::RecordId).eq(Expr::val(device_id_str.as_str())));
 
-    let old_has_device = Expr::cust_with_values(
-        "old_data->>'device_id' = $1",
-        [device_id_str.clone()],
-    );
-    let new_has_device = Expr::cust_with_values(
-        "new_data->>'device_id' = $1",
-        [device_id_str.clone()],
-    );
+    let old_has_device =
+        Expr::cust_with_values("old_data->>'device_id' = $1", [device_id_str.clone()]);
+    let new_has_device =
+        Expr::cust_with_values("new_data->>'device_id' = $1", [device_id_str.clone()]);
 
     let query = dtos::AuditLog::Entity::find()
         .filter(is_device.or(old_has_device).or(new_has_device))

@@ -1,7 +1,7 @@
 pub mod application_assignments;
-pub mod audit_log;
 pub mod application_configs;
 pub mod applications;
+pub mod audit_log;
 pub mod device_summaries;
 pub mod devices;
 pub mod groups;
@@ -14,10 +14,10 @@ pub mod tenants;
 pub mod users;
 
 pub use application_assignments::*;
-#[allow(unused_imports)]
-pub use audit_log::*;
 pub use application_configs::*;
 pub use applications::*;
+#[allow(unused_imports)]
+pub use audit_log::*;
 pub use device_summaries::*;
 pub use devices::*;
 pub use groups::*;
