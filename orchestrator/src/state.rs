@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::config_loader::Settings;
+use crate::{application::Application, config_loader::Settings};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct OsState {
@@ -15,23 +15,12 @@ pub struct OsState {
 }
 
 #[derive(Debug, Clone)]
-pub struct AppState {
-    #[expect(unused)]
-    pub app_id: String, // the podman/docker image name
-    #[expect(unused)]
-    pub version: String, // the podman/docker image tag
-    #[expect(unused)]
-    pub updating: bool,
-    // TODO: add more app info as needed (e.g. run args, compose file)
-}
-
-#[derive(Debug, Clone)]
 pub struct AgentState {
     pub self_version: String,
     pub config: Arc<Settings>,
 
     pub os_state: Arc<Mutex<OsState>>,
-    pub apps_state: Arc<Mutex<Vec<AppState>>>,
+    pub apps_state: Arc<Mutex<Vec<Application>>>,
 }
 
 impl AgentState {
@@ -39,7 +28,7 @@ impl AgentState {
         version: impl Into<String>,
         config: Arc<Settings>,
         initial_os_state: OsState,
-        inital_apps_state: Vec<AppState>,
+        inital_apps_state: Vec<Application>,
     ) -> Self {
         Self {
             self_version: version.into(),

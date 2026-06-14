@@ -3,7 +3,9 @@ use clap::Parser;
 use config_loader::get_config;
 use log::{debug, error, info};
 
+use crate::application::Application;
 use crate::loop_os::run_os_tree_main_loop;
+use crate::podman::wrapper::PodmanWrapper;
 use crate::state::OsState;
 use crate::update_check::{CheckForUpdate, UpdateChecker};
 use crate::util::bootc_wrapper::Bootc;
@@ -11,9 +13,10 @@ use crate::util::executer::RealExecuter;
 
 use crate::{
     inventory::collect_and_save_inventory,
-    loop_apps::{get_initial_apps_state, run_apps_main_loop},
+    loop_apps::{run_apps_main_loop},
     state::AgentState,
 };
+mod application;
 mod download_manager;
 mod healthcheck;
 mod inventory;
@@ -24,7 +27,7 @@ mod state;
 mod update_check;
 mod util;
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -106,7 +109,10 @@ async fn main() {
     };
 
     info!("Reading inital application state");
-    let apps_state = get_initial_apps_state();
+    let (podman, containers) = PodmanWrapper::connect(Path::new("/run/podman/podman.sock"))
+        .await
+        .unwrap();
+    let apps_state = containers.into_iter().map(Application::wrap).collect();
 
     debug!("Creating AgentState");
     let agent_state = AgentState::new(VERSION, Arc::clone(&config), os_state, apps_state);
@@ -131,8 +137,8 @@ async fn main() {
 
     let _apps_handle = tokio::spawn(run_apps_main_loop(
         agent_state.clone(),
+        podman,
         Arc::clone(&download_manager),
-        Arc::clone(&update_checker),
     ));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
         agent_state.clone(),

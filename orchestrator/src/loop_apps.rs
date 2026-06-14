@@ -1,132 +1,265 @@
+use std::iter::Peekable;
 use std::sync::Arc;
 use std::time::Duration;
 
-use amos_common::entities::ApplicationConfig;
-use log::{debug, error, info, warn};
-use tokio::time::interval;
+use tokio::sync::Mutex;
 
+use crate::application::Application;
 use crate::download_manager::DownloadManager;
-use crate::inventory::{ApplicationInfo, CollectionResult, collect_application_inventory};
-use crate::state::{AgentState, AppState};
-use crate::update_check::{CheckForUpdate, UpdateDecision, diff_app_images};
+use crate::podman::PodmanPullBehaviour::PullIfMissing;
+use crate::podman::{Podman, PodmanImageInfo};
+use crate::state::AgentState;
 
-pub fn get_initial_apps_state() -> Vec<AppState> {
-    // Real state is populated from the first inventory collection in the loop.
-    Vec::new()
-}
-
-pub async fn run_apps_main_loop(
+pub async fn run_apps_main_loop<P: Podman>(
     agent_state: AgentState,
+    podman: P,
     download_manager: Arc<DownloadManager>,
-    update_checker: Arc<dyn CheckForUpdate>,
 ) {
-    let mut update_interval = interval(Duration::from_secs(
-        agent_state.config.poll_interval_secs.into(),
+    let mut update_interval = tokio::time::interval(Duration::from_secs(
+        agent_state.config.poll_interval_secs as u64,
     ));
+    // Prevent bursting should an update cycle take longer than expected
+    update_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
-        // run loop only as often as defined in the config
         update_interval.tick().await;
 
-        // Only the application inventory is relevant here; collecting it
-        // directly avoids coupling this loop to unrelated system-info collection
-        // (which would otherwise fail the whole cycle).
-        let applications = collect_application_inventory();
-
-        {
-            // set the current_app_state to the global app_state
-            let mut current_state = agent_state.apps_state.lock().await;
-            *current_state = apps_state_from_inventory(&applications);
-        }
-
-        let decision = match update_checker.check_apps(&applications).await {
-            Ok(Some(d)) => d,
-            Ok(None) => continue, // local inventory unavailable, skip cycle
-            Err(e) => {
-                error!("Apps update check failed: {:?}", e);
-                continue;
-            }
-        };
-
-        match decision {
-            UpdateDecision::UpToDate { target } => {
-                info!("Apps up to date ({} configs assigned)", target.len());
-                report_running_configs(&download_manager, &target).await;
-            }
-            UpdateDecision::UpdateRequired { reasons, target } => {
-                for reason in &reasons {
-                    info!("{}", reason);
-                }
-                reconcile_containers(&applications, &target).await;
-            }
+        if let Err(e) = try_update(&agent_state.apps_state, &podman, &download_manager).await {
+            log::warn!("Failed to update applications: {:?}", e);
         }
     }
 }
 
-fn apps_state_from_inventory(
-    applications: &CollectionResult<Vec<ApplicationInfo>>,
-) -> Vec<AppState> {
-    match applications {
-        CollectionResult::Ok(apps) => apps
-            .iter()
-            .map(|a| AppState {
-                app_id: a.app_name.clone(),
-                version: a.app_version.clone(),
-                updating: false,
-            })
-            .collect(),
-        CollectionResult::Unavailable { .. } => Vec::new(),
-    }
-}
-
-async fn report_running_configs(
+async fn try_update<P: Podman>(
+    apps_state: &Mutex<Vec<Application>>,
+    podman: &P,
     download_manager: &DownloadManager,
-    target: &[ApplicationConfig::Model],
-) {
-    for cfg in target {
-        if let Err(e) = download_manager
-            .report_current_application_assignment(cfg.id)
-            .await
-        {
-            warn!(
-                "Failed to report application assignment for config #{}: {e:?}",
-                cfg.id
-            );
+) -> anyhow::Result<()> {
+    let target_apps = download_manager.get_target_application_configs().await?;
+
+    // Pull new images
+    let mut target_images = futures_util::future::join_all(
+        target_apps
+            .iter()
+            .map(|a| podman.image(&a.image, PullIfMissing)),
+    )
+    .await
+    .into_iter()
+    .map(|r| r.and_then(|o| o.ok_or(anyhow::anyhow!("Could not pull image"))))
+    .collect::<Result<Vec<_>, _>>()?;
+
+    target_images.sort_by(order_reference);
+
+    {
+        let mut apps = apps_state.lock().await;
+
+        apps.sort_by(order_reference);
+
+        for action in ReconcileIterator::new(&apps, target_images) {
+            match action {
+                ReconcileAction::Create { image } => {
+                    let app = Application::launch_from_image(&image, image.digest()).await?;
+                    apps.push(app);
+                }
+                ReconcileAction::Update {
+                    application_index,
+                    target_image,
+                } => {
+                    apps.swap_remove(application_index).remove().await?;
+                    let app = Application::launch_from_image(&target_image, target_image.digest())
+                        .await?;
+                    apps.push(app);
+                }
+                ReconcileAction::Remove { application_index } => {
+                    apps.swap_remove(application_index).remove().await?;
+                }
+            }
+        }
+    }
+
+    for app in target_apps {
+        download_manager
+            .report_current_application_assignment(app.id)
+            .await?;
+    }
+
+    Ok(())
+}
+
+/// Iterator to generate actions for merging the target application state
+/// into the current one. Returns the actions in reverse order of the current
+/// applications, so the Vec can be modified in a "for"-loop.
+struct ReconcileIterator<PImg: PodmanImageInfo> {
+    current: Peekable<std::vec::IntoIter<(String, String, usize)>>,
+    target: Peekable<std::vec::IntoIter<(String, PImg)>>,
+}
+
+impl<PImg: PodmanImageInfo> ReconcileIterator<PImg> {
+    /// Both apps and target_imgs have to be sorted by image reference
+    fn new(
+        apps: &[impl PodmanImageInfo],
+        target_imgs: impl IntoIterator<IntoIter = impl DoubleEndedIterator<Item = PImg>>,
+    ) -> Self {
+        let current: Vec<_> = apps
+            .iter()
+            .enumerate()
+            .rev()
+            .map(|(i, app)| {
+                // Remove any tags from image reference
+                let reference = app.reference().split(':').next().unwrap().to_owned();
+                (reference, app.digest().to_owned(), i)
+            })
+            .collect();
+
+        let target: Vec<_> = target_imgs
+            .into_iter()
+            .rev()
+            .map(|img| {
+                // Remove any tags from image reference
+                let reference = img.reference().split(':').next().unwrap().to_owned();
+                (reference, img)
+            })
+            .collect();
+
+        debug_assert!(current.is_sorted_by(|a, b| a.0 > b.0));
+        debug_assert!(target.is_sorted_by(|a, b| a.0 > b.0));
+
+        Self {
+            current: current.into_iter().peekable(),
+            target: target.into_iter().peekable(),
         }
     }
 }
 
-async fn reconcile_containers(
-    current: &CollectionResult<Vec<ApplicationInfo>>,
-    target: &[ApplicationConfig::Model],
-) {
-    let current_images: Vec<String> = match current {
-        CollectionResult::Ok(apps) => apps.iter().map(ApplicationInfo::image_key).collect(),
-        CollectionResult::Unavailable { .. } => Vec::new(),
-    };
+impl<PI: PodmanImageInfo> Iterator for ReconcileIterator<PI> {
+    type Item = ReconcileAction<PI>;
 
-    let diff = diff_app_images(&current_images, target);
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            // Early exits for empty iterators
+            let (curr, target) = match (self.current.peek(), self.target.peek()) {
+                (None, None) => return None,
+                (None, _) => {
+                    return Some(ReconcileAction::Create {
+                        image: self.target.next()?.1,
+                    });
+                }
+                (_, None) => {
+                    return Some(ReconcileAction::Remove {
+                        application_index: self.current.next()?.2,
+                    });
+                }
+                (Some(c), Some(t)) => (c, t),
+            };
 
-    // NOTE: create_container / delete_container are still stubs (podman
-    // integration pending), so these are logged at debug to avoid implying work
-    // that hasn't actually happened. Promote to info once they really act.
-    for cfg in diff.to_create {
-        debug!("Would create container for image {}", cfg.image);
-        create_container(&cfg.image).await;
-    }
+            match (&*curr.0, &*target.0) {
+                (a, b) if a < b => {
+                    return Some(ReconcileAction::Create {
+                        image: self.target.next()?.1,
+                    });
+                }
+                (a, b) if a > b => {
+                    return Some(ReconcileAction::Remove {
+                        application_index: self.current.next()?.2,
+                    });
+                }
+                _ => {
+                    let curr = self.current.next()?;
+                    let target = self.target.next()?;
 
-    for img in diff.to_remove {
-        debug!("Would delete container for image {}", img);
-        delete_container(&img).await;
+                    // Digests are different if we pulled a different image earlier
+                    if curr.1 != target.1.digest() {
+                        return Some(ReconcileAction::Update {
+                            application_index: curr.2,
+                            target_image: target.1,
+                        });
+                    }
+                }
+            }
+        }
     }
 }
 
-// TODO
-async fn create_container(image: &str) {
-    let _ = image;
+enum ReconcileAction<PI: PodmanImageInfo> {
+    Create {
+        image: PI,
+    },
+    Update {
+        application_index: usize,
+        target_image: PI,
+    },
+    Remove {
+        application_index: usize,
+    },
 }
 
-// TODO
-async fn delete_container(image: &str) {
-    let _ = image;
+fn order_reference<A: PodmanImageInfo, B: PodmanImageInfo>(a: &A, b: &B) -> std::cmp::Ordering {
+    a.reference().cmp(b.reference())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ReconcileAction::*, *};
+
+    #[derive(Clone, Copy)]
+    struct MockApplication<'a> {
+        reference: &'a str,
+        digest: &'a str,
+    }
+
+    impl<'a> MockApplication<'a> {
+        fn new(reference: &'a str, digest: &'a str) -> Self {
+            Self { reference, digest }
+        }
+    }
+
+    impl<'a> PodmanImageInfo for MockApplication<'a> {
+        fn reference(&self) -> &str {
+            &self.reference
+        }
+
+        fn digest(&self) -> &str {
+            &self.digest
+        }
+    }
+
+    #[test]
+    fn test_reconcile() {
+        let alpine_1 = MockApplication::new("docker.io/alpine:1.0", "alpine_1");
+        let alpine_2 = MockApplication::new("docker.io/alpine:2.0", "alpine_2");
+        let mongodb = MockApplication::new("docker.io/mongodb:5.0", "mongodb");
+        let postgres = MockApplication::new("docker.io/postgres:asöldfjasd", "postgres");
+
+        let apps = [alpine_1, postgres];
+        let target = [alpine_2, mongodb];
+
+        let mut iter = ReconcileIterator::new(&apps, target);
+
+        assert!(matches!(
+            iter.next(),
+            Some(Remove {
+                application_index: 1
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Create {
+                image: MockApplication {
+                    digest: "mongodb",
+                    ..
+                }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Update {
+                application_index: 0,
+                target_image: MockApplication {
+                    digest: "alpine_2",
+                    ..
+                }
+            })
+        ));
+        assert!(iter.next().is_none())
+    }
 }
