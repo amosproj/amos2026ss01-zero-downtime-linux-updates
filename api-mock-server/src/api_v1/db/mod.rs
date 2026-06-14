@@ -29,10 +29,11 @@ pub use reported_os_assignments::*;
 pub use tenants::*;
 pub use users::*;
 
-use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
+use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr};
 use sea_orm_migration::MigratorTrait;
 use tokio::sync::RwLock;
 
+use crate::config::AuditConfig;
 use crate::db_migration::Migrator;
 
 pub(crate) static DB: RwLock<Option<DatabaseConnection>> = RwLock::const_new(None);
@@ -42,12 +43,18 @@ macro_rules! db {
         crate::api_v1::db::DB.read().await.clone().unwrap()
     };
 }
-pub(crate) use db;
+pub(super) use db;
 
-pub async fn initialialize_db(database_url: String) -> Result<(), DbErr> {
+pub async fn initialialize_db(
+    database_url: String,
+    audit_config: AuditConfig,
+) -> Result<(), DbErr> {
     let mut opt = ConnectOptions::new(database_url.to_owned());
     // SQL queries should be the last resort when debugging...
     opt.sqlx_logging_level(log::LevelFilter::Trace);
+    // Limit pool to 1 connection so that SET app.audit_user (used by audit
+    // triggers) persists across all db.execute() calls within a single request.
+    opt.max_connections(1);
 
     let conn = Database::connect(opt).await?;
 
@@ -55,7 +62,72 @@ pub async fn initialialize_db(database_url: String) -> Result<(), DbErr> {
 
     Migrator::up(&conn, None).await?;
 
+    reconcile_audit_triggers(&conn, &audit_config).await?;
+
     DB.write().await.replace(conn);
+
+    Ok(())
+}
+
+const DEFAULT_AUDIT_TABLES: &[(&str, &str)] = &[
+    ("tenants", "id"),
+    ("groups", "id"),
+    ("devices", "id"),
+    ("applications", "id"),
+    ("application_configs", "id"),
+    ("application_assignments", "id"),
+    ("os_versions", "id"),
+    ("os_assignments", "id"),
+    ("reported_application_assignments", "id"),
+    ("reported_os_assignments", "id"),
+    ("pings", "device_id"),
+];
+
+async fn reconcile_audit_triggers(
+    conn: &DatabaseConnection,
+    config: &AuditConfig,
+) -> Result<(), DbErr> {
+    if conn.get_database_backend() != DbBackend::Postgres {
+        return Ok(());
+    }
+
+    let tracked: Vec<(String, String)> = match &config.tracked_tables {
+        Some(tables) => {
+            let mut result = Vec::new();
+            for name in tables {
+                let pk = DEFAULT_AUDIT_TABLES
+                    .iter()
+                    .find(|(t, _)| *t == name.as_str())
+                    .map(|(_, pk)| *pk)
+                    .unwrap_or("id");
+                result.push((name.clone(), pk.to_string()));
+            }
+            result
+        }
+        None => DEFAULT_AUDIT_TABLES
+            .iter()
+            .map(|(t, pk)| (t.to_string(), pk.to_string()))
+            .collect(),
+    };
+
+    for (table, _) in DEFAULT_AUDIT_TABLES {
+        let trigger_name = format!("audit_{}", table);
+        conn.execute_unprepared(&format!("DROP TRIGGER IF EXISTS {trigger_name} ON {table}"))
+            .await?;
+    }
+
+    for (table, pk_col) in &tracked {
+        let trigger_name = format!("audit_{}", table);
+        let fn_name = if pk_col == "id" {
+            "audit_log_trigger_fn"
+        } else {
+            "audit_log_trigger_pings_fn"
+        };
+        conn.execute_unprepared(&format!(
+            "CREATE TRIGGER {trigger_name} AFTER INSERT OR UPDATE OR DELETE ON {table} FOR EACH ROW EXECUTE FUNCTION {fn_name}()"
+        ))
+        .await?;
+    }
 
     Ok(())
 }
@@ -66,9 +138,11 @@ mod tests {
     use sea_orm::sea_query::prelude::serde_json;
     use serial_test::serial;
 
+    use crate::config::AuditConfig;
+
     #[cfg(test)]
     async fn test_initialize_empty_inmem_db() {
-        super::initialialize_db("sqlite::memory:".into())
+        super::initialialize_db("sqlite::memory:".into(), AuditConfig::default())
             .await
             .unwrap();
     }
@@ -374,5 +448,198 @@ mod tests {
         assert_eq!(app_entry["comment"], "primary instance");
         assert!(app_entry.get("reported_assignment_id").is_some());
         assert!(app_entry.get("updated_at").is_some());
+    }
+
+    // Integration tests for audit log functionality.
+    // These require PostgreSQL (triggers do not fire on SQLite).
+    // Run with: cargo test -- --ignored (against a PostgreSQL instance)
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
+    async fn audit_log_captures_insert() {
+        test_initialize_empty_inmem_db().await;
+
+        let _tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+
+        let count = super::audit_log::count_audit_logs_for("tenants", "1", "INSERT")
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
+    async fn audit_log_captures_update() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        super::update_tenant(tenant.id, "T2".to_owned(), None)
+            .await
+            .unwrap();
+
+        let entries =
+            super::audit_log::get_audit_logs_for_record("tenants", &tenant.id.to_string())
+                .await
+                .unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[1].operation, "UPDATE");
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
+    async fn audit_log_captures_delete() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        super::delete_tenant(tenant.id).await.unwrap();
+
+        let count =
+            super::audit_log::count_audit_logs_for("tenants", &tenant.id.to_string(), "DELETE")
+                .await
+                .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
+    async fn audit_log_changed_by_null_for_unauthenticated() {
+        test_initialize_empty_inmem_db().await;
+
+        super::upsert_ping(42).await.unwrap();
+
+        let entries = super::audit_log::get_audit_logs_for_record("pings", "42")
+            .await
+            .unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].changed_by, None);
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
+    async fn audit_log_full_history_for_record() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        let device = super::add_device("uuid".to_owned(), "host".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+        super::update_device(
+            device.id,
+            device.uuid.clone(),
+            "host2".to_owned(),
+            tenant.id,
+            None,
+        )
+        .await
+        .unwrap();
+        super::update_device(device.id, device.uuid, "host3".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+
+        let entries =
+            super::audit_log::get_audit_logs_for_record("devices", &device.id.to_string())
+                .await
+                .unwrap();
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].operation, "INSERT");
+        assert_eq!(entries[1].operation, "UPDATE");
+        assert_eq!(entries[2].operation, "UPDATE");
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — JSONB operators and triggers"]
+    async fn audit_log_device_history() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        let device = super::add_device("uuid".to_owned(), "host".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+        let app = super::add_application("app".to_owned(), "desc".to_owned())
+            .await
+            .unwrap();
+        let config = super::add_application_config(app.id, "img".to_owned(), None, None)
+            .await
+            .unwrap();
+        super::add_application_assignment_to_device(config.id, device.id)
+            .await
+            .unwrap();
+
+        let (entries, _) = super::audit_log::get_audit_logs_for_device(device.id, 0, 20)
+            .await
+            .unwrap();
+        assert!(entries.len() >= 2);
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
+    async fn audit_log_list_with_filters() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        super::add_device("uuid".to_owned(), "host".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+
+        let (entries, _) =
+            super::audit_log::list_audit_logs(Some("tenants".to_string()), None, None, None, 0, 20)
+                .await
+                .unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].table_name, "tenants");
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
+    async fn audit_log_pagination() {
+        test_initialize_empty_inmem_db().await;
+
+        for i in 0..25 {
+            super::add_tenant(format!("T{i}"), None).await.unwrap();
+        }
+
+        let (_, total) = super::audit_log::list_audit_logs(None, None, None, None, 0, 10)
+            .await
+            .unwrap();
+        assert!(total >= 25);
+    }
+
+    #[tokio::test]
+    #[serial]
+    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
+    async fn audit_log_configurable_tables() {
+        super::initialialize_db(
+            "sqlite::memory:".into(),
+            AuditConfig {
+                tracked_tables: Some(vec!["devices".to_string()]),
+            },
+        )
+        .await
+        .unwrap();
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        super::add_device("uuid".to_owned(), "host".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+
+        let (tenant_entries, _) =
+            super::audit_log::list_audit_logs(Some("tenants".to_string()), None, None, None, 0, 20)
+                .await
+                .unwrap();
+        assert_eq!(tenant_entries.len(), 0);
+
+        let (device_entries, _) =
+            super::audit_log::list_audit_logs(Some("devices".to_string()), None, None, None, 0, 20)
+                .await
+                .unwrap();
+        assert_eq!(device_entries.len(), 1);
     }
 }

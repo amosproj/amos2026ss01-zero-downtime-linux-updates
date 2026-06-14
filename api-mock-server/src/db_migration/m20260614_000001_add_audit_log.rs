@@ -44,6 +44,8 @@ impl MigrationTrait for Migration {
         db.execute_unprepared("CREATE INDEX idx_audit_log_changed_at ON audit_log (changed_at)")
             .await?;
 
+        // Trigger function for tables whose primary key column is "id".
+        // Captures OLD/NEW row snapshots and the current audit user.
         db.execute_unprepared(
             r#"
             CREATE OR REPLACE FUNCTION audit_log_trigger_fn()
@@ -75,6 +77,8 @@ impl MigrationTrait for Migration {
         )
         .await?;
 
+        // Separate trigger function for the "pings" table, which uses
+        // "device_id" as its primary key instead of "id".
         db.execute_unprepared(
             r#"
             CREATE OR REPLACE FUNCTION audit_log_trigger_pings_fn()

@@ -49,7 +49,6 @@ pub struct JwtConfig {
 pub struct AuditConfig {
     /// Which tables to create audit triggers on.
     /// If None, all mutable tables are tracked.
-    #[allow(dead_code)]
     pub tracked_tables: Option<Vec<String>>,
 }
 
@@ -75,7 +74,6 @@ pub struct Settings {
     pub jwt: JwtConfig,
 
     #[serde(default)]
-    #[allow(dead_code)]
     pub audit: AuditConfig,
 }
 

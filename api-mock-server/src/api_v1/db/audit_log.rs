@@ -97,6 +97,9 @@ pub async fn get_audit_logs_for_device(
         .eq(Expr::val("devices"))
         .and(Expr::col(dtos::AuditLog::Column::RecordId).eq(Expr::val(device_id_str.as_str())));
 
+    // PostgreSQL-specific JSONB operators (->>) to search for device_id in
+    // old_data/new_data columns. This function only works on PostgreSQL;
+    // audit triggers do not fire on SQLite so there are no rows to query.
     let old_has_device =
         Expr::cust_with_values("old_data->>'device_id' = $1", [device_id_str.clone()]);
     let new_has_device =

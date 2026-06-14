@@ -68,7 +68,7 @@ async fn main() {
     });
 
     // Initialize database
-    api_v1::db::initialialize_db(config.database_url)
+    api_v1::db::initialialize_db(config.database_url, config.audit)
         .await
         .unwrap_or_else(|err| {
             error!("Failed to initialize database connection: {}", err);

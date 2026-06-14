@@ -77,9 +77,12 @@ mod tests {
     use tower::ServiceExt;
 
     async fn test_app() -> Router {
-        crate::api_v1::db::initialialize_db("sqlite::memory:".into())
-            .await
-            .unwrap();
+        crate::api_v1::db::initialialize_db(
+            "sqlite::memory:".into(),
+            crate::config::AuditConfig::default(),
+        )
+        .await
+        .unwrap();
         Router::new().nest("/v1", routes())
     }
 
