@@ -1,0 +1,75 @@
+# Lima template for the edge IPC VM.
+#
+# Boots the bootc disk image in ./dist, produced by either `make image` (build
+# locally) or `make pull-image` (download the prebuilt image from GHCR, for devs
+# who don't build locally). See the images: block below.
+#
+# Quickstart (in the project root directory):
+#   limactl start --name edge-ipc dev-env/lima/edge-ipc.yaml
+#   limactl shell edge-ipc -- journalctl -u orchestrator.service -f
+#
+#
+# for all .yaml options see:
+# https://github.com/lima-vm/lima/blob/master/templates/default.yaml
+
+# vmType: "vz" # https://lima-vm.io/docs/config/vmtype/
+arch: "default"
+cpus: 2
+memory: "4GiB"
+disk: "20GiB"
+
+images:
+  # Local entries, populated either by `make image` (build locally) or by
+  # `make pull-image` (download the prebuilt image from GHCR — see below).
+  # raw works under both vz and qemu.
+  - location: "dist/image/disk.raw"
+    arch: "aarch64"
+  - location: "dist/qcow2/disk.qcow2"
+    arch: "x86_64"
+
+mounts:
+  - location: "~"
+    writable: false
+  - location: "/tmp/lima"
+    writable: true
+
+# /usr/local/bin is read-only, so let's point it to /var/usrlocal/bin instead.
+provision:
+  - mode: boot
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      mkdir -p /var/usrlocal/bin
+  # Fall back to xterm-256color when the host terminal's terminfo entry
+  # isn't shipped in the VM (e.g. xterm-ghostty, xterm-kitty). Without this,
+  # `systemctl status` and other pager-using commands fail with
+  # "terminal not fully functional".
+  - mode: data
+    path: /etc/profile.d/lima-term-fallback.sh
+    permissions: "0755"
+    content: |
+      if [ -n "$TERM" ] && ! infocmp "$TERM" >/dev/null 2>&1; then
+        export TERM=xterm-256color
+      fi
+  # AMOS: write config file the orchestrator reads.
+  - mode: data
+    path: /etc/amos/config.toml
+    # owner: "root:root"
+    # permissions: "644"
+    content: |
+      cloud_url = "http://host.lima.internal:8080/v1"
+      poll_interval_secs = 5
+      inventory_path = "/var/lib/amos/inventory.json"
+      device_uuid = "00000000-0000-0000-0000-000000000001"
+# Extra environment variables that will be loaded into the VM at start up.
+# These variables are consumed by internal init scripts, and also added
+# to /etc/environment.
+env:
+  LIMA_CIDATA_GUEST_INSTALL_PREFIX: /var/usrlocal
+  # AMOS: path to config file for orchestrator.
+  APP_CONFIG_FILE: /etc/amos/config.toml
+
+# Turn off containerd. https://lima-vm.io/docs/examples/containers/containerd/
+containerd:
+  system: false
+  user: false

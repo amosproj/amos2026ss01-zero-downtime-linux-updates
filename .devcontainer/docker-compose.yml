@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   dev-container:
@@ -14,6 +14,9 @@ services:
       dockerfile: .devcontainer/mock-api.Dockerfile
     environment:
       APP_DATABASE_URL: "sqlite::memory:"
+    ports:
+      # Exposed so the Lima edge-ipc VM can reach it at host.lima.internal:8080.
+      - "127.0.0.1:8080:8080"
 
   postgres-container:
     image: registry.access.redhat.com/hi/postgresql:18.3
@@ -31,7 +34,6 @@ services:
     privileged: true
     volumes:
       - podman_socket:/run/podman
-
 
 volumes:
   postgres_data:

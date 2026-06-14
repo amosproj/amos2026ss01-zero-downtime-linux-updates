@@ -1,10 +1,9 @@
-name: "CI Pipeline"
+name: "Rust CI/CD"
 on:
   push:
   pull_request:
 
 jobs:
-
   # Check for compilation errors with cargo check
   check:
     name: cargo check
@@ -38,7 +37,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo test --all-features
 
-# Release Build if a Tag is pushed
+  # Release Build if a Tag is pushed
   release_build:
     name: Release Build
     # only run when a tag is pushed
