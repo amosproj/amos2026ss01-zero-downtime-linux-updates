@@ -1,0 +1,50 @@
+use axum::{
+    extract::{Request, State},
+    http::{StatusCode, header},
+    middleware::Next,
+    response::Response,
+};
+use log::{debug, error};
+
+use crate::{api_v1::db, auth::validate_token, config::JwtConfig};
+
+pub async fn jwt_auth(
+    State(jwt_config): State<JwtConfig>,
+    mut req: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // 1. Get the Authorization header
+    let auth_header = req
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok());
+
+    // 2. Make sure it starts with "Bearer "
+    let token = match auth_header {
+        Some(header) if header.starts_with("Bearer ") => &header["Bearer ".len()..],
+        _ => {
+            // No token or wrong format — reject with 401
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    // 3. Validate the token
+    match validate_token(token, &jwt_config) {
+        Ok(claims) => {
+            if let Err(err) = db::upsert_user(claims.clone()).await {
+                error!("Failed to upsert user into db: {:?}", err);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+
+            // 4. Attach the claims to the request so handlers can use them
+            req.extensions_mut().insert(claims);
+            // 5. Pass the request to the next layer
+            Ok(next.run(req).await)
+        }
+        Err(err) => {
+            debug!("JWT rejected: {:?}", err);
+            // Invalid or expired token — reject with 401
+            Err(StatusCode::UNAUTHORIZED)
+        }
+    }
+}
