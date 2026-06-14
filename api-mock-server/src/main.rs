@@ -6,6 +6,7 @@ pub(crate) mod db_migration;
 pub(crate) mod dtos;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware as axum_middleware, routing::get};
+mod audit_context;
 mod middleware;
 use config::get_config;
 use log::{debug, error, info};

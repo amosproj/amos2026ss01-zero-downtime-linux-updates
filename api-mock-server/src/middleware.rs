@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use axum::{
     extract::{Request, State},
     http::{StatusCode, header},
@@ -5,30 +7,50 @@ use axum::{
     response::Response,
 };
 use log::{debug, error};
+use sea_orm::ConnectionTrait;
 
-use crate::{api_v1::db, auth::validate_token, config::JwtConfig};
+use crate::api_v1::db;
+use crate::audit_context::CURRENT_USER;
+use crate::auth::validate_token;
+use crate::config::JwtConfig;
+
+async fn set_pg_session_user(subject: &str) -> Result<(), sea_orm::DbErr> {
+    let db = crate::api_v1::db::db!();
+    let sql = format!(
+        "SET app.audit_user = '{}'",
+        subject.replace('\'', "''")
+    );
+    match db.execute_unprepared(&sql).await {
+        Ok(_) => Ok(()),
+        Err(err) => {
+            let msg = format!("{:?}", err);
+            if msg.contains("SQLite") || msg.contains("sqlite") || msg.contains("not supported") {
+                debug!("Skipping PG session variable on non-Postgres backend");
+                Ok(())
+            } else {
+                Err(err)
+            }
+        }
+    }
+}
 
 pub async fn jwt_auth(
     State(jwt_config): State<JwtConfig>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    // 1. Get the Authorization header
     let auth_header = req
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok());
 
-    // 2. Make sure it starts with "Bearer "
     let token = match auth_header {
         Some(header) if header.starts_with("Bearer ") => &header["Bearer ".len()..],
         _ => {
-            // No token or wrong format — reject with 401
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
 
-    // 3. Validate the token
     match validate_token(token, &jwt_config) {
         Ok(claims) => {
             if let Err(err) = db::upsert_user(claims.clone()).await {
@@ -36,14 +58,22 @@ pub async fn jwt_auth(
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
 
-            // 4. Attach the claims to the request so handlers can use them
+            if let Err(err) = set_pg_session_user(&claims.subject).await {
+                error!("Failed to set PG session user: {:?}", err);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+
+            let user_subject = claims.subject.clone();
             req.extensions_mut().insert(claims);
-            // 5. Pass the request to the next layer
-            Ok(next.run(req).await)
+
+            let user_ref = RefCell::new(Some(user_subject));
+
+            Ok(CURRENT_USER
+                .scope(user_ref, async { next.run(req).await })
+                .await)
         }
         Err(err) => {
             debug!("JWT rejected: {:?}", err);
-            // Invalid or expired token — reject with 401
             Err(StatusCode::UNAUTHORIZED)
         }
     }

@@ -30,3 +30,6 @@ pub use crate::entities::reported_os_assignment as ReportedOsAssignment;
 
 pub mod tenant;
 pub use crate::entities::tenant as Tenant;
+
+pub mod audit_log;
+pub use crate::entities::audit_log as AuditLog;

@@ -1,4 +1,5 @@
 pub mod application_assignments;
+pub mod audit_log;
 pub mod application_configs;
 pub mod applications;
 pub mod device_summaries;
@@ -13,6 +14,8 @@ pub mod tenants;
 pub mod users;
 
 pub use application_assignments::*;
+#[allow(unused_imports)]
+pub use audit_log::*;
 pub use application_configs::*;
 pub use applications::*;
 pub use device_summaries::*;
@@ -32,14 +35,14 @@ use tokio::sync::RwLock;
 
 use crate::db_migration::Migrator;
 
-pub(super) static DB: RwLock<Option<DatabaseConnection>> = RwLock::const_new(None);
+pub(crate) static DB: RwLock<Option<DatabaseConnection>> = RwLock::const_new(None);
 
 macro_rules! db {
     () => {
         crate::api_v1::db::DB.read().await.clone().unwrap()
     };
 }
-pub(super) use db;
+pub(crate) use db;
 
 pub async fn initialialize_db(database_url: String) -> Result<(), DbErr> {
     let mut opt = ConnectOptions::new(database_url.to_owned());

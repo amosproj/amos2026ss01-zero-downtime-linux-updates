@@ -45,6 +45,14 @@ pub struct JwtConfig {
     pub public_key: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct AuditConfig {
+    /// Which tables to create audit triggers on.
+    /// If None, all mutable tables are tracked.
+    #[allow(dead_code)]
+    pub tracked_tables: Option<Vec<String>>,
+}
+
 impl Default for JwtConfig {
     fn default() -> Self {
         JwtConfig {
@@ -65,6 +73,10 @@ pub struct Settings {
 
     #[serde(default)]
     pub jwt: JwtConfig,
+
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub audit: AuditConfig,
 }
 
 /// Loads and validates the server configuration.

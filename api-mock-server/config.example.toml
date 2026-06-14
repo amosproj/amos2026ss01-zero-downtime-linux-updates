@@ -41,3 +41,11 @@ Anm8E788IHh9EybwO/uEiDqfSXlR8cmeBhD3B+vrkjbCnz/p6o8nhOzVabJUkYGa
 RwsluOuHZzbXjtbwKS9rJ5sCAwEAAQ==
 -----END PUBLIC KEY-----
 """
+
+# This section configures audit logging of database changes
+[audit]
+
+# Which tables to create audit triggers on.
+# If not set, all mutable tables are tracked.
+# Env: APP_AUDIT__TRACKED_TABLES
+# tracked_tables = ["devices", "tenants", "groups"]
