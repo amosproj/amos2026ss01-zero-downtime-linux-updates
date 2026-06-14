@@ -12,9 +12,7 @@ use crate::util::bootc_wrapper::Bootc;
 use crate::util::executer::RealExecuter;
 
 use crate::{
-    inventory::collect_and_save_inventory,
-    loop_apps::{run_apps_main_loop},
-    state::AgentState,
+    inventory::collect_and_save_inventory, loop_apps::run_apps_main_loop, state::AgentState,
 };
 mod application;
 mod download_manager;

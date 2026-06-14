@@ -158,7 +158,7 @@ impl PodmanWrapper {
         Ok(futures_util::future::join_all(container_futs)
             .await
             .into_iter()
-            .filter_map(|x| x)
+            .flatten()
             .collect())
     }
 }
