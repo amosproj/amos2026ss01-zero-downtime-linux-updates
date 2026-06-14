@@ -1,3 +1,4 @@
+use amos_common::Page;
 use amos_common::entities::reported_application_assignment::CreateModel as ReportedApplicationAssignmentCreate;
 use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
 use amos_common::entities::{ApplicationAssignment, ApplicationConfig, OsAssignment, OsVersion};
@@ -60,12 +61,12 @@ impl DownloadManager {
             anyhow::bail!("Server responded with status {} for {}", resp.status(), url);
         }
 
-        let assignments: Vec<OsAssignment::Model> = resp
+        let page: Page<OsAssignment::Model> = resp
             .json()
             .await
-            .with_context(|| "Failed to parse OS assignments response")?;
+            .with_context(|| "Failed to parse OS assignments page response")?;
 
-        assignments.into_iter().next().ok_or_else(|| {
+        page.data.into_iter().next().ok_or_else(|| {
             anyhow::anyhow!(
                 "No OS assignment found for device {}",
                 self.config.device_uuid
@@ -161,9 +162,11 @@ impl DownloadManager {
             anyhow::bail!("Server responded with status {} for {}", resp.status(), url);
         }
 
-        resp.json::<Vec<ApplicationAssignment::Model>>()
+        let page: Page<ApplicationAssignment::Model> = resp
+            .json()
             .await
-            .with_context(|| "Failed to parse application assignments response")
+            .with_context(|| "Failed to parse application assignments page response")?;
+        Ok(page.data)
     }
 
     async fn get_application_config_by_id(&self, id: i32) -> Result<ApplicationConfig::Model> {

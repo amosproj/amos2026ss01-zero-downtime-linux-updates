@@ -10,6 +10,7 @@ pub mod pings;
 pub mod reported_application_assignments;
 pub mod reported_os_assignments;
 pub mod tenants;
+pub mod users;
 
 pub use application_assignments::*;
 pub use application_configs::*;
@@ -23,6 +24,7 @@ pub use pings::*;
 pub use reported_application_assignments::*;
 pub use reported_os_assignments::*;
 pub use tenants::*;
+pub use users::*;
 
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;

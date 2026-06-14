@@ -1,0 +1,121 @@
+name: "Edge Disk Image"
+
+on:
+  push:
+    tags: ["**"]
+  workflow_dispatch:
+    inputs:
+      image_ref:
+        description: "tag of image to build the disk from (image built by container-orchestrator.yml)"
+        required: false
+        default: "latest"
+        type: string
+
+jobs:
+  build-disk:
+    name: Build disk image (${{ matrix.arch }})
+    permissions:
+      contents: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # container-orchestrator.yml publishes a multi-arch manifest, so each
+        # runner pulls the matching arch of the -system image automatically.
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Resolve bootc image reference
+        run: |
+          set -euo pipefail
+          REF="ghcr.io/${{ github.repository }}-system:${{ inputs.image_ref }}"
+          echo "IMAGE_REF=$REF" >> "$GITHUB_ENV"
+          echo "Using bootc image: $REF"
+
+      - name: Log in to GHCR (root podman, for pulling the bootc image)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull the bootc image into root storage
+        run: sudo podman pull "${IMAGE_REF}"
+
+      - name: Assert prod policy (no dev markers in image)
+        run: |
+          set -euo pipefail
+          cid=$(sudo podman create "${IMAGE_REF}")
+          trap "sudo podman rm -f $cid >/dev/null" EXIT
+          if sudo podman cp "$cid:/etc/amos-dev-image" /tmp/marker 2>/dev/null; then
+            echo "::error::dev marker present in the disk image"; exit 1
+          fi
+
+      - name: Build qcow2 image
+        run: |
+          mkdir -p "$PWD/output"
+          sudo podman run --rm --privileged --pull=missing \
+            --security-opt label=type:unconfined_t \
+            -v "$PWD/output":/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            ghcr.io/osbuild/image-builder-cli:latest \
+            build \
+              --bootc-ref "${IMAGE_REF}" \
+              --bootc-default-fs ext4 \
+              --output-dir /output \
+              qcow2
+
+      - name: Build raw image
+        run: |
+          mkdir -p "$PWD/output"
+          sudo podman run --rm --privileged --pull=missing \
+            --security-opt label=type:unconfined_t \
+            -v "$PWD/output":/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            ghcr.io/osbuild/image-builder-cli:latest \
+            build \
+              --bootc-ref "${IMAGE_REF}" \
+              --bootc-default-fs ext4 \
+              --output-dir /output \
+              raw
+
+      - name: Compress and rename artifacts
+        run: |
+          set -euo pipefail
+          sudo chown -R "$USER:$USER" output
+          mkdir -p dist
+          SAFE_REF="${GITHUB_REF_NAME//\//-}"
+          xz -T0 -9 output/*.qcow2 output/*.raw
+          mv output/*.qcow2.xz "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz"
+          mv output/*.raw.xz   "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz"
+          ls -lh dist/*.xz
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push disk image to GHCR via ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Push artifacts
+        run: |
+          SAFE_REF="${GITHUB_REF_NAME//\//-}"
+          cd dist
+          oras push \
+            ghcr.io/${{ github.repository }}-disk:${SAFE_REF}-${{ matrix.arch }} \
+            amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz \
+            amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz
+
+      #- name: Attach to GitHub Release
+      #  if: startsWith(github.ref_name, 'test-setup-')
+      #  uses: softprops/action-gh-release@v2.6.2
+      #  with:
+      #    files: dist/*.xz
+      #    draft: true
+      #    fail_on_unmatched_files: true
