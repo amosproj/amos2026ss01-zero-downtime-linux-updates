@@ -23,7 +23,7 @@ RUN systemctl enable orchestrator.service
 # Install Greenboot health checks
 RUN dnf -y install greenboot greenboot-default-health-checks
 
-# Install TPM tools for TPM (latter only for debugging)
+# Install TPM library for interacting with the TPM (latter one only for debugging)
 RUN dnf -y install tpm2-tss tpm2-tools
 
 # Install cloud-init so the resulting disk image is provisionable via NoCloud
