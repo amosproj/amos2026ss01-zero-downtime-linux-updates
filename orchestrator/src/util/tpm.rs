@@ -4,11 +4,13 @@ use log::debug;
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
 use tss_esapi::constants::SessionType;
-use tss_esapi::{Context, TctiNameConf};
+use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
 use tss_esapi::interface_types::algorithm::HashingAlgorithm;
 use tss_esapi::interface_types::resource_handles::Hierarchy;
-use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
 use tss_esapi::structures::{HashScheme, MaxBuffer, Public, SignatureScheme};
+use tss_esapi::{Context, TctiNameConf, WrapperErrorKind};
+
+const PERSISTENT_HANDLE: u32 = 0x8100_0000;
 
 pub fn tpm_init() -> Result<(), Box<dyn std::error::Error>> {
     // Connect to TPM (swtpm)
@@ -17,54 +19,62 @@ pub fn tpm_init() -> Result<(), Box<dyn std::error::Error>> {
         .or_else(|_| TctiNameConf::from_str("device:/dev/tpm0"))?;
     debug!("Using tcti: {:?}", tcti_config);
     let mut ctx = Context::new(tcti_config)?;
-    debug!("A");
 
     // Load your persistent key (example handle)
-    let persistent_handle = PersistentTpmHandle::new(0x81000000)?;
+    let persistent_handle = PersistentTpmHandle::new(PERSISTENT_HANDLE)?;
     let object_handle = ctx.tr_from_tpm_public(persistent_handle.into())?;
     let key_handle = KeyHandle::from(object_handle);
-    debug!("B");
 
-    // ------- export pubkey
     // Read public area
     let (public, _name, _qualified_name) = ctx.read_public(key_handle)?;
+    let pubkey = armor_rsa_public_key(public)?;
+    println!("{}", pubkey);
 
-    // Extract RSA parameters
-    let (modulus, exponent) = match public {
-        Public::Rsa { unique, parameters, .. } => {
-            let modulus = unique.value().to_vec();
+    let data = "hello world";
+    let sig_bytes = sign_data(ctx, key_handle, data.to_string())?;
+    println!("Signature ({} bytes): {:02x?}", sig_bytes.len(), sig_bytes);
 
-            // TPM stores exponent as a u32, but 0 means "default = 65537"
-            let exp = parameters.exponent().value();
-            let exponent = if exp == 0 { 65537 } else { exp };
+    Ok(())
+}
 
-            (modulus, exponent)
-        }
-        _ => panic!("Not an RSA key"),
+fn armor_rsa_public_key(public: Public) -> Result<String, tss_esapi::Error> {
+    let Public::Rsa {
+        unique, parameters, ..
+    } = public
+    else {
+        return Err(tss_esapi::Error::WrapperError(
+            WrapperErrorKind::InconsistentParams,
+        ));
     };
-    println!("Modulus ({} bytes): {:02x?}", modulus.len(), modulus);
-    println!("exponent: {}", exponent);
 
+    let modulus = unique.value().to_vec();
     let n = BigUint::from_bytes_be(&modulus);
+
+    let exponent = match parameters.exponent().value() {
+        0 => 65537,
+        e => e,
+    };
     let e = BigUint::from(exponent);
-    let pubkey = RsaPublicKey::new(n, e).unwrap();
 
-    let spki_pem = pubkey.to_public_key_pem(Default::default()).unwrap();
-    println!("{}", spki_pem);
-    // ---------
+    let pubkey = RsaPublicKey::new(n, e)
+        .map_err(|_| tss_esapi::Error::WrapperError(WrapperErrorKind::InvalidParam))?;
 
+    let pem = pubkey
+        .to_public_key_pem(rsa::pkcs8::LineEnding::LF)
+        .map_err(|_| tss_esapi::Error::WrapperError(WrapperErrorKind::InvalidParam))?;
 
-    let data = b"hello world";
-    let input_data = MaxBuffer::try_from(&data[..])
-        .expect("Failed to create buffer for input data.");
-    debug!("C");
+    Ok(pem)
+}
 
-    let (digest, ticket) = ctx.hash(
-        input_data,
-        HashingAlgorithm::Sha256,
-        Hierarchy::Null,
-    )?;
-    debug!("D");
+fn sign_data(
+    mut ctx: Context,
+    key_handle: KeyHandle,
+    input: String,
+) -> Result<Vec<u8>, tss_esapi::Error> {
+    let input_buffer = MaxBuffer::try_from(input.as_bytes())
+        .map_err(|_| tss_esapi::Error::WrapperError(WrapperErrorKind::InvalidParam))?;
+
+    let (digest, ticket) = ctx.hash(input_buffer, HashingAlgorithm::Sha256, Hierarchy::Null)?;
 
     // TODO: Possibly avoidable by creating the key without create option `withuserauth`
     let session = ctx.start_auth_session(
@@ -79,25 +89,19 @@ pub fn tpm_init() -> Result<(), Box<dyn std::error::Error>> {
 
     // RSASSA-PKCS1-v1_5 with SHA256
     let scheme = SignatureScheme::RsaSsa {
-        hash_scheme: HashScheme::new(HashingAlgorithm::Sha256)
+        hash_scheme: HashScheme::new(HashingAlgorithm::Sha256),
     };
 
-    // Sign
-    let signature = ctx.sign(
-        key_handle,
-        digest,
-        scheme,
-        ticket,
-    )?;
-    debug!("E");
+    let signature = ctx.sign(key_handle, digest, scheme, ticket)?;
 
-    // Extract raw signature bytes
-    let sig_bytes = match signature {
+    let signature_bytes = match signature {
         tss_esapi::structures::Signature::RsaSsa(sig) => sig.signature().to_vec(),
-        _ => panic!("Unexpected signature type"),
+        _ => {
+            return Err(tss_esapi::Error::WrapperError(
+                WrapperErrorKind::InconsistentParams,
+            ));
+        }
     };
 
-    println!("Signature ({} bytes): {:02x?}", sig_bytes.len(), sig_bytes);
-
-    Ok(())
+    Ok(signature_bytes)
 }
