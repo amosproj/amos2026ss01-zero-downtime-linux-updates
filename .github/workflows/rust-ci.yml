@@ -3,13 +3,6 @@ on:
   push:
   pull_request:
 
-# Install tss2 headers / pkgconfig required during compilation
-.install-deps: &install-deps
-- name: Install tpm libs required for compilation
-  run: |
-    sudo apt update
-    sudo apt install -y libtss2-dev
-
 jobs:
   # Check for compilation errors with cargo check
   check:
@@ -27,7 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - *install-deps
+      # Install tss2 headers / pkgconfig required during compilation (reused across jobs)
+      - &install-deps
+        name: Install tpm libs required for compilation
+        run: |
+          sudo apt update
+          sudo apt install -y libtss2-dev
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: rustfmt, clippy
