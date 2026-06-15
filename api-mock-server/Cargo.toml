@@ -13,8 +13,8 @@ config = { workspace = true }
 env_logger = { workspace = true }
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 log = { workspace = true }
-sea-orm = { workspace = true }
-# Ensure to match version with sea-orm from workspace!
+# Ensure to match version with sea-orm-migration crate!
+sea-orm = { version = "2.0.0-rc", features = ["sqlx-postgres", "sqlx-sqlite", "runtime-tokio-rustls", "macros", "with-json", "entity-registry"] }
 sea-orm-migration = { version = "2.0.0-rc", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 serde = { workspace = true }
 tokio = { workspace = true }
