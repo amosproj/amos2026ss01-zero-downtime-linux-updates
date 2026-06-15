@@ -7,6 +7,12 @@
 # Env: APP_DATABASE_URL
 database_url = "postgres://foo:bar@127.0.0.1/amos_db"
 
+# Connection string to the TimescaleDB database for storing device and
+# application container logs. Must begin with `postgres://` (hypertables are
+# PostgreSQL/TimescaleDB-specific).
+# Env: APP_TIMESCALE_DATABASE_URL
+timescale_database_url = "postgres://app:4M0S@127.0.0.1:5433/amos_timeseries"
+
 # Port that the API server will listen on
 # Env: APP_HTTP_PORT
 http_port = 8080

@@ -6,7 +6,7 @@ members = ["api-mock-server", "common", "orchestrator", "sea-orm-timescale"]
 amos-api-mock-server = { path = "api-mock-server" }
 amos-common = { path = "common" }
 amos-orchestrator = { path = "orchestrator" }
-amos-sea-orm-timescale = { path = "sea-orm-timescale" }
+sea-orm-timescale = { path = "sea-orm-timescale" }
 
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive"] }
@@ -18,3 +18,4 @@ sea-orm = { version = "2.0.0-rc", features = ["sqlx-postgres", "sqlx-sqlite", "r
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.52.2", features = ["full"] }
+uuid = { version = "1", features = ["serde", "v7"] }

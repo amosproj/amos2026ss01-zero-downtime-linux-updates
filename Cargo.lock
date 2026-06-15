@@ -60,6 +60,7 @@ version = "0.1.0"
 dependencies = [
  "amos-common",
  "axum",
+ "chrono",
  "clap",
  "config",
  "env_logger",
@@ -67,12 +68,15 @@ dependencies = [
  "log",
  "sea-orm",
  "sea-orm-migration",
+ "sea-orm-timescale",
  "serde",
  "serde_json",
  "serial_test",
  "tokio",
+ "tokio-stream",
  "tower",
  "tower-http",
+ "uuid",
 ]
 
 [[package]]
@@ -87,6 +91,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -4455,6 +4460,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

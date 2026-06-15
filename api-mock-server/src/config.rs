@@ -5,6 +5,9 @@ use std::path::PathBuf;
 fn default_database_url() -> String {
     "postgres://app:4M0S@127.0.0.1:5432/amos".into()
 }
+fn default_timescale_database_url() -> String {
+    "postgres://app:4M0S@127.0.0.1:5433/amos_timeseries".into()
+}
 fn default_http_port() -> u16 {
     8080
 }
@@ -60,6 +63,9 @@ pub struct Settings {
     #[serde(default = "default_database_url")]
     pub database_url: String,
 
+    #[serde(default = "default_timescale_database_url")]
+    pub timescale_database_url: String,
+
     #[serde(default = "default_http_port")]
     pub http_port: u16,
 
@@ -96,6 +102,10 @@ pub fn validate_config(config: &Settings) -> Result<(), String> {
         return Err("Database connection url must begin with `postgres://`".into());
     }
 
+    if !config.timescale_database_url.starts_with("postgres://") {
+        return Err("TimescaleDB connection url must begin with `postgres://`".into());
+    }
+
     if config.http_port == 0 {
         return Err("HTTP port must be > 0".into());
     }
@@ -116,6 +126,15 @@ mod tests {
     fn jdbc_url_without_postgres_fails() {
         let mut config = get_default().unwrap();
         config.database_url = "mysql://foo:bar@baz:bum".into();
+
+        let validation = validate_config(&config);
+        assert!(validation.is_err());
+    }
+
+    #[test]
+    fn timescale_url_without_postgres_fails() {
+        let mut config = get_default().unwrap();
+        config.timescale_database_url = "sqlite::memory:".into();
 
         let validation = validate_config(&config);
         assert!(validation.is_err());
