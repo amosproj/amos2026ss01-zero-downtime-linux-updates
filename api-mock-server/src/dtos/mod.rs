@@ -14,7 +14,7 @@ pub mod group;
 pub use self::group as Group;
 
 pub mod logs;
-pub use logs::{ApplicationLog, DeviceLog};
+pub use logs::{ApplicationLog, DeviceLog, LogLevel};
 
 pub mod os_assignment;
 pub use self::os_assignment as OsAssignment;

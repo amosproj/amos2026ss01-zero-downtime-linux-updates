@@ -127,6 +127,32 @@ non-empty, `404` for unknown device), plus the request body carries an
 Response: `201 Created` with the list of stored entries, each including
 `device_id` and `application_id`.
 
+### `GET /v1/logs/devices`
+
+Query historic device log entries, most recent first. All query parameters
+are optional:
+
+- `device_id` — only entries for this device.
+- `level` — minimum severity (`level <= entry.level`), e.g. `level=warn`
+  returns `warn`, `error` and `fatal` entries.
+- `from` / `to` — restrict to entries with `time` in `[from, to]`
+  (RFC 3339 timestamps, e.g. `2026-06-01T00:00:00Z`).
+- `page` / `page_size` — pagination, as on other list endpoints (default
+  `page=1`, `page_size=20`, max `page_size=200`).
+
+Response: a `Page` of `device_logs` entries (same shape as the entries
+returned by `POST /v1/logs/devices`).
+
+### `GET /v1/logs/applications`
+
+Query historic application log entries, most recent first. Same query
+parameters as `GET /v1/logs/devices`, plus:
+
+- `application_id` — only entries for this application.
+
+Response: a `Page` of `application_logs` entries (same shape as the entries
+returned by `POST /v1/logs/applications`).
+
 ### `GET /v1/logs/stream`
 
 Server-Sent Events (SSE) stream of incoming logs (both device and
@@ -152,13 +178,21 @@ data: {"kind":"application","id":"...","time":"...","device_id":1,"application_i
 
 This stream is **in-memory only**: it broadcasts entries as they are
 inserted by the two publish endpoints above, with no replay/history. It is
-intended for "live tail" use cases; querying historical logs is not yet
-supported.
+intended for "live tail" use cases; use `GET /v1/logs/devices` and
+`GET /v1/logs/applications` to query historical logs.
 
 Because `/v1/logs/stream` sits behind the global JWT middleware,
 `curl -N -H "Authorization: Bearer <token>" .../v1/logs/stream` works, but a
 browser's native `EventSource` API (which cannot set request headers) cannot
 be used directly against this endpoint.
+
+## Retention
+
+Both `device_logs` and `application_logs` have a TimescaleDB retention
+policy that automatically drops chunks (and the data within them) older than
+**1 year**. This is configured in
+`m20260615_000001_add_log_retention_policy` via
+`sea_orm_timescale::migration::add_retention_policy`.
 
 ## Configuration
 

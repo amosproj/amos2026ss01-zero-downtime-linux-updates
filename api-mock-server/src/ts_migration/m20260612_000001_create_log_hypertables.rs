@@ -47,8 +47,3 @@ impl MigrationTrait for Migration {
         todo!();
     }
 }
-
-// No retention policy is configured by default. To add one later, call
-// `sea_orm_timescale::migration::add_retention_policy(db, "device_logs", &RetentionConfig {
-//     drop_after: Interval::Days(30),
-// })` (and similarly for `application_logs`) from a new migration.

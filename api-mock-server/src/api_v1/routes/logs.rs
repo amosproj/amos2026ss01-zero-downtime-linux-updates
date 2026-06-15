@@ -3,16 +3,20 @@ use std::time::Duration;
 
 use crate::api_v1::db;
 use crate::api_v1::log_stream;
-use crate::api_v1::routes::{db_err, err};
+use crate::api_v1::routes::{
+    db_err, err,
+    pagination::{Page, PageParams},
+    pagination_err,
+};
 use crate::api_v1::ts_db;
-use amos_common::entities::{ApplicationLog, DeviceLog, LogEvent, LogLevel};
+use amos_common::entities::{ApplicationLog, DeviceLog, LogEvent, LogLevel, LogQuery, LogStreamQuery};
 use axum::{
     Json, Router,
     extract::Query,
     http::StatusCode,
     response::sse::{Event, KeepAlive, Sse},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::get,
 };
 use serde::Deserialize;
 use tokio_stream::StreamExt;
@@ -21,8 +25,14 @@ use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 
 pub fn routes() -> Router {
     Router::new()
-        .route("/logs/devices", post(create_device_logs))
-        .route("/logs/applications", post(create_application_logs))
+        .route(
+            "/logs/devices",
+            get(list_device_logs).post(create_device_logs),
+        )
+        .route(
+            "/logs/applications",
+            get(list_application_logs).post(create_application_logs),
+        )
         .route("/logs/stream", get(stream_logs))
 }
 
@@ -114,11 +124,57 @@ async fn create_application_logs(
     }
 }
 
-#[derive(Deserialize)]
-struct LogStreamQuery {
-    device_id: Option<i32>,
-    application_id: Option<i32>,
-    level: Option<LogLevel>,
+/// GET /logs/devices?device_id=&level=&from=&to=&page=&page_size= — Query historic device logs.
+async fn list_device_logs(
+    Query(page): Query<PageParams>,
+    Query(params): Query<LogQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+
+    match ts_db::list_device_logs(
+        params.device_id,
+        params.level,
+        params.from,
+        params.to,
+        page.to_db_page(),
+        page.page_size,
+    )
+    .await
+    {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
+        Err(e) => db_err(e),
+    }
+}
+
+/// GET /logs/applications?device_id=&application_id=&level=&from=&to=&page=&page_size= — Query historic application logs.
+async fn list_application_logs(
+    Query(page): Query<PageParams>,
+    Query(params): Query<LogQuery>,
+) -> Response {
+    if let Err(e) = page.validate() {
+        return pagination_err(e);
+    }
+
+    match ts_db::list_application_logs(
+        params.device_id,
+        params.application_id,
+        params.level,
+        params.from,
+        params.to,
+        page.to_db_page(),
+        page.page_size,
+    )
+    .await
+    {
+        Ok((data, total)) => {
+            Json(Page::new(data, page.page, page.page_size, total)).into_response()
+        }
+        Err(e) => db_err(e),
+    }
 }
 
 /// Returns true if `event` matches the given filters.

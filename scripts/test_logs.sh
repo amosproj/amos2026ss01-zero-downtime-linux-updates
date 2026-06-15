@@ -146,6 +146,12 @@ api "/logs/devices" POST '{ "entries": [ { "time": null, "level": "info", "messa
 
 api "/logs/devices?device_uuid=00000000-0000-0000-0000-000000000000" POST '{ "entries": [ { "time": null, "level": "info", "message": "unknown device", "source": null } ] }' 404
 
+# --- GET /logs/devices (historic query) ---
+
+api "/logs/devices" GET '' 200
+
+api "/logs/devices?device_id=1&level=warn&from=2026-06-12T00:00:00Z&to=2026-06-12T23:59:59Z" GET '' 200
+
 # --- /logs/applications ---
 
 api "/logs/applications?device_uuid=${device_uuid}" POST '{
@@ -154,6 +160,12 @@ api "/logs/applications?device_uuid=${device_uuid}" POST '{
         { "time": null, "level": "error", "message": "Connection refused", "source": "amos-orchestrator" }
     ]
 }' 201
+
+# --- GET /logs/applications (historic query) ---
+
+api "/logs/applications" GET '' 200
+
+api "/logs/applications?device_id=1&application_id=1&level=error" GET '' 200
 
 # --- /logs/stream (SSE) ---
 
