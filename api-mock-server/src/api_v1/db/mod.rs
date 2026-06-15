@@ -148,12 +148,15 @@ mod tests {
     }
 
     #[cfg(test)]
-    async fn test_initialize_postgres_db() -> testcontainers::ContainerAsync<testcontainers_modules::postgres::Postgres> {
+    async fn test_initialize_postgres_db()
+    -> testcontainers::ContainerAsync<testcontainers_modules::postgres::Postgres> {
         use testcontainers_modules::{postgres::Postgres, testcontainers::runners::AsyncRunner};
         let container = Postgres::default().start().await.unwrap();
         let port = container.get_host_port_ipv4(5432).await.unwrap();
         let url = format!("postgres://postgres:postgres@127.0.0.1:{port}/postgres");
-        super::initialialize_db(url, AuditConfig::default()).await.unwrap();
+        super::initialialize_db(url, AuditConfig::default())
+            .await
+            .unwrap();
         container // keep alive for the test's lifetime
     }
 
@@ -517,9 +520,10 @@ mod tests {
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
 
-        let entries = super::audit_log::get_audit_logs_for_record("tenants", &tenant.id.to_string())
-            .await
-            .unwrap();
+        let entries =
+            super::audit_log::get_audit_logs_for_record("tenants", &tenant.id.to_string())
+                .await
+                .unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].changed_by, None);
     }
