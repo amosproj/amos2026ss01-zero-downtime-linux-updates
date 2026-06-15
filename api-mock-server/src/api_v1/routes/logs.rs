@@ -9,7 +9,9 @@ use crate::api_v1::routes::{
     pagination_err,
 };
 use crate::api_v1::ts_db;
-use amos_common::entities::{ApplicationLog, DeviceLog, LogEvent, LogLevel, LogQuery, LogStreamQuery};
+use amos_common::entities::{
+    ApplicationLog, DeviceLog, LogEvent, LogLevel, LogQuery, LogStreamQuery,
+};
 use axum::{
     Json, Router,
     extract::Query,

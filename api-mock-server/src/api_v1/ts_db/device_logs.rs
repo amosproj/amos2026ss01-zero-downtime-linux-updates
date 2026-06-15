@@ -63,7 +63,8 @@ pub async fn list_device_logs(
         query = query.filter(dtos::DeviceLog::Column::DeviceId.eq(device_id));
     }
     if let Some(min_level) = min_level {
-        query = query.filter(dtos::DeviceLog::Column::Level.is_in(super::levels_at_least(min_level)));
+        query =
+            query.filter(dtos::DeviceLog::Column::Level.is_in(super::levels_at_least(min_level)));
     }
     if let Some(from) = from {
         query = query.filter(dtos::DeviceLog::Column::Time.gte(from));
