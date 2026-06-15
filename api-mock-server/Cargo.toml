@@ -11,7 +11,7 @@ serde_json = { workspace = true }
 clap = { workspace = true }
 config = { workspace = true }
 env_logger = { workspace = true }
-jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
+jsonwebtoken = { workspace = true }
 log = { workspace = true }
 # Ensure to match version with sea-orm-migration crate!
 sea-orm = { version = "2.0.0-rc", features = ["sqlx-postgres", "sqlx-sqlite", "runtime-tokio-rustls", "macros", "with-json", "entity-registry"] }
