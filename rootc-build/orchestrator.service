@@ -1,8 +1,13 @@
 [Unit]
 Description=Zero-Downtime Linux Update Orchestrator
 Documentation=https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates
-After=network-online.target cloud-final.service
-Wants=network-online.target cloud-final.service
+# Order only on network-online.target.
+# The config file (/etc/amos/config.toml) is written by cloud-init's write_files
+# stage, which completes before network-online.target, so the config is already
+# present by the time we start.
+After=network-online.target
+Wants=network-online.target
+
 
 [Service]
 Type=simple
@@ -13,4 +18,3 @@ Environment=RUST_LOG=info
 
 [Install]
 WantedBy=multi-user.target
-

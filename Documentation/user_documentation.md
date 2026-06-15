@@ -68,7 +68,11 @@ See the [Build & Deploy Documentation](build_documentation.md) for full build in
 
 ## Configuration
 
-The Orchestrator reads its configuration from a TOML file. By default it looks for `config.toml` in the working directory. A custom path can be passed via `--config`.
+The Orchestrator reads its configuration from a TOML file. The file path is resolved in the following order of precedence:
+
+1. The `--config <FILE>` CLI flag (required if given — startup fails if the file is missing).
+2. The `APP_CONFIG_FILE` environment variable (required if set).
+3. `config.toml` in the current working directory (optional — defaults are used if absent).
 
 A ready-to-use template with inline documentation for all available options is provided at [`orchestrator/config.example.toml`](../orchestrator/config.example.toml). Copy it and adjust the values for your environment:
 
@@ -86,6 +90,8 @@ All config values can be overridden with environment variables prefixed `APP_`:
 | `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | Poll frequency in seconds |
 | `APP_INVENTORY_PATH` | `inventory_path` | Inventory output file path |
 | `https_proxy` | — | HTTPS proxy URL (reqwest default) |
+
+> **Note:** `APP_CONFIG_FILE` is special — it selects *which* config file to load (see precedence above) rather than overriding a value. The `--config` flag takes precedence over it.
 
 ### Validation rules
 
