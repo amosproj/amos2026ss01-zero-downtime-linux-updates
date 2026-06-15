@@ -147,6 +147,16 @@ mod tests {
             .unwrap();
     }
 
+    #[cfg(test)]
+    async fn test_initialize_postgres_db() -> testcontainers::ContainerAsync<testcontainers_modules::postgres::Postgres> {
+        use testcontainers_modules::{postgres::Postgres, testcontainers::runners::AsyncRunner};
+        let container = Postgres::default().start().await.unwrap();
+        let port = container.get_host_port_ipv4(5432).await.unwrap();
+        let url = format!("postgres://postgres:postgres@127.0.0.1:{port}/postgres");
+        super::initialialize_db(url, AuditConfig::default()).await.unwrap();
+        container // keep alive for the test's lifetime
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_initialize_db_succeeds() {
@@ -456,9 +466,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
     async fn audit_log_captures_insert() {
-        test_initialize_empty_inmem_db().await;
+        let _container = test_initialize_postgres_db().await;
 
         let _tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
 
@@ -470,9 +479,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
     async fn audit_log_captures_update() {
-        test_initialize_empty_inmem_db().await;
+        let _container = test_initialize_postgres_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
         super::update_tenant(tenant.id, "T2".to_owned(), None)
@@ -489,9 +497,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
     async fn audit_log_captures_delete() {
-        test_initialize_empty_inmem_db().await;
+        let _container = test_initialize_postgres_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
         super::delete_tenant(tenant.id).await.unwrap();
@@ -505,13 +512,12 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
     async fn audit_log_changed_by_null_for_unauthenticated() {
-        test_initialize_empty_inmem_db().await;
+        let _container = test_initialize_postgres_db().await;
 
-        super::upsert_ping(42).await.unwrap();
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
 
-        let entries = super::audit_log::get_audit_logs_for_record("pings", "42")
+        let entries = super::audit_log::get_audit_logs_for_record("tenants", &tenant.id.to_string())
             .await
             .unwrap();
         assert_eq!(entries.len(), 1);
@@ -520,9 +526,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
     async fn audit_log_full_history_for_record() {
-        test_initialize_empty_inmem_db().await;
+        let _container = test_initialize_postgres_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
         let device = super::add_device("uuid".to_owned(), "host".to_owned(), tenant.id, None)
@@ -553,9 +558,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — JSONB operators and triggers"]
     async fn audit_log_device_history() {
-        test_initialize_empty_inmem_db().await;
+        let _container = test_initialize_postgres_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
         let device = super::add_device("uuid".to_owned(), "host".to_owned(), tenant.id, None)
@@ -579,9 +583,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
     async fn audit_log_list_with_filters() {
-        test_initialize_empty_inmem_db().await;
+        let _container = test_initialize_postgres_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
         super::add_device("uuid".to_owned(), "host".to_owned(), tenant.id, None)
@@ -598,9 +601,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
     async fn audit_log_pagination() {
-        test_initialize_empty_inmem_db().await;
+        let _container = test_initialize_postgres_db().await;
 
         for i in 0..25 {
             super::add_tenant(format!("T{i}"), None).await.unwrap();
@@ -614,10 +616,14 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    #[ignore = "requires PostgreSQL — audit triggers do not fire on SQLite"]
     async fn audit_log_configurable_tables() {
+        use testcontainers_modules::{postgres::Postgres, testcontainers::runners::AsyncRunner};
+        let container = Postgres::default().start().await.unwrap();
+        let port = container.get_host_port_ipv4(5432).await.unwrap();
+        let url = format!("postgres://postgres:postgres@127.0.0.1:{port}/postgres");
+
         super::initialialize_db(
-            "sqlite::memory:".into(),
+            url,
             AuditConfig {
                 tracked_tables: Some(vec!["devices".to_string()]),
             },

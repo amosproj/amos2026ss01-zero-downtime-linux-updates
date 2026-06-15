@@ -23,3 +23,5 @@ tower-http = { version = "0.6", features = ["fs"] }
 [dev-dependencies]
 serial_test = "3.4.0"
 tower = "0.5.3"
+testcontainers = "0.27.3"
+testcontainers-modules = { version = "0.15.0", features = ["postgres"] }
