@@ -37,3 +37,18 @@ impl ActiveModelBehavior for ActiveModel {
         Ok(self)
     }
 }
+
+impl Model {
+    pub fn into_api(self) -> amos_common::entities::AuditLog::Model {
+        amos_common::entities::AuditLog::Model {
+            id: self.id,
+            table_name: self.table_name,
+            record_id: self.record_id,
+            operation: self.operation,
+            old_data: self.old_data,
+            new_data: self.new_data,
+            changed_by: self.changed_by,
+            changed_at: self.changed_at,
+        }
+    }
+}

@@ -9,19 +9,6 @@ use sea_orm::{
 
 use super::db;
 
-fn into_api(model: dtos::AuditLog::Model) -> AuditLog::Model {
-    AuditLog::Model {
-        id: model.id,
-        table_name: model.table_name,
-        record_id: model.record_id,
-        operation: model.operation,
-        old_data: model.old_data,
-        new_data: model.new_data,
-        changed_by: model.changed_by,
-        changed_at: model.changed_at,
-    }
-}
-
 pub async fn list_audit_logs(
     table_name: Option<String>,
     record_id: Option<String>,
@@ -50,7 +37,7 @@ pub async fn list_audit_logs(
     let total = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
 
-    Ok((data.into_iter().map(into_api).collect(), total))
+    Ok((data.into_iter().map(|m| m.into_api()).collect(), total))
 }
 
 pub async fn get_audit_logs_for_record(
@@ -65,7 +52,7 @@ pub async fn get_audit_logs_for_record(
         .all(&db)
         .await?;
 
-    Ok(data.into_iter().map(into_api).collect())
+    Ok(data.into_iter().map(|m| m.into_api()).collect())
 }
 
 pub async fn get_audit_logs_for_table(
@@ -82,7 +69,7 @@ pub async fn get_audit_logs_for_table(
     let total = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
 
-    Ok((data.into_iter().map(into_api).collect(), total))
+    Ok((data.into_iter().map(|m| m.into_api()).collect(), total))
 }
 
 pub async fn get_audit_logs_for_device(
@@ -113,7 +100,7 @@ pub async fn get_audit_logs_for_device(
     let total = paginator.num_items().await?;
     let data = paginator.fetch_page(page).await?;
 
-    Ok((data.into_iter().map(into_api).collect(), total))
+    Ok((data.into_iter().map(|m| m.into_api()).collect(), total))
 }
 
 pub async fn count_audit_logs_for(
