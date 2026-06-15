@@ -248,6 +248,14 @@ All routes are served under `/v1`. Fields marked `*` are required. Pagination is
 | `GET` | `/v1/devices/summary` | List device summaries. Query options: `?group_id=<id>&tenant_id=<id>&uuid=<string>&hostname=<string>` |
 | `GET` | `/v1/devices/{id}/summary` | Get a single device summary |
 
+**Audit Logs** _(read-only)_
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/audit-logs` | List audit logs. Query options: `?table_name=<string>&record_id=<string>&changed_by=<string>&operation=<string>` |
+| `GET` | `/v1/audit-logs/{table_name}/{record_id}` | Get audit logs for a specific table and record id. |
+| `GET` | `/v1/audit-logs/by-device/{id}` | Get audit logs for a specific device. |
+
 **Tenants**
 
 | Method | Path | Description |
