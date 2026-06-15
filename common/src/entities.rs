@@ -13,8 +13,8 @@ pub use crate::entities::device as Device;
 pub mod group;
 pub use crate::entities::group as Group;
 
-pub mod logs;
-pub use crate::entities::logs::{
+pub mod log;
+pub use crate::entities::log::{
     ApplicationLog, DeviceLog, LogEvent, LogLevel, LogQuery, LogStreamQuery,
 };
 
