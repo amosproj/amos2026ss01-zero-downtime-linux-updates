@@ -64,6 +64,7 @@ pub async fn get_device_by_uuid(uuid: String) -> Result<Option<Device::Model>, D
 
 pub async fn add_device(
     uuid: String,
+    public_key: Option<String>,
     hostname: String,
     tenant_id: i32,
     group_id: Option<i32>,
@@ -71,6 +72,7 @@ pub async fn add_device(
     let device = dtos::Device::ActiveModel {
         id: NotSet,
         uuid: Set(uuid),
+        public_key: Set(public_key),
         hostname: Set(hostname),
         tenant_id: Set(tenant_id),
         group_id: Set(group_id),
@@ -87,6 +89,7 @@ pub async fn add_device(
 pub async fn update_device(
     id: i32,
     uuid: String,
+    public_key: Option<String>,
     hostname: String,
     tenant_id: i32,
     group_id: Option<i32>,
@@ -95,6 +98,7 @@ pub async fn update_device(
     let device = dtos::Device::ActiveModel {
         id: Set(id),
         uuid: Set(uuid),
+        public_key: Set(public_key),
         hostname: Set(hostname),
         tenant_id: Set(tenant_id),
         group_id: Set(group_id),

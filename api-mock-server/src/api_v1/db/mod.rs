@@ -91,6 +91,7 @@ mod tests {
 
         super::add_device(
             "c0ffee-xdxdxd-129874".to_owned(),
+            None,
             "host-01.er5.weber.group".to_owned(),
             tenant.id,
             Some(group.id),
@@ -108,6 +109,7 @@ mod tests {
 
         let result = super::add_device(
             "c0ffee-xdxdxd-129874".to_owned(),
+            None,
             "host-01.er5.weber.group".to_owned(),
             tenant.id,
             Some(0),
@@ -124,7 +126,7 @@ mod tests {
 
         let tenant = super::add_tenant("X".to_owned(), None).await.unwrap();
 
-        let device = super::add_device("".to_owned(), "".to_owned(), tenant.id, None)
+        let device = super::add_device("".to_owned(), None, "".to_owned(), tenant.id, None)
             .await
             .unwrap();
         println!("Created device: {:?}", device);
@@ -178,13 +180,13 @@ mod tests {
 
         let t1 = super::add_tenant("T1".to_owned(), None).await.unwrap();
         let t2 = super::add_tenant("T2".to_owned(), None).await.unwrap();
-        super::add_device("uuid-1".to_owned(), "host-1".to_owned(), t1.id, None)
+        super::add_device("uuid-1".to_owned(), None, "host-1".to_owned(), t1.id, None)
             .await
             .unwrap();
-        super::add_device("uuid-2".to_owned(), "host-2".to_owned(), t1.id, None)
+        super::add_device("uuid-2".to_owned(), None, "host-2".to_owned(), t1.id, None)
             .await
             .unwrap();
-        super::add_device("uuid-3".to_owned(), "host-3".to_owned(), t2.id, None)
+        super::add_device("uuid-3".to_owned(), None, "host-3".to_owned(), t2.id, None)
             .await
             .unwrap();
         let (devices, _total) = super::list_devices(None, Some(t1.id), None, None, 0, 20)
@@ -203,13 +205,14 @@ mod tests {
         let group = super::add_group("G".to_owned()).await.unwrap();
         super::add_device(
             "uuid-1".to_owned(),
+            None,
             "host-1".to_owned(),
             tenant.id,
             Some(group.id),
         )
         .await
         .unwrap();
-        super::add_device("uuid-2".to_owned(), "host-2".to_owned(), tenant.id, None)
+        super::add_device("uuid-2".to_owned(), None, "host-2".to_owned(), tenant.id, None)
             .await
             .unwrap();
         let (devices, _total) = super::list_devices(Some(group.id), None, None, None, 0, 20)
@@ -225,10 +228,10 @@ mod tests {
         test_initialize_empty_inmem_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
-        let d1 = super::add_device("uuid-d1".to_owned(), "host-d1".to_owned(), tenant.id, None)
+        let d1 = super::add_device("uuid-d1".to_owned(), None, "host-d1".to_owned(), tenant.id, None)
             .await
             .unwrap();
-        let d2 = super::add_device("uuid-d2".to_owned(), "host-d2".to_owned(), tenant.id, None)
+        let d2 = super::add_device("uuid-d2".to_owned(), None, "host-d2".to_owned(), tenant.id, None)
             .await
             .unwrap();
         let app = super::add_application("app".to_owned(), "desc".to_owned())
@@ -255,12 +258,13 @@ mod tests {
         test_initialize_empty_inmem_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
-        let device = super::add_device("uuid".to_owned(), "old-host".to_owned(), tenant.id, None)
+        let device = super::add_device("uuid".to_owned(), None, "old-host".to_owned(), tenant.id, None)
             .await
             .unwrap();
         let updated = super::update_device(
             device.id,
             device.uuid,
+            None,
             "new-hostname".to_owned(),
             tenant.id,
             None,
@@ -296,7 +300,7 @@ mod tests {
             .await
             .unwrap();
         let device =
-            super::add_device("uuid-abc".to_owned(), "host-01".to_owned(), tenant.id, None)
+            super::add_device("uuid-abc".to_owned(), None, "host-01".to_owned(), tenant.id, None)
                 .await
                 .unwrap();
 
