@@ -14,6 +14,13 @@ use log::{debug, error, trace};
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend};
 use serde_json::Value;
 use std::cell::RefCell;
+
+use crate::api_v1::db;
+use crate::audit_context::CURRENT_USER;
+use crate::auth_device::validate_device_token;
+use crate::auth_user::validate_user_token;
+use crate::config::JwtConfig;
+
 async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
     if db.get_database_backend() != DbBackend::Postgres {
         debug!("Skipping PG session variable on non-Postgres backend");
@@ -23,6 +30,7 @@ async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<()
     db.execute_unprepared(&sql).await?;
     Ok(())
 }
+
 pub async fn jwt_auth(
     State(jwt_config): State<JwtConfig>,
     mut req: Request,
@@ -41,6 +49,7 @@ pub async fn jwt_auth(
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
+
     // 3. Distinguish between device and user token
     //    A token is only assumed from a device if `"role": "device"` is contained inside the claim
     let token_data = match insecure_decode::<Value>(token) {
@@ -49,7 +58,9 @@ pub async fn jwt_auth(
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
+
     let is_device = is_device_token(&token_data);
+
     if is_device {
         // 4. Validate the token for a device
         trace!("Received device JWT: {}", token);
@@ -109,6 +120,7 @@ pub async fn jwt_auth(
         }
     }
 }
+
 fn is_device_token(token: &TokenData<Value>) -> bool {
     token
         .claims
