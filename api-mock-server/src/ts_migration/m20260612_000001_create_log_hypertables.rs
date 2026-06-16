@@ -15,6 +15,14 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let schema = Schema::new(manager.get_database_backend());
 
+        manager
+            .create_type(
+                schema
+                    .create_enum_from_active_enum::<dtos::LogLevel>()
+                    .expect("LogLevel is a valid active enum"),
+            )
+            .await?;
+
         create_table(manager, &schema, dtos::DeviceLog::Entity).await?;
         create_hypertable(
             manager.get_connection(),

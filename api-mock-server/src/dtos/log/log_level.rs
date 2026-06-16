@@ -2,7 +2,7 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
-#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(10))")]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "log_level")]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
     #[sea_orm(string_value = "trace")]
