@@ -1,7 +1,7 @@
 mod config_loader;
 use clap::Parser;
 use config_loader::get_config;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::application::Application;
 use crate::loop_os::run_os_tree_main_loop;
