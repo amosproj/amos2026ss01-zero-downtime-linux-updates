@@ -9,6 +9,12 @@
 # Env: APP_DATABASE_URL
 database_url = "postgres://foo:bar@127.0.0.1/amos_db"
 
+# Connection string to the TimescaleDB database for storing device and
+# application container logs. Must begin with `postgres://` (hypertables are
+# PostgreSQL/TimescaleDB-specific).
+# Env: APP_TIMESCALE_DATABASE_URL
+timescale_database_url = "postgres://app:4M0S@127.0.0.1:5433/amos_timeseries"
+
 # Port that the API server will listen on
 # Env: APP_HTTP_PORT
 http_port = 8080
@@ -41,3 +47,11 @@ Anm8E788IHh9EybwO/uEiDqfSXlR8cmeBhD3B+vrkjbCnz/p6o8nhOzVabJUkYGa
 RwsluOuHZzbXjtbwKS9rJ5sCAwEAAQ==
 -----END PUBLIC KEY-----
 """
+
+# This section configures audit logging of database changes
+[audit]
+
+# Which tables to create audit triggers on.
+# If not set, all mutable tables are tracked.
+# Env: APP_AUDIT__TRACKED_TABLES
+# tracked_tables = ["devices", "tenants", "groups"]

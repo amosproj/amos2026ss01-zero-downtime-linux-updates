@@ -118,7 +118,15 @@ async fn create_device(Json(body): Json<DeviceCreate>) -> Response {
             "Device hostname cannot be empty",
         );
     }
-    match db::add_device(body.uuid, body.hostname, body.tenant_id, body.group_id).await {
+    match db::add_device(
+        body.uuid,
+        body.public_key,
+        body.hostname,
+        body.tenant_id,
+        body.group_id,
+    )
+    .await
+    {
         Ok(device) => (StatusCode::CREATED, Json(device)).into_response(),
         Err(e) => db_err(e),
     }
@@ -139,7 +147,16 @@ async fn update_device(Path(id): Path<i32>, Json(body): Json<DeviceCreate>) -> R
             "Device hostname cannot be empty",
         );
     }
-    match db::update_device(id, body.uuid, body.hostname, body.tenant_id, body.group_id).await {
+    match db::update_device(
+        id,
+        body.uuid,
+        body.public_key,
+        body.hostname,
+        body.tenant_id,
+        body.group_id,
+    )
+    .await
+    {
         Ok(device) => Json(device).into_response(),
         Err(e) => db_err(e),
     }
