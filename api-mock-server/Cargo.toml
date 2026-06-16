@@ -16,9 +16,12 @@ jsonwebtoken = { workspace = true }
 log = { workspace = true }
 sea-orm = { workspace = true }
 sea-orm-migration = { workspace = true }
+sea-orm-timescale = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }
+tokio-stream = { version = "0.1", features = ["sync"] }
 tower-http = { version = "0.6", features = ["fs"] }
+uuid = { workspace = true }
 
 [dev-dependencies]
 serial_test = "3.4.0"
