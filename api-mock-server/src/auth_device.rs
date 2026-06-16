@@ -38,8 +38,11 @@ pub async fn validate_device_token(
     // Ensure tokens is not issued for longer than their maximum lifetime
     // Allow some drift due to (missing) clock synchronization
     let difference_secs = verified_token.claims.exp - chrono::Utc::now().timestamp();
-    if (difference_secs -10) > MAX_TOKEN_LIFETIME {
-        warn!("Rejected device JWT due to too long lifetime: {} secs", difference_secs);
+    if (difference_secs - 10) > MAX_TOKEN_LIFETIME {
+        warn!(
+            "Rejected device JWT due to too long lifetime: {} secs",
+            difference_secs
+        );
         return Err(jsonwebtoken::errors::ErrorKind::InvalidToken.into());
     }
 
