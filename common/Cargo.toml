@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 base64 = { workspace = true }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
 futures-util = "0.3.32"
 reqwest = { version = "0.13.3", features = ["json", "stream"] }
 serde = { workspace = true }
