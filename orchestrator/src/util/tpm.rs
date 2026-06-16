@@ -1,9 +1,9 @@
 use std::fs;
 use std::str::FromStr as _;
 
-use log::{debug, warn};
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
+use tracing::{debug, warn};
 use tss_esapi::constants::SessionType;
 use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
 use tss_esapi::interface_types::algorithm::HashingAlgorithm;

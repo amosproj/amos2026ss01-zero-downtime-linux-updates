@@ -9,7 +9,7 @@ use std::sync::Arc;
 use amos_common::entities::{ApplicationConfig, OsVersion};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use log::debug;
+use tracing::debug;
 
 use crate::download_manager::DownloadManager;
 use crate::inventory::{ApplicationInfo, CollectionResult};

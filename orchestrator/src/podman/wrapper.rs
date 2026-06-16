@@ -12,6 +12,7 @@ use podman_api::{
         ContainerWaitOpts, ImagePruneOpts, PullOpts,
     },
 };
+use tracing::debug;
 
 use super::{PodmanContainerState, PodmanPullBehaviour};
 
@@ -109,7 +110,7 @@ impl PodmanWrapper {
         let podman = podman_api::Podman::unix(socket_path);
 
         let status = podman.ping().await?;
-        log::debug!("Connected to Podman API {}", status.api_version);
+        debug!("Connected to Podman API {}", status.api_version);
 
         let mut instance = Self { podman };
         let containers = instance.list_containers().await?;

@@ -172,11 +172,21 @@ impl Bootc {
 
     #[allow(dead_code)]
     pub async fn rollback(&self) -> Result<()> {
+        info!("Rolling back to previous bootc deployment");
         let args = vec!["rollback".to_string(), "--apply".to_string()];
         let res = self.run_bootc_root(args).await?;
 
         // Use helper to treat 137 as success
-        self.handle_exit_code(res.exit_code)
+        match self.handle_exit_code(res.exit_code) {
+            Ok(()) => {
+                info!("bootc rollback succeeded; reboot imminent");
+                Ok(())
+            }
+            Err(e) => {
+                error!(exit_code = ?res.exit_code, "bootc rollback failed");
+                Err(e)
+            }
+        }
     }
 
     #[allow(dead_code)]

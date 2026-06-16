@@ -2,10 +2,10 @@ use crate::download_manager::DownloadManager;
 use crate::state::{AgentState, OsState};
 use crate::update_check::{CheckForUpdate, UpdateDecision};
 use crate::util::bootc_wrapper::Bootc;
-use log::{error, info, warn};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;
+use tracing::{error, info, warn};
 
 pub async fn run_os_tree_main_loop(
     agent_state: AgentState,
@@ -44,8 +44,9 @@ pub async fn run_os_tree_main_loop(
             }
         };
 
+        let update_pending = bootc_status.staged.is_some();
         let current_os_state = OsState {
-            update_pending: bootc_status.staged.is_some(),
+            update_pending,
             booted_image: booted_checksum.clone(),
             update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
         };
@@ -72,6 +73,12 @@ pub async fn run_os_tree_main_loop(
                 for reason in &reasons {
                     info!("{}", reason);
                 }
+                if update_pending {
+                    warn!(
+                        "An update is already staged but the target has changed; \
+                         re-staging on top of the existing staged deployment",
+                    );
+                }
                 handle_bootc(&client, &booted_checksum, &target.commit_hash).await;
             }
         }
@@ -88,8 +95,10 @@ async fn handle_bootc(client: &Bootc, booted_checksum: &str, target_commit: &str
         Ok(()) => {
             info!("bootc switch staged successfully. Applying and rebooting...");
 
-            if let Err(e) = client.apply().await {
-                error!("Critical: switch succeeded but apply failed: {:?}", e);
+            // Last log line before the reboot
+            match client.apply().await {
+                Ok(()) => info!(target_commit, "bootc apply succeeded; reboot imminent",),
+                Err(e) => error!("Critical: switch succeeded but apply failed: {:?}", e),
             }
         }
         Err(e) => {

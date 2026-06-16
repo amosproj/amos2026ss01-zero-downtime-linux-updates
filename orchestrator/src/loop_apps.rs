@@ -2,8 +2,9 @@ use std::iter::Peekable;
 use std::sync::Arc;
 use std::time::Duration;
 
-use amos_common::entities::ApplicationConfig::Model;
+use amos_common::entities::ApplicationConfig;
 use tokio::sync::Mutex;
+use tracing::warn;
 
 use crate::application::Application;
 use crate::download_manager::DownloadManager;
@@ -26,7 +27,7 @@ pub async fn run_apps_main_loop(
         update_interval.tick().await;
 
         if let Err(e) = try_update(&agent_state.apps_state, &podman, &download_manager).await {
-            log::warn!("Failed to update applications: {:?}", e);
+            warn!("Failed to update applications: {:?}", e);
         }
     }
 }
@@ -44,7 +45,7 @@ async fn try_update(
 
     impl<'a, P: PodmanImage> TargetApp<'a, P> {
         async fn from_config(
-            cfg: &'a Model,
+            cfg: &'a ApplicationConfig::Model,
             podman: &'a impl Podman<PImage<'a> = P>,
         ) -> anyhow::Result<Self> {
             Ok(Self {

@@ -82,7 +82,7 @@ _image-build:
 	mkdir -p $(DIST_DIR)/qcow2 $(DIST_DIR)/image
 	mv $(DIST_DIR)/*.qcow2 $(DIST_DIR)/qcow2/disk.qcow2
 	mv $(DIST_DIR)/*.raw   $(DIST_DIR)/image/disk.raw
-	sudo chown -R $$USER:$$USER $(DIST_DIR)
+	sudo chown -R $$USER $(DIST_DIR)
 
 pull-image: ARCH ?= $(HOST_ARCH)
 pull-image: _image-pull ## Download prebuilt disk image from GHCR for host arch into ./dist
