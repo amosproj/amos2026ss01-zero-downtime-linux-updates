@@ -28,6 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      # Install tss2 headers / pkgconfig required during compilation (reused across jobs)
+      - name: Install tpm libs required for compilation
+        run: |
+          sudo apt update
+          sudo apt install -y libtss2-dev
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Build documentation
         run: cargo doc --no-deps --workspace --all-features --document-private-items
