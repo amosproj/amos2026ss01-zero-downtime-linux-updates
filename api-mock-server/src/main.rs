@@ -1,6 +1,6 @@
 use clap::Parser;
 mod api_v1;
-mod auth;
+mod auth_user;
 mod config;
 pub(crate) mod db_migration;
 pub(crate) mod dtos;

@@ -1,4 +1,4 @@
-use crate::auth::Claims;
+use crate::auth_user::Claims;
 use crate::dtos;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
