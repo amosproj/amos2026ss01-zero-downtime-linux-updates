@@ -1,7 +1,7 @@
 mod config_loader;
 use clap::Parser;
 use config_loader::get_config;
-use log::{debug, error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::application::Application;
 use crate::loop_os::run_os_tree_main_loop;
@@ -18,6 +18,7 @@ mod application;
 mod download_manager;
 mod healthcheck;
 mod inventory;
+mod logging;
 mod loop_apps;
 mod loop_os;
 mod podman;
@@ -52,13 +53,17 @@ struct Cli {
 async fn main() {
     let cli = Cli::parse();
 
-    // Adjust log level according to verbosity specified via CLI
-    let mut log_level = log::LevelFilter::Warn;
-    for _ in 0..cli.debug {
-        log_level = log_level.increment_severity();
-    }
+    // Load config first so logging can be tagged with the device UUID. The
+    // logging subscriber isn't up yet, so failures go straight to stderr.
+    // FIXME: think about how to handle/log failed config reads.
+    //   they should be logged and sent to remote db but also include the device UUID
+    //   depens on how UUID will be provided in the future.
+    let config = Arc::new(get_config(cli.config.clone()).unwrap_or_else(|err| {
+        eprintln!("Failed to load config: {err}");
+        std::process::exit(1);
+    }));
 
-    env_logger::builder().filter_level(log_level).init();
+    logging::init(cli.debug, &config.device_uuid);
 
     let signer = match util::tpm::tpm_init() {
         Ok(signer) => signer,
@@ -82,13 +87,11 @@ async fn main() {
         std::process::exit(0);
     }
 
-    info!("Started app...");
-
-    let config = Arc::new(get_config(cli.config).unwrap_or_else(|err| {
-        error!("Failed to load config: {}", err);
-        std::process::exit(1);
-    }));
-
+    info!(
+        version = VERSION,
+        device_uuid = %config.device_uuid,
+        "Orchestrator started",
+    );
     debug!("Loaded config: {:?}", config);
 
     info!("Collecting initial inventory");

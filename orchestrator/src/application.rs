@@ -1,4 +1,5 @@
 use std::{sync::Arc, time::Duration};
+use tracing::{debug, error, info, warn};
 
 use crate::podman::{PodmanContainer, PodmanContainerState, PodmanImage, PodmanImageInfo};
 
@@ -172,24 +173,21 @@ impl EventReceiver for LogEventReceiver {
     fn send(&self, event: LifecycleEvent) {
         match event {
             LifecycleEvent::StateChange(None, state) => {
-                log::info!("Application {} has state {:?}", self.app_name, state)
+                info!("Application {} has state {:?}", self.app_name, state)
             }
-            LifecycleEvent::StateChange(Some(old_state), new_state) => log::info!(
+            LifecycleEvent::StateChange(Some(old_state), new_state) => info!(
                 "Application {} changed state: {:?} -> {:?}",
-                self.app_name,
-                old_state,
-                new_state
+                self.app_name, old_state, new_state
             ),
             LifecycleEvent::StoppedUnexpectedly => {
-                log::warn!("Application {} stopped unexpectedly", self.app_name)
+                warn!("Application {} stopped unexpectedly", self.app_name)
             }
-            LifecycleEvent::FailureThresholdReached(failures) => log::warn!(
+            LifecycleEvent::FailureThresholdReached(failures) => warn!(
                 "Application {} seems to have trouble starting (encountered {} failures)",
-                self.app_name,
-                failures
+                self.app_name, failures
             ),
-            LifecycleEvent::AttemptingStart => log::debug!("Trying to start {}", self.app_name),
-            LifecycleEvent::FatalError(e) => log::error!("{:?}", e),
+            LifecycleEvent::AttemptingStart => debug!("Trying to start {}", self.app_name),
+            LifecycleEvent::FatalError(e) => error!("{:?}", e),
         }
     }
 }
