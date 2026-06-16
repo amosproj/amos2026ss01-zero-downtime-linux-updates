@@ -9,7 +9,7 @@ use super::db;
 
 // --Users--
 
-pub async fn upsert_user(claims: Claims) -> Result<(), DbErr> {
+pub async fn upsert_user(claims: Claims) -> Result<dtos::user::Model, DbErr> {
     let db = db!();
 
     let user = dtos::User::ActiveModel {
@@ -29,5 +29,5 @@ pub async fn upsert_user(claims: Claims) -> Result<(), DbErr> {
 
     debug!("Upserted user: {:?}", upserted_user);
 
-    Ok(())
+    Ok(upserted_user)
 }

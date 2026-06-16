@@ -36,3 +36,6 @@ pub use self::tenant as Tenant;
 
 pub mod user;
 pub use self::user as User;
+
+pub mod audit_log;
+pub use self::audit_log as AuditLog;

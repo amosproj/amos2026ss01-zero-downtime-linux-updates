@@ -1,3 +1,8 @@
+use crate::api_v1::db;
+use crate::audit_context::CURRENT_USER;
+use crate::auth_device::validate_device_token;
+use crate::auth_user::validate_user_token;
+use crate::config::JwtConfig;
 use axum::{
     extract::{Request, State},
     http::{StatusCode, header},
@@ -6,12 +11,19 @@ use axum::{
 };
 use jsonwebtoken::{TokenData, dangerous::insecure_decode};
 use log::{debug, error, trace};
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend};
 use serde_json::Value;
+use std::cell::RefCell;
 
-use crate::api_v1::db;
-use crate::auth_device::validate_device_token;
-use crate::auth_user::validate_user_token;
-use crate::config::JwtConfig;
+async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
+    if db.get_database_backend() != DbBackend::Postgres {
+        debug!("Skipping PG session variable on non-Postgres backend");
+        return Ok(());
+    }
+    let sql = format!("SET app.audit_user = '{}'", user_id);
+    db.execute_unprepared(&sql).await?;
+    Ok(())
+}
 
 pub async fn jwt_auth(
     State(jwt_config): State<JwtConfig>,
@@ -23,7 +35,6 @@ pub async fn jwt_auth(
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok());
-
     // 2. Make sure it starts with "Bearer "
     let token = match auth_header {
         Some(header) if header.starts_with("Bearer ") => &header["Bearer ".len()..],
@@ -65,15 +76,35 @@ pub async fn jwt_auth(
         trace!("Received user JWT: {}", token);
         match validate_user_token(token, &jwt_config) {
             Ok(claims) => {
-                if let Err(err) = db::upsert_user(claims.clone()).await {
-                    error!("Failed to upsert user into db: {:?}", err);
+                // 5. Upsert user into the database
+                let user = match db::upsert_user(claims.clone()).await {
+                    Ok(user) => user,
+                    Err(err) => {
+                        error!("Failed to upsert user into db: {:?}", err);
+                        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                    }
+                };
+                // 6. Set PostgreSQL session variable for audit triggers.
+                //    We use SET (not SET LOCAL) because the SET and the subsequent
+                //    data-changing query run as separate db.execute() calls.
+                //    SET LOCAL would be lost when the implicit transaction commits.
+                //    The connection pool is configured with max_connections=1 (see
+                //    initialialize_db) so all operations within a single request
+                //    share the same connection, preventing user-context leakage
+                //    across requests.
+                let conn = db::DB.read().await.clone().unwrap();
+                if let Err(err) = set_pg_session_user(&conn, user.id).await {
+                    error!("Failed to set PG session user: {:?}", err);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
-
-                // 5. Attach the claims to the request so handlers can use them
+                // 7. Attach the claims to the request so handlers can use them
+                let user_subject = claims.subject.clone();
                 req.extensions_mut().insert(claims);
-                // 6. Pass the request to the next layer
-                Ok(next.run(req).await)
+                // 8. Set task-local user context and pass the request to the next layer
+                let user_ref = RefCell::new(Some(user_subject));
+                Ok(CURRENT_USER
+                    .scope(user_ref, async { next.run(req).await })
+                    .await)
             }
             Err(err) => {
                 debug!("JWT rejected: {:?}", err);

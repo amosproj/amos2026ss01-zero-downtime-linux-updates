@@ -8,6 +8,7 @@ pub(crate) mod dtos;
 pub(crate) mod ts_migration;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware as axum_middleware, routing::get};
+mod audit_context;
 mod middleware;
 use config::get_config;
 use log::{debug, error, info};
@@ -69,7 +70,7 @@ async fn main() {
     });
 
     // Initialize database
-    api_v1::db::initialialize_db(config.database_url)
+    api_v1::db::initialialize_db(config.database_url, config.audit)
         .await
         .unwrap_or_else(|err| {
             error!("Failed to initialize database connection: {}", err);

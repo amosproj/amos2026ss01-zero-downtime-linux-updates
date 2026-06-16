@@ -1,6 +1,7 @@
 pub mod application_assignments;
 pub mod application_configs;
 pub mod applications;
+pub mod audit_log;
 pub mod devices;
 pub mod groups;
 pub mod logs;
@@ -31,7 +32,7 @@ pub(super) fn err(status: StatusCode, message: impl ToString) -> Response {
         .into_response()
 }
 
-pub(super) fn not_found(resource: &str, id: i32) -> Response {
+pub(super) fn not_found(resource: &str, id: impl std::fmt::Display) -> Response {
     err(
         StatusCode::NOT_FOUND,
         format!("{} with id {} not found", resource, id),
@@ -63,6 +64,7 @@ pub fn routes() -> Router {
         .merge(reported_application_assignments::routes())
         .merge(reported_os_assignments::routes())
         .merge(tenants::routes())
+        .merge(audit_log::routes())
 }
 
 // --Tests--
@@ -79,10 +81,29 @@ mod tests {
     use tower::ServiceExt;
 
     async fn test_app() -> Router {
-        crate::api_v1::db::initialialize_db("sqlite::memory:".into())
+        crate::api_v1::db::initialialize_db(
+            "sqlite::memory:".into(),
+            crate::config::AuditConfig::default(),
+        )
+        .await
+        .unwrap();
+        Router::new().nest("/v1", routes())
+    }
+
+    async fn test_app_postgres() -> (
+        Router,
+        testcontainers::ContainerAsync<testcontainers_modules::postgres::Postgres>,
+    ) {
+        use testcontainers_modules::{postgres::Postgres, testcontainers::runners::AsyncRunner};
+        let container = Postgres::default().start().await.unwrap();
+        let port = container.get_host_port_ipv4(5432).await.unwrap();
+        let url = format!("postgres://postgres:postgres@127.0.0.1:{port}/postgres");
+
+        crate::api_v1::db::initialialize_db(url, crate::config::AuditConfig::default())
             .await
             .unwrap();
-        Router::new().nest("/v1", routes())
+
+        (Router::new().nest("/v1", routes()), container)
     }
 
     async fn get(app: Router, uri: &str) -> (StatusCode, String) {
@@ -836,6 +857,120 @@ mod tests {
         .await;
 
         assert_eq!(status, StatusCode::NOT_FOUND);
+    }
+
+    // --- Audit logs ---
+    // AuditLog::Model: { id: i32, table_name: String, record_id: String, operation: String,
+    //                    old_data: Option<String>, new_data: Option<String>,
+    //                    changed_by: i32, changed_at: DateTimeUtc }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_audit_logs_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/audit-logs").await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_audit_logs_page_zero_returns_422() {
+        let (status, _) = get(test_app().await, "/v1/audit-logs?page=0").await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_audit_logs_for_record_not_found_returns_404() {
+        let (status, body) = get(test_app().await, "/v1/audit-logs/tenants/999").await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert!(json.get("error").is_some());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_audit_logs_for_device_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/audit-logs/by-device/1").await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    // --- Audit logs (PostgreSQL-only) ---
+    // Run with: cargo test -- --ignored (against a PostgreSQL instance)
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_audit_logs_for_record_returns_entries_after_insert() {
+        let (app, _container) = test_app_postgres().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Acme","description":null}"#,
+        )
+        .await;
+
+        let (status, body) = get(app, "/v1/audit-logs/tenants/1").await;
+
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let entries = json.as_array().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0]["table_name"], "tenants");
+        assert_eq!(entries[0]["record_id"], "1");
+        assert_eq!(entries[0]["operation"], "INSERT");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_audit_logs_filters_by_table_name() {
+        let (app, _container) = test_app_postgres().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(app.clone(), "/v1/groups", r#"{"id":0,"name":"G"}"#).await;
+
+        let (status, body) = get(app, "/v1/audit-logs?table_name=groups").await;
+
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["total_items"], 1);
+        assert_eq!(json["data"][0]["table_name"], "groups");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_audit_logs_for_device_includes_device_history() {
+        let (app, _container) = test_app_postgres().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#,
+        )
+        .await;
+
+        let (status, body) = get(app, "/v1/audit-logs/by-device/1").await;
+
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert!(
+            json["data"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|e| e["table_name"] == "devices")
+        );
     }
 
     // --- Error response shape ---
