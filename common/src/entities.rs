@@ -13,6 +13,11 @@ pub use crate::entities::device as Device;
 pub mod group;
 pub use crate::entities::group as Group;
 
+pub mod log;
+pub use crate::entities::log::{
+    ApplicationLog, DeviceLog, LogEvent, LogLevel, LogQuery, LogStreamQuery,
+};
+
 pub mod os_assignment;
 pub use crate::entities::os_assignment as OsAssignment;
 
@@ -30,3 +35,6 @@ pub use crate::entities::reported_os_assignment as ReportedOsAssignment;
 
 pub mod tenant;
 pub use crate::entities::tenant as Tenant;
+
+pub mod audit_log;
+pub use crate::entities::audit_log as AuditLog;
