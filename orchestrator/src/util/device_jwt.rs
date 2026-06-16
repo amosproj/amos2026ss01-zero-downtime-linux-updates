@@ -25,7 +25,7 @@ fn prepare_jwt(device_uuid: String) -> (String, i64) {
     let header_b64 = URL_SAFE_NO_PAD.encode(header_json);
     let claims_b64 = URL_SAFE_NO_PAD.encode(claims_json);
 
-    return (format!("{}.{}", header_b64, claims_b64), expiry);
+    (format!("{}.{}", header_b64, claims_b64), expiry)
 }
 
 pub fn create_tpm_jwt(

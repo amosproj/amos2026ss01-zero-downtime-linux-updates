@@ -52,12 +52,12 @@ pub async fn jwt_auth(
                 // 5. Attach the claims to the request so handlers can use them
                 req.extensions_mut().insert(claims);
                 // 6. Pass the request to the next layer
-                return Ok(next.run(req).await);
+                Ok(next.run(req).await)
             }
             Err(err) => {
                 debug!("JWT rejected: {:?}", err);
                 // Invalid or expired token — reject with 401
-                return Err(StatusCode::UNAUTHORIZED);
+                Err(StatusCode::UNAUTHORIZED)
             }
         }
     } else {
@@ -73,22 +73,22 @@ pub async fn jwt_auth(
                 // 5. Attach the claims to the request so handlers can use them
                 req.extensions_mut().insert(claims);
                 // 6. Pass the request to the next layer
-                return Ok(next.run(req).await);
+                Ok(next.run(req).await)
             }
             Err(err) => {
                 debug!("JWT rejected: {:?}", err);
                 // Invalid or expired token — reject with 401
-                return Err(StatusCode::UNAUTHORIZED);
+                Err(StatusCode::UNAUTHORIZED)
             }
         }
     }
 }
 
 fn is_device_token(token: &TokenData<Value>) -> bool {
-    return token
+    token
         .claims
         .get("role")
         .and_then(|v| v.as_str())
         .map(|s| s == "device")
-        .unwrap_or(false);
+        .unwrap_or(false)
 }

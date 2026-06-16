@@ -68,7 +68,7 @@ impl DownloadManager {
         // refresh token
         debug!("Renewing device jwt");
         let mut signer = self.signer.lock().await;
-        let (new_token, expiry) = create_tpm_jwt(&mut *signer, self.config.device_uuid.clone())?;
+        let (new_token, expiry) = create_tpm_jwt(&mut signer, self.config.device_uuid.clone())?;
         state.token = new_token;
         state.expires_at = expiry;
 
