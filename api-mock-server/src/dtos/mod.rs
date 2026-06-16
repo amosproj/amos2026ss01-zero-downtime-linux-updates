@@ -13,6 +13,9 @@ pub use self::device as Device;
 pub mod group;
 pub use self::group as Group;
 
+pub mod log;
+pub use log::{ApplicationLog, DeviceLog, LogLevel};
+
 pub mod os_assignment;
 pub use self::os_assignment as OsAssignment;
 
