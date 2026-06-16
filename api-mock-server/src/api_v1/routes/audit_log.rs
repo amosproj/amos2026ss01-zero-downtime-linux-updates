@@ -25,12 +25,12 @@ pub fn routes() -> Router {
 struct AuditLogQuery {
     table_name: Option<String>,
     record_id: Option<String>,
-    changed_by: Option<String>,
+    changed_by: Option<i32>,
     operation: Option<String>,
 }
 
 /// GET /audit-logs — List audit log entries.
-/// Optional query: `?table_name=<string>&record_id=<string>&changed_by=<string>&operation=<string>&page=1&page_size=20`
+/// Optional query: `?table_name=<string>&record_id=<string>&changed_by=<int>&operation=<string>&page=1&page_size=20`
 async fn list_audit_logs(
     Query(page): Query<PageParams>,
     Query(params): Query<AuditLogQuery>,

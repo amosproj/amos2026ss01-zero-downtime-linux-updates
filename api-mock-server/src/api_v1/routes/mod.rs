@@ -860,7 +860,7 @@ mod tests {
     // --- Audit logs ---
     // AuditLog::Model: { id: i32, table_name: String, record_id: String, operation: String,
     //                    old_data: Option<String>, new_data: Option<String>,
-    //                    changed_by: Option<String>, changed_at: DateTimeUtc }
+    //                    changed_by: i32, changed_at: DateTimeUtc }
 
     #[tokio::test]
     #[serial]

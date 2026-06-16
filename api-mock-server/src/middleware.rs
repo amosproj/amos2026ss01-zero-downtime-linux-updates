@@ -14,12 +14,12 @@ use crate::audit_context::CURRENT_USER;
 use crate::auth::validate_token;
 use crate::config::JwtConfig;
 
-async fn set_pg_session_user(db: &DatabaseConnection, subject: &str) -> Result<(), sea_orm::DbErr> {
+async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
     if db.get_database_backend() != DbBackend::Postgres {
         debug!("Skipping PG session variable on non-Postgres backend");
         return Ok(());
     }
-    let sql = format!("SET app.audit_user = '{}'", subject.replace('\'', "''"));
+    let sql = format!("SET app.audit_user = '{}'", user_id);
     db.execute_unprepared(&sql).await?;
     Ok(())
 }
@@ -48,10 +48,13 @@ pub async fn jwt_auth(
     match validate_token(token, &jwt_config) {
         Ok(claims) => {
             // 4. Upsert user into the database
-            if let Err(err) = db::upsert_user(claims.clone()).await {
-                error!("Failed to upsert user into db: {:?}", err);
-                return Err(StatusCode::INTERNAL_SERVER_ERROR);
-            }
+            let user = match db::upsert_user(claims.clone()).await {
+                Ok(user) => user,
+                Err(err) => {
+                    error!("Failed to upsert user into db: {:?}", err);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
 
             // 5. Set PostgreSQL session variable for audit triggers.
             //    We use SET (not SET LOCAL) because the SET and the subsequent
@@ -62,7 +65,7 @@ pub async fn jwt_auth(
             //    share the same connection, preventing user-context leakage
             //    across requests.
             let conn = db::DB.read().await.clone().unwrap();
-            if let Err(err) = set_pg_session_user(&conn, &claims.subject).await {
+            if let Err(err) = set_pg_session_user(&conn, user.id).await {
                 error!("Failed to set PG session user: {:?}", err);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }

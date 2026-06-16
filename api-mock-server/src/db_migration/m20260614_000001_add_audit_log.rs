@@ -33,6 +33,16 @@ impl MigrationTrait for Migration {
 
         let db = manager.get_connection();
 
+        db.execute_unprepared(
+            "INSERT INTO users (subject, name) VALUES ('system', 'System') ON CONFLICT (subject) DO NOTHING",
+        )
+        .await?;
+
+        db.execute_unprepared(
+            "ALTER TABLE audit_log ADD CONSTRAINT fk_audit_log_changed_by FOREIGN KEY (changed_by) REFERENCES users(id)",
+        )
+        .await?;
+
         db.execute_unprepared("ALTER TABLE audit_log ALTER COLUMN changed_at SET DEFAULT now()")
             .await?;
 
@@ -44,30 +54,35 @@ impl MigrationTrait for Migration {
         db.execute_unprepared("CREATE INDEX idx_audit_log_changed_at ON audit_log (changed_at)")
             .await?;
 
-        // Trigger function for tables whose primary key column is "id".
-        // Captures OLD/NEW row snapshots and the current audit user.
+        db.execute_unprepared("CREATE INDEX idx_audit_log_changed_by ON audit_log (changed_by)")
+            .await?;
+
         db.execute_unprepared(
             r#"
             CREATE OR REPLACE FUNCTION audit_log_trigger_fn()
             RETURNS TRIGGER AS $$
             DECLARE
-                _user TEXT;
+                _user_id INTEGER;
             BEGIN
                 BEGIN
-                    _user := current_setting('app.audit_user', true);
+                    _user_id := current_setting('app.audit_user', true)::integer;
                 EXCEPTION WHEN OTHERS THEN
-                    _user := NULL;
+                    _user_id := NULL;
                 END;
+
+                IF _user_id IS NULL THEN
+                    SELECT id INTO _user_id FROM users WHERE subject = 'system';
+                END IF;
 
                 IF (TG_OP = 'INSERT') THEN
                     INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, NEW.id::TEXT, 'INSERT', NULL, to_jsonb(NEW), _user);
+                    VALUES (TG_TABLE_NAME, NEW.id::TEXT, 'INSERT', NULL, to_jsonb(NEW), _user_id);
                 ELSIF (TG_OP = 'UPDATE') THEN
                     INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, NEW.id::TEXT, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), _user);
+                    VALUES (TG_TABLE_NAME, NEW.id::TEXT, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), _user_id);
                 ELSIF (TG_OP = 'DELETE') THEN
                     INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, OLD.id::TEXT, 'DELETE', to_jsonb(OLD), NULL, _user);
+                    VALUES (TG_TABLE_NAME, OLD.id::TEXT, 'DELETE', to_jsonb(OLD), NULL, _user_id);
                 END IF;
 
                 RETURN NULL;
@@ -77,30 +92,63 @@ impl MigrationTrait for Migration {
         )
         .await?;
 
-        // Separate trigger function for the "pings" table, which uses
-        // "device_id" as its primary key instead of "id".
         db.execute_unprepared(
             r#"
             CREATE OR REPLACE FUNCTION audit_log_trigger_pings_fn()
             RETURNS TRIGGER AS $$
             DECLARE
-                _user TEXT;
+                _user_id INTEGER;
             BEGIN
                 BEGIN
-                    _user := current_setting('app.audit_user', true);
+                    _user_id := current_setting('app.audit_user', true)::integer;
                 EXCEPTION WHEN OTHERS THEN
-                    _user := NULL;
+                    _user_id := NULL;
+                END;
+
+                IF _user_id IS NULL THEN
+                    SELECT id INTO _user_id FROM users WHERE subject = 'system';
+                END IF;
+
+                IF (TG_OP = 'INSERT') THEN
+                    INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
+                    VALUES (TG_TABLE_NAME, NEW.device_id::TEXT, 'INSERT', NULL, to_jsonb(NEW), _user_id);
+                ELSIF (TG_OP = 'UPDATE') THEN
+                    INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
+                    VALUES (TG_TABLE_NAME, NEW.device_id::TEXT, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), _user_id);
+                ELSIF (TG_OP = 'DELETE') THEN
+                    INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
+                    VALUES (TG_TABLE_NAME, OLD.device_id::TEXT, 'DELETE', to_jsonb(OLD), NULL, _user_id);
+                END IF;
+
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+            "#,
+        )
+        .await?;
+
+        db.execute_unprepared(
+            r#"
+            CREATE OR REPLACE FUNCTION audit_log_trigger_pings_fn()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                _user_id INTEGER;
+            BEGIN
+                BEGIN
+                    _user_id := current_setting('app.audit_user', true)::integer;
+                EXCEPTION WHEN OTHERS THEN
+                    SELECT id INTO _user_id FROM users WHERE subject = 'system';
                 END;
 
                 IF (TG_OP = 'INSERT') THEN
                     INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, NEW.device_id::TEXT, 'INSERT', NULL, to_jsonb(NEW), _user);
+                    VALUES (TG_TABLE_NAME, NEW.device_id::TEXT, 'INSERT', NULL, to_jsonb(NEW), _user_id);
                 ELSIF (TG_OP = 'UPDATE') THEN
                     INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, NEW.device_id::TEXT, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), _user);
+                    VALUES (TG_TABLE_NAME, NEW.device_id::TEXT, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), _user_id);
                 ELSIF (TG_OP = 'DELETE') THEN
                     INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, OLD.device_id::TEXT, 'DELETE', to_jsonb(OLD), NULL, _user);
+                    VALUES (TG_TABLE_NAME, OLD.device_id::TEXT, 'DELETE', to_jsonb(OLD), NULL, _user_id);
                 END IF;
 
                 RETURN NULL;

@@ -136,6 +136,7 @@ async fn reconcile_audit_triggers(
 mod tests {
     use amos_common::entities::Application;
     use sea_orm::sea_query::prelude::serde_json;
+    use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
     use serial_test::serial;
 
     use crate::config::AuditConfig;
@@ -472,12 +473,14 @@ mod tests {
     async fn audit_log_captures_insert() {
         let _container = test_initialize_postgres_db().await;
 
-        let _tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
 
-        let count = super::audit_log::count_audit_logs_for("tenants", "1", "INSERT")
-            .await
-            .unwrap();
-        assert_eq!(count, 1);
+        let entries =
+            super::audit_log::get_audit_logs_for_record("tenants", &tenant.id.to_string())
+                .await
+                .unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].operation, "INSERT");
     }
 
     #[tokio::test]
@@ -506,11 +509,12 @@ mod tests {
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
         super::delete_tenant(tenant.id).await.unwrap();
 
-        let count =
-            super::audit_log::count_audit_logs_for("tenants", &tenant.id.to_string(), "DELETE")
+        let entries =
+            super::audit_log::get_audit_logs_for_record("tenants", &tenant.id.to_string())
                 .await
                 .unwrap();
-        assert_eq!(count, 1);
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[1].operation, "DELETE");
     }
 
     #[tokio::test]
@@ -525,7 +529,15 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].changed_by, None);
+
+        let db = super::DB.read().await.clone().unwrap();
+        let system_user = crate::dtos::User::Entity::find()
+            .filter(crate::dtos::User::Column::Subject.eq("system"))
+            .one(&db)
+            .await
+            .unwrap()
+            .expect("system user should exist");
+        assert_eq!(entries[0].changed_by, system_user.id);
     }
 
     #[tokio::test]

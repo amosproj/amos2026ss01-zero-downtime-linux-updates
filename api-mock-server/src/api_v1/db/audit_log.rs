@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::dtos;
 use amos_common::entities::AuditLog;
 use sea_orm::sea_query::Expr;
@@ -12,7 +10,7 @@ use super::db;
 pub async fn list_audit_logs(
     table_name: Option<String>,
     record_id: Option<String>,
-    changed_by: Option<String>,
+    changed_by: Option<i32>,
     operation: Option<String>,
     page: u64,
     page_size: u64,
@@ -55,23 +53,6 @@ pub async fn get_audit_logs_for_record(
     Ok(data.into_iter().map(|m| m.into_api()).collect())
 }
 
-pub async fn get_audit_logs_for_table(
-    table_name: &str,
-    page: u64,
-    page_size: u64,
-) -> Result<(Vec<AuditLog::Model>, u64), DbErr> {
-    let db = db!();
-    let query = dtos::AuditLog::Entity::find()
-        .filter(dtos::AuditLog::Column::TableName.eq(table_name))
-        .order_by_desc(dtos::AuditLog::Column::ChangedAt);
-
-    let paginator = query.paginate(&db, page_size);
-    let total = paginator.num_items().await?;
-    let data = paginator.fetch_page(page).await?;
-
-    Ok((data.into_iter().map(|m| m.into_api()).collect(), total))
-}
-
 pub async fn get_audit_logs_for_device(
     device_id: i32,
     page: u64,
@@ -101,20 +82,4 @@ pub async fn get_audit_logs_for_device(
     let data = paginator.fetch_page(page).await?;
 
     Ok((data.into_iter().map(|m| m.into_api()).collect(), total))
-}
-
-pub async fn count_audit_logs_for(
-    table_name: &str,
-    record_id: &str,
-    operation: &str,
-) -> Result<u64, DbErr> {
-    let db = db!();
-    let count = dtos::AuditLog::Entity::find()
-        .filter(dtos::AuditLog::Column::TableName.eq(table_name))
-        .filter(dtos::AuditLog::Column::RecordId.eq(record_id))
-        .filter(dtos::AuditLog::Column::Operation.eq(operation))
-        .count(&db)
-        .await?;
-
-    Ok(count)
 }

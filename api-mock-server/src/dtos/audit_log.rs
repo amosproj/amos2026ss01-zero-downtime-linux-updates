@@ -22,7 +22,7 @@ pub struct Model {
     #[sea_orm(column_type = "JsonBinary", nullable)]
     pub new_data: Option<Json>,
 
-    pub changed_by: Option<String>,
+    pub changed_by: i32,
 
     pub changed_at: DateTimeUtc,
 }
