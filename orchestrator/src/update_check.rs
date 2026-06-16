@@ -31,6 +31,7 @@ pub trait CheckForUpdate: Send + Sync {
 
     /// Returns `Ok(None)` when the local app inventory is unavailable and a
     /// meaningful comparison can't be made (e.g., podman not present).
+    #[expect(unused)]
     async fn check_apps(
         &self,
         current: &CollectionResult<Vec<ApplicationInfo>>,
