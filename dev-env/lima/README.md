@@ -35,8 +35,6 @@ limactl shell edge-ipc -- journalctl -u orchestrator.service -f
 
 # 4. start the api-server and db on your host-machine (outside the vm)
 podman compose -f .devcontainer/docker-compose.yml up -d mock-api-container postgres-container
-# or 
-limactl shell edge-ipc
 ```
 
 The orchestrator starts automatically (it's a systemd service enabled in the
@@ -44,6 +42,8 @@ image). To inspect the inventory it produced:
 
 ```bash
 limactl shell edge-ipc -- sudo cat /var/lib/amos/inventory.json
+# or do it manually after entering the vm with
+limactl shell edge-ipc
 ```
 
 Tear down with `limactl stop edge-ipc && limactl delete edge-ipc`.
@@ -54,12 +54,12 @@ This is a bootc/ostree system, so the filesystem is split: `/usr` is a
 **read-only** part of the OS image, while `/etc` and `/var` are **writable** and
 **persist** across OS updates.
 
-| Path | What | Notes |
-|------|------|-------|
-| `/usr/local/bin/amos-orchestrator` | The orchestrator binary | `/usr/local` is a symlink to writable `/var/usrlocal`; the rest of `/usr` is read-only |
-| `/etc/amos/config.toml` | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](./edge-ipc.yaml) |
-| `/var/lib/amos/inventory.json` | Device inventory the agent writes on startup | Standard place for app state; created by the service (runs as root) |
-| `/etc/systemd/system/orchestrator.service` | The systemd service that runs the agent | Enabled at image-build time; starts on boot |
+| Path                                       | What                                                                      | Notes                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `/usr/local/bin/amos-orchestrator`         | The orchestrator binary                                                   | `/usr/local` is a symlink to writable `/var/usrlocal`; the rest of `/usr` is read-only |
+| `/etc/amos/config.toml`                    | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](./edge-ipc.yaml)                |
+| `/var/lib/amos/inventory.json`             | Device inventory the agent writes on startup                              | Standard place for app state; created by the service (runs as root)                    |
+| `/etc/systemd/system/orchestrator.service` | The systemd service that runs the agent                                   | Enabled at image-build time; starts on boot                                            |
 
 > **Heads-up:** run the agent via systemd (it runs as root). Running
 > `amos-orchestrator` by hand as your normal user fails to create `/var/lib/amos`
@@ -71,7 +71,6 @@ This is a bootc/ostree system, so the filesystem is split: `/usr` is a
 - **Connection errors in the log:** the agent polls the cloud API at the
   `cloud_url` in `config.toml` (by default the mock server on the host's port
   8080). Start the mock server if you want successful polls.
-
 
 ### TPM
 
