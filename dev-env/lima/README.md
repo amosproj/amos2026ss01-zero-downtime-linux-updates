@@ -49,6 +49,28 @@ limactl shell edge-ipc
 
 Tear down with `limactl stop edge-ipc && limactl delete edge-ipc`.
 
+## Viewing logs
+
+The quick path is `journalctl` directly:
+
+```bash
+limactl shell edge-ipc -- journalctl -u orchestrator.service -f   # follow
+limactl shell edge-ipc -- journalctl -u orchestrator.service -n200  # last 200 lines
+```
+
+Dev images also ship [`lazyjournal`](https://github.com/Lifailon/lazyjournal), a
+TUI for browsing systemd journals — handy for hopping between units, scrolling
+back, and searching:
+
+```bash
+limactl shell edge-ipc -- lazyjournal
+```
+
+Filter to a single unit (e.g. the orchestrator) with `/` inside the TUI, or
+pick from the unit list on the left. `lazyjournal` is only baked into images
+built with `DEV_MODE=true` — that's what `make image` does, but the CI image
+fetched by `make pull-image` is built prod-like and won't have it.
+
 ## Key paths inside the VM
 
 This is a bootc/ostree system. See
