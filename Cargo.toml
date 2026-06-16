@@ -1,11 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["api-mock-server", "common", "orchestrator"]
+members = ["api-mock-server", "common", "orchestrator", "sea-orm-timescale"]
 
 [workspace.dependencies]
 amos-api-mock-server = { path = "api-mock-server" }
 amos-common = { path = "common" }
 amos-orchestrator = { path = "orchestrator" }
+sea-orm-timescale = { path = "sea-orm-timescale" }
 
 anyhow = "1.0.102"
 base64 = "0.22"
@@ -20,3 +21,4 @@ sea-orm = { version = "2.0.0-rc", features = ["sqlx-postgres", "sqlx-sqlite", "r
 sea-orm-migration = { version = "2.0.0-rc", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 serde_json = "1.0"
 tokio = { version = "1.52.2", features = ["full"] }
+uuid = { version = "1", features = ["serde", "v7"] }
