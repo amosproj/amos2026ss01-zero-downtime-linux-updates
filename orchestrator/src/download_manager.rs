@@ -208,9 +208,7 @@ impl DownloadManager {
     /// Fetches the application configs assigned to this device from the API.
     /// Resolves `/app-assignments?device_uuid=<uuid>` to the referenced
     /// `ApplicationConfig` records via `/app-configs/<id>`.
-    pub async fn get_target_application_configs(
-        &self,
-    ) -> Result<Vec<ApplicationConfig::Model>> {
+    pub async fn get_target_application_configs(&self) -> Result<Vec<ApplicationConfig::Model>> {
         self.ensure_auth_not_expired().await?;
 
         let assignments = self.get_target_application_assignments().await?;

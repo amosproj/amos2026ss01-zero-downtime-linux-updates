@@ -212,9 +212,15 @@ mod tests {
         )
         .await
         .unwrap();
-        super::add_device("uuid-2".to_owned(), None, "host-2".to_owned(), tenant.id, None)
-            .await
-            .unwrap();
+        super::add_device(
+            "uuid-2".to_owned(),
+            None,
+            "host-2".to_owned(),
+            tenant.id,
+            None,
+        )
+        .await
+        .unwrap();
         let (devices, _total) = super::list_devices(Some(group.id), None, None, None, 0, 20)
             .await
             .unwrap();
@@ -228,12 +234,24 @@ mod tests {
         test_initialize_empty_inmem_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
-        let d1 = super::add_device("uuid-d1".to_owned(), None, "host-d1".to_owned(), tenant.id, None)
-            .await
-            .unwrap();
-        let d2 = super::add_device("uuid-d2".to_owned(), None, "host-d2".to_owned(), tenant.id, None)
-            .await
-            .unwrap();
+        let d1 = super::add_device(
+            "uuid-d1".to_owned(),
+            None,
+            "host-d1".to_owned(),
+            tenant.id,
+            None,
+        )
+        .await
+        .unwrap();
+        let d2 = super::add_device(
+            "uuid-d2".to_owned(),
+            None,
+            "host-d2".to_owned(),
+            tenant.id,
+            None,
+        )
+        .await
+        .unwrap();
         let app = super::add_application("app".to_owned(), "desc".to_owned())
             .await
             .unwrap();
@@ -258,9 +276,15 @@ mod tests {
         test_initialize_empty_inmem_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
-        let device = super::add_device("uuid".to_owned(), None, "old-host".to_owned(), tenant.id, None)
-            .await
-            .unwrap();
+        let device = super::add_device(
+            "uuid".to_owned(),
+            None,
+            "old-host".to_owned(),
+            tenant.id,
+            None,
+        )
+        .await
+        .unwrap();
         let updated = super::update_device(
             device.id,
             device.uuid,
@@ -299,10 +323,15 @@ mod tests {
         let tenant = super::add_tenant("Acme".to_owned(), Some("Sitz: Nürnberg".to_owned()))
             .await
             .unwrap();
-        let device =
-            super::add_device("uuid-abc".to_owned(), None, "host-01".to_owned(), tenant.id, None)
-                .await
-                .unwrap();
+        let device = super::add_device(
+            "uuid-abc".to_owned(),
+            None,
+            "host-01".to_owned(),
+            tenant.id,
+            None,
+        )
+        .await
+        .unwrap();
 
         // OS side
         let os_version = super::add_os_version(

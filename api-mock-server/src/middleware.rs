@@ -69,7 +69,7 @@ pub async fn jwt_auth(
                     error!("Failed to upsert user into db: {:?}", err);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
-    
+
                 // 5. Attach the claims to the request so handlers can use them
                 req.extensions_mut().insert(claims);
                 // 6. Pass the request to the next layer
@@ -85,7 +85,9 @@ pub async fn jwt_auth(
 }
 
 fn is_device_token(token: &TokenData<Value>) -> bool {
-    return token.claims.get("role")
+    return token
+        .claims
+        .get("role")
         .and_then(|v| v.as_str())
         .map(|s| s == "device")
         .unwrap_or(false);
