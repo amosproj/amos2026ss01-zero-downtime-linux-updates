@@ -11,6 +11,9 @@ fn default_interval() -> u32 {
 fn default_inventory_path() -> String {
     "./inventory/inventory.json".into()
 }
+fn default_podman_path() -> String {
+    "/run/podman/podman.sock".to_owned()
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
@@ -23,9 +26,11 @@ pub struct Settings {
     #[serde(default = "default_inventory_path")]
     pub inventory_path: String,
 
+    #[serde(default = "default_podman_path")]
+    pub podman_path: String,
+
     pub https_proxy: Option<String>,
 
-    #[allow(dead_code)]
     pub device_uuid: String,
 }
 
@@ -80,6 +85,7 @@ mod tests {
             cloud_url: default_cloud(),
             poll_interval_secs: default_interval(),
             inventory_path: default_inventory_path(),
+            podman_path: default_podman_path(),
             https_proxy: None,
             device_uuid: "00000000-0000-0000-0000-000000000000".into(),
         }

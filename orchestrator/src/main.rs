@@ -107,7 +107,7 @@ async fn main() {
     };
 
     info!("Reading inital application state");
-    let (podman, containers) = PodmanWrapper::connect(Path::new("/run/podman/podman.sock"))
+    let (podman, containers) = PodmanWrapper::connect(Path::new(&config.podman_path))
         .await
         .unwrap();
     let apps_state = containers.into_iter().map(Application::wrap).collect();

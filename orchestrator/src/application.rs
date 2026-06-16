@@ -33,8 +33,12 @@ impl Application {
         }
     }
 
-    pub async fn launch_from_image(image: &impl PodmanImage, name: &str) -> anyhow::Result<Self> {
-        let container = image.create_container(name, Vec::new()).await?;
+    pub async fn launch_from_image(
+        image: &impl PodmanImage,
+        name: &str,
+        environment: impl IntoIterator<Item = (&str, &str)> + Send,
+    ) -> anyhow::Result<Self> {
+        let container = image.create_container(name, environment).await?;
         Ok(Self::wrap(container))
     }
 
@@ -72,6 +76,13 @@ async fn run_lifecycle_loop(
         let mut failure_counter = 0u32;
         let mut old_state = None;
 
+        let increase_failures = |counter: &mut u32| {
+            *counter += 1;
+            if *counter == 10 {
+                event_recv.send(LifecycleEvent::FailureThresholdReached(*counter));
+            }
+        };
+
         let error = loop {
             let state = match container.state().await {
                 Ok(s) => s,
@@ -79,19 +90,19 @@ async fn run_lifecycle_loop(
             };
             let state_changed = old_state.is_some_and(|s| s != state);
 
-            if state_changed {
+            if old_state.is_none() || state_changed {
                 event_recv.send(LifecycleEvent::StateChange(old_state, state));
-            }
-
-            if failure_counter == 10 {
-                event_recv.send(LifecycleEvent::FailureThresholdReached(failure_counter));
             }
 
             let mut timeout = match state {
                 PodmanContainerState::Stopped => {
                     // Do not count the initial start as a failure
                     if old_state.is_some() {
-                        failure_counter += 1
+                        increase_failures(&mut failure_counter);
+                    }
+
+                    if old_state.is_some_and(|s| s == PodmanContainerState::Running) {
+                        event_recv.send(LifecycleEvent::StoppedUnexpectedly);
                     }
 
                     if let Err(e) = container.start().await {
@@ -102,7 +113,7 @@ async fn run_lifecycle_loop(
                     Duration::from_secs(10)
                 }
                 PodmanContainerState::Ambiguous => {
-                    failure_counter += 1;
+                    increase_failures(&mut failure_counter);
                     Duration::from_secs(10)
                 }
                 PodmanContainerState::Running => {
@@ -127,7 +138,9 @@ async fn run_lifecycle_loop(
                 _ = tokio::time::sleep(timeout), if timeout < Duration::MAX => {},
                 _ = container.wait_for_state_change(state) => {},
                 _ = delete_notifier.notified() => {
-                    container.destroy().await.unwrap();
+                    if let Err(e) = container.destroy().await {
+                        event_recv.send(LifecycleEvent::FatalError(e));
+                    }
                     return
                 }
             }
@@ -145,6 +158,7 @@ trait EventReceiver {
 #[derive(Debug)]
 enum LifecycleEvent {
     StateChange(Option<PodmanContainerState>, PodmanContainerState),
+    StoppedUnexpectedly,
     FailureThresholdReached(u32),
     AttemptingStart,
     FatalError(anyhow::Error),
@@ -166,6 +180,9 @@ impl EventReceiver for LogEventReceiver {
                 old_state,
                 new_state
             ),
+            LifecycleEvent::StoppedUnexpectedly => {
+                log::warn!("Application {} stopped unexpectedly", self.app_name)
+            }
             LifecycleEvent::FailureThresholdReached(failures) => log::warn!(
                 "Application {} seems to have trouble starting (encountered {} failures)",
                 self.app_name,
@@ -183,8 +200,17 @@ mod tests {
 
     use async_trait::async_trait;
 
-    use super::*;
+    use super::{LifecycleEvent::*, *};
     use crate::podman::PodmanContainerState::{Ambiguous, Running, Stopped};
+
+    macro_rules! assert_rcv {
+        ($rx:expr, None) => {
+            assert!($rx.recv().await.is_none());
+        };
+        ($rx:expr, $target:pat) => {
+            assert!(matches!($rx.recv().await, Some($target)));
+        };
+    }
 
     struct ChannelEventReceiver {
         tx: tokio::sync::mpsc::UnboundedSender<LifecycleEvent>,
@@ -196,48 +222,50 @@ mod tests {
         }
     }
 
-    struct WorkingMockContainer(Arc<Mutex<PodmanContainerState>>);
-
-    #[async_trait]
-    impl PodmanContainer for WorkingMockContainer {
-        async fn start(&mut self) -> anyhow::Result<()> {
-            *self.0.lock().unwrap() = PodmanContainerState::Running;
-            Ok(())
-        }
-        async fn stop(&mut self) -> anyhow::Result<()> {
-            *self.0.lock().unwrap() = PodmanContainerState::Stopped;
-            Ok(())
-        }
-        async fn destroy(self) -> anyhow::Result<()> {
-            Ok(())
-        }
-        async fn state(&self) -> anyhow::Result<PodmanContainerState> {
-            Ok(*self.0.lock().unwrap())
-        }
-        async fn wait_for_state_change(&self, current: PodmanContainerState) -> anyhow::Result<()> {
-            if current == *self.0.lock().unwrap() {
-                tokio::time::sleep(Duration::MAX).await;
-            }
-            Ok(())
-        }
-        fn name(&self) -> &str {
-            "testname"
-        }
-    }
-
-    impl PodmanImageInfo for WorkingMockContainer {
-        fn reference(&self) -> &str {
-            "docker.io/library/alpine:latest"
-        }
-        fn digest(&self) -> &str {
-            "unknown"
-        }
-    }
-
     #[tokio::test]
     async fn test_application_working() {
-        let container_state = Arc::new(Mutex::new(PodmanContainerState::Stopped));
-        let container = WorkingMockContainer(container_state.clone());
+        struct MockContainer(PodmanContainerState);
+
+        #[async_trait]
+        impl PodmanContainer for MockContainer {
+            async fn start(&mut self) -> anyhow::Result<()> {
+                self.0 = PodmanContainerState::Running;
+                Ok(())
+            }
+            async fn stop(&mut self) -> anyhow::Result<()> {
+                self.0 = PodmanContainerState::Stopped;
+                Ok(())
+            }
+            async fn destroy(self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn state(&self) -> anyhow::Result<PodmanContainerState> {
+                Ok(self.0)
+            }
+            async fn wait_for_state_change(
+                &self,
+                current: PodmanContainerState,
+            ) -> anyhow::Result<()> {
+                if current == self.0 {
+                    panic!("Waiting forever in test");
+                }
+                Ok(())
+            }
+            fn name(&self) -> &str {
+                "testname"
+            }
+        }
+
+        impl PodmanImageInfo for MockContainer {
+            fn reference(&self) -> &str {
+                "docker.io/library/alpine:latest"
+            }
+            fn digest(&self) -> &str {
+                "unknown"
+            }
+        }
+
+        let container = MockContainer(PodmanContainerState::Stopped);
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -247,62 +275,57 @@ mod tests {
             Arc::new(tokio::sync::Notify::const_new()),
         ));
 
-        assert!(matches!(
-            rx.recv().await.unwrap(),
-            LifecycleEvent::AttemptingStart
-        ));
-        assert!(matches!(
-            rx.recv().await.unwrap(),
-            LifecycleEvent::StateChange(Some(Stopped), Running)
-        ));
-        assert_eq!(
-            *container_state.lock().unwrap(),
-            PodmanContainerState::Running
-        );
+        assert_rcv!(rx, StateChange(None, Stopped));
+        assert_rcv!(rx, AttemptingStart);
+        assert_rcv!(rx, StateChange(Some(Stopped), Running));
 
         lifecycle_loop.abort();
         assert!(lifecycle_loop.await.is_err());
-    }
-
-    struct NotStartingMockContainer;
-
-    #[async_trait]
-    impl PodmanContainer for NotStartingMockContainer {
-        async fn start(&mut self) -> anyhow::Result<()> {
-            Ok(())
-        }
-        async fn stop(&mut self) -> anyhow::Result<()> {
-            Ok(())
-        }
-        async fn destroy(self) -> anyhow::Result<()> {
-            Ok(())
-        }
-        async fn state(&self) -> anyhow::Result<PodmanContainerState> {
-            Ok(PodmanContainerState::Stopped)
-        }
-        async fn wait_for_state_change(&self, current: PodmanContainerState) -> anyhow::Result<()> {
-            if current == PodmanContainerState::Stopped {
-                tokio::time::sleep(Duration::MAX).await;
-            }
-            Ok(())
-        }
-        fn name(&self) -> &str {
-            "testname"
-        }
-    }
-
-    impl PodmanImageInfo for NotStartingMockContainer {
-        fn reference(&self) -> &str {
-            "docker.io/library/alpine:latest"
-        }
-        fn digest(&self) -> &str {
-            "unknown"
-        }
+        assert_rcv!(rx, None);
     }
 
     #[tokio::test]
     async fn test_application_not_starting() {
-        let container = NotStartingMockContainer;
+        struct MockContainer;
+
+        #[async_trait]
+        impl PodmanContainer for MockContainer {
+            async fn start(&mut self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn stop(&mut self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn destroy(self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn state(&self) -> anyhow::Result<PodmanContainerState> {
+                Ok(PodmanContainerState::Stopped)
+            }
+            async fn wait_for_state_change(
+                &self,
+                current: PodmanContainerState,
+            ) -> anyhow::Result<()> {
+                if current == PodmanContainerState::Stopped {
+                    tokio::time::sleep(Duration::MAX).await;
+                }
+                Ok(())
+            }
+            fn name(&self) -> &str {
+                "testname"
+            }
+        }
+
+        impl PodmanImageInfo for MockContainer {
+            fn reference(&self) -> &str {
+                "docker.io/library/alpine:latest"
+            }
+            fn digest(&self) -> &str {
+                "unknown"
+            }
+        }
+
+        let container = MockContainer;
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -312,12 +335,14 @@ mod tests {
             Arc::new(tokio::sync::Notify::const_new()),
         ));
 
+        assert_rcv!(rx, StateChange(None, Stopped));
+
         // Make sure after some amount of failures the system throws an error
         for i in 0.. {
             match rx.recv().await.unwrap() {
-                LifecycleEvent::AttemptingStart => assert!(i < 100),
-                LifecycleEvent::FailureThresholdReached(failures) => {
-                    assert_eq!(i - 1, failures);
+                AttemptingStart => assert!(i < 100),
+                FailureThresholdReached(failures) => {
+                    assert_eq!(i, failures);
                     break;
                 }
                 _ => panic!(),
@@ -328,48 +353,50 @@ mod tests {
         assert!(lifecycle_loop.await.is_err());
     }
 
-    struct AmbiguousMockContainer(Arc<Mutex<PodmanContainerState>>);
-
-    #[async_trait]
-    impl PodmanContainer for AmbiguousMockContainer {
-        async fn start(&mut self) -> anyhow::Result<()> {
-            *self.0.lock().unwrap() = PodmanContainerState::Ambiguous;
-            Ok(())
-        }
-        async fn stop(&mut self) -> anyhow::Result<()> {
-            *self.0.lock().unwrap() = PodmanContainerState::Stopped;
-            Ok(())
-        }
-        async fn destroy(self) -> anyhow::Result<()> {
-            Ok(())
-        }
-        async fn state(&self) -> anyhow::Result<PodmanContainerState> {
-            Ok(*self.0.lock().unwrap())
-        }
-        async fn wait_for_state_change(&self, current: PodmanContainerState) -> anyhow::Result<()> {
-            if current == *self.0.lock().unwrap() {
-                tokio::time::sleep(Duration::MAX).await;
-            }
-            Ok(())
-        }
-        fn name(&self) -> &str {
-            "testname"
-        }
-    }
-
-    impl PodmanImageInfo for AmbiguousMockContainer {
-        fn reference(&self) -> &str {
-            "docker.io/library/alpine:latest"
-        }
-        fn digest(&self) -> &str {
-            "unknown"
-        }
-    }
-
     #[tokio::test]
     async fn test_application_ambiguous() {
-        let container_state = Arc::new(Mutex::new(PodmanContainerState::Stopped));
-        let container = AmbiguousMockContainer(container_state.clone());
+        struct MockContainer(PodmanContainerState);
+
+        #[async_trait]
+        impl PodmanContainer for MockContainer {
+            async fn start(&mut self) -> anyhow::Result<()> {
+                self.0 = PodmanContainerState::Ambiguous;
+                Ok(())
+            }
+            async fn stop(&mut self) -> anyhow::Result<()> {
+                self.0 = PodmanContainerState::Stopped;
+                Ok(())
+            }
+            async fn destroy(self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn state(&self) -> anyhow::Result<PodmanContainerState> {
+                Ok(self.0)
+            }
+            async fn wait_for_state_change(
+                &self,
+                current: PodmanContainerState,
+            ) -> anyhow::Result<()> {
+                if current == self.0 {
+                    tokio::time::sleep(Duration::MAX).await;
+                }
+                Ok(())
+            }
+            fn name(&self) -> &str {
+                "testname"
+            }
+        }
+
+        impl PodmanImageInfo for MockContainer {
+            fn reference(&self) -> &str {
+                "docker.io/library/alpine:latest"
+            }
+            fn digest(&self) -> &str {
+                "unknown"
+            }
+        }
+
+        let container = MockContainer(PodmanContainerState::Stopped);
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -379,18 +406,91 @@ mod tests {
             Arc::new(tokio::sync::Notify::const_new()),
         ));
 
-        assert!(matches!(
-            rx.recv().await.unwrap(),
-            LifecycleEvent::AttemptingStart
+        assert_rcv!(rx, StateChange(None, Stopped));
+        assert_rcv!(rx, AttemptingStart);
+        assert_rcv!(rx, StateChange(Some(Stopped), Ambiguous));
+        assert_rcv!(rx, FailureThresholdReached(_));
+
+        lifecycle_loop.abort();
+        assert!(lifecycle_loop.await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_application_crashing() {
+        struct MockContainer(Mutex<PodmanContainerState>);
+
+        #[async_trait]
+        impl PodmanContainer for MockContainer {
+            async fn start(&mut self) -> anyhow::Result<()> {
+                *self.0.lock().unwrap() = PodmanContainerState::Running;
+                Ok(())
+            }
+            async fn stop(&mut self) -> anyhow::Result<()> {
+                *self.0.lock().unwrap() = PodmanContainerState::Stopped;
+                Ok(())
+            }
+            async fn destroy(self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn state(&self) -> anyhow::Result<PodmanContainerState> {
+                Ok(*self.0.lock().unwrap())
+            }
+            async fn wait_for_state_change(
+                &self,
+                current: PodmanContainerState,
+            ) -> anyhow::Result<()> {
+                // Apparently tokio::test uses a single-threaded runtime, so
+                // the test would never complete without explicitly yielding
+                tokio::task::yield_now().await;
+
+                match current {
+                    PodmanContainerState::Running => {
+                        *self.0.lock().unwrap() = PodmanContainerState::Stopped;
+                    }
+                    x if x == *self.0.lock().unwrap() => {
+                        panic!("Waiting forever in test");
+                    }
+                    _ => {}
+                }
+                Ok(())
+            }
+            fn name(&self) -> &str {
+                "testname"
+            }
+        }
+
+        impl PodmanImageInfo for MockContainer {
+            fn reference(&self) -> &str {
+                "docker.io/library/alpine:latest"
+            }
+            fn digest(&self) -> &str {
+                "unknown"
+            }
+        }
+
+        let container = MockContainer(Mutex::new(PodmanContainerState::Stopped));
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let lifecycle_loop = tokio::spawn(run_lifecycle_loop(
+            container,
+            ChannelEventReceiver { tx },
+            Arc::new(tokio::sync::Notify::const_new()),
         ));
-        assert!(matches!(
-            rx.recv().await.unwrap(),
-            LifecycleEvent::StateChange(Some(Stopped), Ambiguous)
-        ));
-        assert!(matches!(
-            rx.recv().await.unwrap(),
-            LifecycleEvent::FailureThresholdReached(_)
-        ));
+
+        assert_rcv!(rx, StateChange(None, Stopped));
+
+        for i in 1.. {
+            assert_rcv!(rx, AttemptingStart);
+            assert_rcv!(rx, StateChange(Some(Stopped), Running));
+            assert_rcv!(rx, StateChange(Some(Running), Stopped));
+
+            match rx.recv().await.unwrap() {
+                StoppedUnexpectedly => assert!(i < 100),
+                FailureThresholdReached(x) if x == i => break,
+                x => panic!("Got unexpected event {:?}", x),
+            }
+        }
 
         lifecycle_loop.abort();
         assert!(lifecycle_loop.await.is_err());

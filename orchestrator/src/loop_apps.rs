@@ -2,12 +2,13 @@ use std::iter::Peekable;
 use std::sync::Arc;
 use std::time::Duration;
 
+use amos_common::entities::ApplicationConfig::Model;
 use tokio::sync::Mutex;
 
 use crate::application::Application;
 use crate::download_manager::DownloadManager;
 use crate::podman::PodmanPullBehaviour::PullIfMissing;
-use crate::podman::{Podman, PodmanImageInfo};
+use crate::podman::{Podman, PodmanImage, PodmanImageInfo};
 use crate::state::AgentState;
 
 pub async fn run_apps_main_loop(
@@ -35,30 +36,62 @@ async fn try_update(
     podman: &impl Podman,
     download_manager: &DownloadManager,
 ) -> anyhow::Result<()> {
-    let target_apps = download_manager.get_target_application_configs().await?;
+    struct TargetApp<'a, P: PodmanImage> {
+        image: P,
+        name: &'a str,
+        environment: Vec<(&'a str, &'a str)>,
+    }
 
-    // Pull new images
-    let mut target_images = futures_util::future::join_all(
-        target_apps
+    impl<'a, P: PodmanImage> TargetApp<'a, P> {
+        async fn from_config(
+            cfg: &'a Model,
+            podman: &'a impl Podman<PImage<'a> = P>,
+        ) -> anyhow::Result<Self> {
+            Ok(Self {
+                image: podman
+                    .image(&cfg.image, PullIfMissing)
+                    .await?
+                    .ok_or(anyhow::anyhow!("Could not pull image"))?,
+                name: &cfg.image,
+                environment: vec![],
+            })
+        }
+    }
+
+    impl<'a, P: PodmanImage> PodmanImageInfo for TargetApp<'a, P> {
+        fn reference(&self) -> &str {
+            self.image.reference()
+        }
+
+        fn digest(&self) -> &str {
+            self.image.digest()
+        }
+    }
+
+    // First, pull target config and possibly new images
+    let target_app_configs = download_manager.get_target_application_configs().await?;
+    let mut target = futures_util::future::join_all(
+        target_app_configs
             .iter()
-            .map(|a| podman.image(&a.image, PullIfMissing)),
+            .map(|a| TargetApp::from_config(a, podman)),
     )
     .await
     .into_iter()
-    .map(|r| r.and_then(|o| o.ok_or(anyhow::anyhow!("Could not pull image"))))
     .collect::<Result<Vec<_>, _>>()?;
 
-    target_images.sort_by(order_reference);
+    target.sort_by(order_reference);
 
     {
         let mut apps = apps_state.lock().await;
 
         apps.sort_by(order_reference);
 
-        for action in ReconcileIterator::new(&apps, target_images) {
+        for action in ReconcileIterator::new(&apps, target) {
             match action {
                 ReconcileAction::Create { image } => {
-                    let app = Application::launch_from_image(&image, image.digest()).await?;
+                    let app =
+                        Application::launch_from_image(&image.image, image.name, image.environment)
+                            .await?;
                     apps.push(app);
                 }
                 ReconcileAction::Update {
@@ -66,8 +99,12 @@ async fn try_update(
                     target_image,
                 } => {
                     apps.swap_remove(application_index).remove().await?;
-                    let app = Application::launch_from_image(&target_image, target_image.digest())
-                        .await?;
+                    let app = Application::launch_from_image(
+                        &target_image.image,
+                        target_image.name,
+                        target_image.environment,
+                    )
+                    .await?;
                     apps.push(app);
                 }
                 ReconcileAction::Remove { application_index } => {
@@ -77,7 +114,7 @@ async fn try_update(
         }
     }
 
-    for app in target_apps {
+    for app in target_app_configs {
         download_manager
             .report_current_application_assignment(app.id)
             .await?;
