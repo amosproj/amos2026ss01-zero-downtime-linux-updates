@@ -13,7 +13,7 @@ pub struct Claims {
 }
 
 // helpers that map missing/invalid -> ErrorKind::InvalidToken
-fn get_str(claim: &Value, key: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn get_str(claim: &Value, key: &str) -> Result<String, jsonwebtoken::errors::Error> {
     claim
         .get(key)
         .and_then(Value::as_str)
