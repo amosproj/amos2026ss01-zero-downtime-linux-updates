@@ -87,7 +87,11 @@ async fn main() {
         std::process::exit(0);
     }
 
-    info!("Started app...");
+    info!(
+        version = VERSION,
+        device_uuid = %config.device_uuid,
+        "Orchestrator started",
+    );
     debug!("Loaded config: {:?}", config);
 
     info!("Collecting initial inventory");

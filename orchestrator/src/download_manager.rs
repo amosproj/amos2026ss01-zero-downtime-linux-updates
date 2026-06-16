@@ -12,6 +12,7 @@ use chrono::Utc;
 use futures_util::future::join_all;
 use reqwest::Client;
 use std::sync::Arc;
+use tracing::{debug, info, warn};
 use tracing::{info, warn};
 
 pub struct TokenState {
@@ -111,7 +112,13 @@ impl DownloadManager {
         self.ensure_auth_not_expired().await?;
 
         let assignment = self.get_target_os_assignment().await?;
-        self.get_os_version_by_id(assignment.os_version_id).await
+        let version = self.get_os_version_by_id(assignment.os_version_id).await?;
+        debug!(
+            os_version_id = version.id,
+            commit_hash = %version.commit_hash,
+            "Resolved target OS version",
+        );
+        Ok(version)
     }
 
     async fn get_target_os_assignment(&self) -> Result<OsAssignment::Model> {
@@ -224,6 +231,7 @@ impl DownloadManager {
             configs.push(result?);
         }
 
+        debug!(count = configs.len(), "Resolved target application configs");
         Ok(configs)
     }
 
