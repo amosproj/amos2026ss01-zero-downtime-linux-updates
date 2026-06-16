@@ -316,20 +316,23 @@ mod tests {
 
     use crate::podman::{
         Podman, PodmanContainer, PodmanContainerState, PodmanImage, PodmanImageInfo,
+        PodmanPullBehaviour::PullIfMissing,
     };
 
     const PODMAN_SOCK: &str = "/run/podman/podman.sock";
 
     #[tokio::test]
     #[ignore = "has to have access to the Podman socket"]
+    #[serial_test::serial]
     async fn test_podman_image_prune() {
         let (mut p, _) = super::PodmanWrapper::connect(Path::new(PODMAN_SOCK))
             .await
             .unwrap();
+        p.prune_images().await.unwrap();
         let len_initial = p.list_images().await.unwrap().len();
 
         p.image(
-            "alpine:latest",
+            "hello-world:latest",
             crate::podman::PodmanPullBehaviour::PullIfMissing,
         )
         .await
@@ -344,6 +347,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "has to have access to the Podman socket"]
+    #[serial_test::serial]
     async fn test_podman_image_pull() {
         let (p, _) = super::PodmanWrapper::connect(Path::new(PODMAN_SOCK))
             .await
@@ -367,6 +371,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "has to have access to the Podman socket"]
+    #[serial_test::serial]
     async fn test_podman_create_and_destroy() {
         let (mut p, _) = super::PodmanWrapper::connect(Path::new(PODMAN_SOCK))
             .await
@@ -426,5 +431,45 @@ mod tests {
             lc(&mut p).await.all(|c| c.name() != "test-container"),
             "Container not destroyed"
         );
+    }
+
+    #[tokio::test]
+    #[ignore = "has to have access to the Podman socket"]
+    #[serial_test::serial]
+    async fn test_podman_wait_for_state() {
+        let (p, _) = super::PodmanWrapper::connect(Path::new(PODMAN_SOCK))
+            .await
+            .unwrap();
+
+        let image = p
+            .image("docker.io/valkey/valkey", PullIfMissing)
+            .await
+            .unwrap()
+            .unwrap();
+        let mut container = image.create_container("test", vec![]).await.unwrap();
+
+        assert_eq!(
+            container.state().await.unwrap(),
+            PodmanContainerState::Stopped
+        );
+
+        // Should immediately return
+        container
+            .wait_for_state_change(PodmanContainerState::Running)
+            .await
+            .unwrap();
+
+        container.start().await.unwrap();
+        container
+            .wait_for_state_change(PodmanContainerState::Stopped)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            container.state().await.unwrap(),
+            PodmanContainerState::Running
+        );
+        container.stop().await.unwrap();
+        container.destroy().await.unwrap();
     }
 }
