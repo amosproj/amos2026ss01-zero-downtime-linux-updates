@@ -10,10 +10,9 @@ use amos_common::entities::{ApplicationAssignment, ApplicationConfig, OsAssignme
 use anyhow::{Context, Result};
 use chrono::Utc;
 use futures_util::future::join_all;
-use log::{debug, info};
-use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::{Client, ClientBuilder};
-use tokio::sync::{Mutex, RwLock};
+use reqwest::Client;
+use std::sync::Arc;
+use tracing::{info, warn};
 
 pub struct TokenState {
     pub token: String,

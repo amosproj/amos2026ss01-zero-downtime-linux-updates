@@ -2,7 +2,7 @@ use crate::download_manager::DownloadManager;
 use crate::state::{AgentState, OsState};
 use crate::update_check::{CheckForUpdate, UpdateDecision};
 use crate::util::bootc_wrapper::Bootc;
-use log::{error, info, warn};
+use tracing::{error, info, warn};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;

@@ -13,10 +13,6 @@ chrono = { workspace = true }
 clap = { workspace = true }
 config = { workspace = true }
 ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
-env_logger = { workspace = true }
-futures-util = "0.3.32"
-jsonwebtoken = { workspace = true }
-log = { workspace = true }
 podman-api = { version = "0.11", default-features = false }
 reqwest = { version = "0.13.3", features = ["json"] }
 rsa = { version = "0.9.10", features = ["pem"] }
@@ -24,7 +20,9 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = "0.1.44"
-tss-esapi = "7.7.0"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing-journald = "0.3"
+futures-util = "0.3.32"
 
 [dev-dependencies]
 serial_test = "3.4.0"

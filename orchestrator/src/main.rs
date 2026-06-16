@@ -1,7 +1,7 @@
 mod config_loader;
 use clap::Parser;
 use config_loader::get_config;
-use log::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::application::Application;
 use crate::loop_os::run_os_tree_main_loop;
@@ -18,6 +18,7 @@ mod application;
 mod download_manager;
 mod healthcheck;
 mod inventory;
+mod logging;
 mod loop_apps;
 mod loop_os;
 mod podman;
@@ -52,13 +53,7 @@ struct Cli {
 async fn main() {
     let cli = Cli::parse();
 
-    // Adjust log level according to verbosity specified via CLI
-    let mut log_level = log::LevelFilter::Warn;
-    for _ in 0..cli.debug {
-        log_level = log_level.increment_severity();
-    }
-
-    env_logger::builder().filter_level(log_level).init();
+    logging::init(cli.debug);
 
     let signer = match util::tpm::tpm_init() {
         Ok(signer) => signer,

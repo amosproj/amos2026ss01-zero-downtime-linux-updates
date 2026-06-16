@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use log::{info, warn};
+use tracing::{info, warn};
 use serde::Serialize;
 
 use crate::util::bootc_wrapper::{Bootc, BootcStatus};
