@@ -12,7 +12,12 @@ use tss_esapi::{Context, TctiNameConf, WrapperErrorKind};
 
 const PERSISTENT_HANDLE: u32 = 0x8100_0000;
 
-pub fn tpm_init() -> Result<(), Box<dyn std::error::Error>> {
+pub struct TpmSigner {
+    ctx: Context,
+    key_handle: KeyHandle,
+}
+
+pub fn tpm_init() -> Result<TpmSigner, tss_esapi::Error> {
     // Connect to TPM (swtpm)
     // /dev/tpmrm0 should be preferred over /dev/tpm0 as it is resource managed
     let tcti_config = TctiNameConf::from_str("device:/dev/tpmrm0")
@@ -30,11 +35,13 @@ pub fn tpm_init() -> Result<(), Box<dyn std::error::Error>> {
     let pubkey = armor_rsa_public_key(public)?;
     println!("{}", pubkey);
 
+    let mut signer = TpmSigner { ctx, key_handle };
+
     let data = "hello world";
-    let sig_bytes = sign_data(ctx, key_handle, data.to_string())?;
+    let sig_bytes = sign_data(&mut signer, data.to_string())?;
     println!("Signature ({} bytes): {:02x?}", sig_bytes.len(), sig_bytes);
 
-    Ok(())
+    Ok(signer)
 }
 
 fn armor_rsa_public_key(public: Public) -> Result<String, tss_esapi::Error> {
@@ -66,18 +73,20 @@ fn armor_rsa_public_key(public: Public) -> Result<String, tss_esapi::Error> {
     Ok(pem)
 }
 
-fn sign_data(
-    mut ctx: Context,
-    key_handle: KeyHandle,
-    input: String,
-) -> Result<Vec<u8>, tss_esapi::Error> {
+pub fn sign_data(signer: &mut TpmSigner, input: String) -> Result<Vec<u8>, tss_esapi::Error> {
     let input_buffer = MaxBuffer::try_from(input.as_bytes())
         .map_err(|_| tss_esapi::Error::WrapperError(WrapperErrorKind::InvalidParam))?;
 
-    let (digest, ticket) = ctx.hash(input_buffer, HashingAlgorithm::Sha256, Hierarchy::Null)?;
+    // ensure NO session is active for TPM2_Hash
+    signer.ctx.clear_sessions();
+
+    let (digest, ticket) =
+        signer
+            .ctx
+            .hash(input_buffer, HashingAlgorithm::Sha256, Hierarchy::Null)?;
 
     // TODO: Possibly avoidable by creating the key without create option `withuserauth`
-    let session = ctx.start_auth_session(
+    let session = signer.ctx.start_auth_session(
         None,
         None,
         None,
@@ -85,14 +94,14 @@ fn sign_data(
         tss_esapi::structures::SymmetricDefinition::AES_128_CFB,
         HashingAlgorithm::Sha256,
     )?;
-    ctx.set_sessions((session, None, None));
+    signer.ctx.set_sessions((session, None, None));
 
     // RSASSA-PKCS1-v1_5 with SHA256
     let scheme = SignatureScheme::RsaSsa {
         hash_scheme: HashScheme::new(HashingAlgorithm::Sha256),
     };
 
-    let signature = ctx.sign(key_handle, digest, scheme, ticket)?;
+    let signature = signer.ctx.sign(signer.key_handle, digest, scheme, ticket)?;
 
     let signature_bytes = match signature {
         tss_esapi::structures::Signature::RsaSsa(sig) => sig.signature().to_vec(),
@@ -102,6 +111,9 @@ fn sign_data(
             ));
         }
     };
+
+    // TODO: Do flush here
+    // signer.ctx.flush_context(session)?;
 
     Ok(signature_bytes)
 }

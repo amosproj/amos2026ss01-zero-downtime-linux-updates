@@ -1,56 +1,131 @@
+use std::sync::Arc;
+
+use crate::config_loader::Settings;
+use crate::util::device_jwt::create_tpm_jwt;
+use crate::util::tpm::TpmSigner;
 use amos_common::Page;
 use amos_common::entities::reported_application_assignment::CreateModel as ReportedApplicationAssignmentCreate;
 use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
 use amos_common::entities::{ApplicationAssignment, ApplicationConfig, OsAssignment, OsVersion};
 use anyhow::{Context, Result};
+use chrono::Utc;
 use futures_util::future::join_all;
-use log::{info, warn};
-use reqwest::Client;
-use std::sync::Arc;
+use log::{debug, info};
+use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::{Client, ClientBuilder};
+use tokio::sync::{Mutex, RwLock};
 
-use crate::config_loader::Settings;
+pub struct TokenState {
+    pub token: String,
+    pub expires_at: i64, // UTC timestamp
+}
 
 pub struct DownloadManager {
-    pub http_client: Client,
+    pub http_client: RwLock<Client>,
     pub config: Arc<Settings>,
+    pub signer: Arc<Mutex<TpmSigner>>,
+    pub token: RwLock<TokenState>,
 }
 
 impl DownloadManager {
-    pub fn new(config: Arc<Settings>) -> Result<Self> {
-        let http_client = build_http_client(&config)?;
+    pub fn new(config: Arc<Settings>, signer: TpmSigner) -> Result<Self> {
+        let http_client = build_http_client(&config)?
+            .build()
+            .with_context(|| "Failed building HTTP client")?;
+
+        let token_state = TokenState {
+            token: String::new(),
+            expires_at: Utc::now().timestamp(), // immediately expired
+        };
+
         Ok(Self {
-            http_client,
+            http_client: RwLock::new(http_client),
             config,
+            signer: Arc::new(Mutex::new(signer)),
+            token: RwLock::new(token_state),
         })
     }
 
+    async fn ensure_auth_not_expired(&self) -> Result<()> {
+        // refresh 30 seconds before expiry
+        let refresh_before = 30;
+
+        {
+            let state = self.token.read().await;
+            if (Utc::now().timestamp() + refresh_before) < state.expires_at {
+                return Ok(()); // still valid
+            }
+        }
+
+        // write lock (only if expired)
+        let mut state = self.token.write().await;
+
+        // double-check after acquiring write lock
+        if (Utc::now().timestamp() + refresh_before) < state.expires_at {
+            return Ok(()); // someone else refreshed it
+        }
+
+        // refresh token
+        debug!("Renewing device jwt");
+        let mut signer = self.signer.lock().await;
+        let (new_token, expiry) = create_tpm_jwt(&mut *signer, self.config.device_uuid.clone())?;
+        state.token = new_token;
+        state.expires_at = expiry;
+
+        // rebuild client with new default Authorization header
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            reqwest::header::AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", state.token))?,
+        );
+
+        let new_client = build_http_client(&self.config)?
+            .default_headers(headers)
+            .build()
+            .with_context(|| "Failed building HTTP client")?;
+
+        {
+            let mut client = self.http_client.write().await;
+            *client = new_client;
+        }
+
+        Ok(())
+    }
+
     // Sends device pings to the API to indicate the orchestrator is still running
-    pub async fn send_ping(&self) {
+    pub async fn send_ping(&self) -> Result<()> {
+        self.ensure_auth_not_expired().await?;
+
         let url = format!(
             "{}/pings/{}",
             self.config.cloud_url, self.config.device_uuid
         );
 
-        let result = self.http_client.put(url).send().await;
-        if let Err(err) = result {
-            warn!("Aliveness report failed: {}", err);
-        }
+        self.http_client.read().await.put(url).send().await?;
+
+        Ok(())
     }
 
     /// Fetches the OS version assigned to this device from the API.
     /// Queries `/os-assignments?device_uuid=<uuid>` then `/os-versions/<id>`.
     pub async fn get_target_os_version(&self) -> Result<OsVersion::Model> {
+        self.ensure_auth_not_expired().await?;
+
         let assignment = self.get_target_os_assignment().await?;
         self.get_os_version_by_id(assignment.os_version_id).await
     }
 
     async fn get_target_os_assignment(&self) -> Result<OsAssignment::Model> {
+        self.ensure_auth_not_expired().await?;
+
         let url = format!(
             "{}/os-assignments?device_uuid={}",
             self.config.cloud_url, self.config.device_uuid
         );
         let resp = self
             .http_client
+            .read()
+            .await
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -77,6 +152,8 @@ impl DownloadManager {
     /// Reports the current OS assignment for this device to the API.
     /// POSTs to `/reported-os-assignments?device_uuid=<uuid>`.
     pub async fn report_current_os_assignment(&self, os_version_id: i32) -> Result<()> {
+        self.ensure_auth_not_expired().await?;
+
         let url = format!(
             "{}/reported-os-assignments?device_uuid={}",
             self.config.cloud_url, self.config.device_uuid
@@ -89,6 +166,8 @@ impl DownloadManager {
 
         let resp = self
             .http_client
+            .read()
+            .await
             .post(&url)
             .json(&body)
             .timeout(std::time::Duration::from_secs(10))
@@ -104,9 +183,13 @@ impl DownloadManager {
     }
 
     async fn get_os_version_by_id(&self, id: i32) -> Result<OsVersion::Model> {
+        self.ensure_auth_not_expired().await?;
+
         let url = format!("{}/os-versions/{}", self.config.cloud_url, id);
         let resp = self
             .http_client
+            .read()
+            .await
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -125,7 +208,11 @@ impl DownloadManager {
     /// Fetches the application configs assigned to this device from the API.
     /// Resolves `/app-assignments?device_uuid=<uuid>` to the referenced
     /// `ApplicationConfig` records via `/app-configs/<id>`.
-    pub async fn get_target_application_configs(&self) -> Result<Vec<ApplicationConfig::Model>> {
+    pub async fn get_target_application_configs(
+        &self,
+    ) -> Result<Vec<ApplicationConfig::Model>> {
+        self.ensure_auth_not_expired().await?;
+
         let assignments = self.get_target_application_assignments().await?;
 
         let mut fetch_futures = Vec::with_capacity(assignments.len());
@@ -146,12 +233,16 @@ impl DownloadManager {
     async fn get_target_application_assignments(
         &self,
     ) -> Result<Vec<ApplicationAssignment::Model>> {
+        self.ensure_auth_not_expired().await?;
+
         let url = format!(
             "{}/app-assignments?device_uuid={}",
             self.config.cloud_url, self.config.device_uuid
         );
         let resp = self
             .http_client
+            .read()
+            .await
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -170,9 +261,13 @@ impl DownloadManager {
     }
 
     async fn get_application_config_by_id(&self, id: i32) -> Result<ApplicationConfig::Model> {
+        self.ensure_auth_not_expired().await?;
+
         let url = format!("{}/app-configs/{}", self.config.cloud_url, id);
         let resp = self
             .http_client
+            .read()
+            .await
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -194,6 +289,8 @@ impl DownloadManager {
         &self,
         application_config_id: i32,
     ) -> Result<()> {
+        self.ensure_auth_not_expired().await?;
+
         let url = format!(
             "{}/reported-app-assignments?device_uuid={}",
             self.config.cloud_url, self.config.device_uuid
@@ -206,6 +303,8 @@ impl DownloadManager {
 
         let resp = self
             .http_client
+            .read()
+            .await
             .post(&url)
             .json(&body)
             .timeout(std::time::Duration::from_secs(10))
@@ -222,7 +321,7 @@ impl DownloadManager {
 }
 
 // If https_proxy is set, it will be used for all requests. Otherwise, reqwest will use https_proxy from the environment variables.
-fn build_http_client(settings: &Settings) -> Result<Client> {
+fn build_http_client(settings: &Settings) -> Result<ClientBuilder> {
     let mut builder = Client::builder();
 
     if let Some(proxy_url) = &settings.https_proxy {
@@ -234,9 +333,7 @@ fn build_http_client(settings: &Settings) -> Result<Client> {
         info!("No https proxy set, using environment variables if available");
     }
 
-    builder
-        .build()
-        .with_context(|| "Failed building HTTP client")
+    Ok(builder)
 }
 
 // // Poll the server to check what the available OS version is
