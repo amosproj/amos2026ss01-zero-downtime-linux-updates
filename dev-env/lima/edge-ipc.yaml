@@ -68,15 +68,10 @@ provision:
       ExecStart=
       ExecStart=/var/usrlocal/bin/amos-orchestrator --config /etc/amos/config.toml
   # AMOS: write config file the orchestrator reads.
+  # `file:` is resolved relative to this YAML.
   - mode: data
     path: /etc/amos/config.toml
-    # owner: "root:root"
-    # permissions: "644"
-    content: |
-      cloud_url = "http://host.lima.internal:8080/api/v1"
-      poll_interval_secs = 5
-      inventory_path = "/var/lib/amos/inventory.json"
-      device_uuid = "00000000-0000-0000-0000-000000000001"
+    file: orchestrator-config.toml
 # Extra environment variables that will be loaded into the VM at start up.
 # These variables are consumed by internal init scripts, and also added
 # to /etc/environment.
