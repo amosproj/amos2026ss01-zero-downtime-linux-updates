@@ -33,13 +33,20 @@ mounts:
   - location: "/tmp/lima"
     writable: true
 
-# /usr/local/bin is read-only, so let's point it to /var/usrlocal/bin instead.
 provision:
+  # Ensure the writable bin dir for hot-swapped dev binaries exists. The
+  # systemd drop-in below points the orchestrator's ExecStart at this path so
+  # `make dev-deploy` can swap the binary without rebuilding the OS image.
   - mode: boot
     script: |
       #!/bin/bash
       set -eux -o pipefail
       mkdir -p /var/usrlocal/bin
+      # If a dev binary hasn't been deployed yet, fall back to the image's
+      # /usr/libexec binary so the service still starts on first boot.
+      if [ ! -x /var/usrlocal/bin/amos-orchestrator ]; then
+        ln -sf /usr/libexec/amos-orchestrator /var/usrlocal/bin/amos-orchestrator
+      fi
   # Fall back to xterm-256color when the host terminal's terminfo entry
   # isn't shipped in the VM (e.g. xterm-ghostty, xterm-kitty). Without this,
   # `systemctl status` and other pager-using commands fail with
@@ -51,6 +58,15 @@ provision:
       if [ -n "$TERM" ] && ! infocmp "$TERM" >/dev/null 2>&1; then
         export TERM=xterm-256color
       fi
+  # AMOS dev override: redirect the orchestrator service's ExecStart to a
+  # writable path so devs can swap the binary on a live VM. Empty ExecStart=
+  # clears the unit's value before setting the new one (systemd requires this).
+  - mode: data
+    path: /etc/systemd/system/orchestrator.service.d/10-dev.conf
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=/var/usrlocal/bin/amos-orchestrator --config /etc/amos/config.toml
   # AMOS: write config file the orchestrator reads.
   - mode: data
     path: /etc/amos/config.toml

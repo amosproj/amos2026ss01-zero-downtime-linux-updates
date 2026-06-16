@@ -1,10 +1,17 @@
-.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull
+.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull dev-deploy
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
 TMP_DIR       ?= /tmp/amos2026ss01-zero-downtime-linux-updates
 IMAGE_BUILDER ?= ghcr.io/osbuild/image-builder-cli:latest
 HOST_ARCH     := $(shell uname -m | sed -e s/arm64/aarch64/ -e s/amd64/x86_64/)
+
+# dev-deploy: name of the running Lima VM and the host-mounted share used as a
+# drop point. The lima yaml mounts host $(LIMA_TMP) at the same path inside the
+# VM, so files copied here are visible to the guest without an SSH round-trip.
+DEV_VM        ?= edge-ipc
+LIMA_TMP      ?= /tmp/lima
+RUST_BUILDER  ?= docker.io/rust:1.95-slim
 
 # Prebuilt disk image published by .github/workflows/disk-image.yml as an OCI
 # artifact (each tag bundles both <name>.raw.xz and <name>.qcow2.xz).
@@ -124,3 +131,39 @@ _image-pull:
 image-clean: ## Remove locally built disk images
 	rm -rf $(DIST_DIR)
 	rm -rf $(TMP_DIR)
+
+# dev-deploy: cross-build the orchestrator for the running VM's arch, drop it
+# through the host-mounted /tmp/lima share, and restart the service. The VM's
+# systemd drop-in (10-dev.conf, written by edge-ipc.yaml) points ExecStart at
+# /var/usrlocal/bin/amos-orchestrator, so this swaps the binary without
+# rebuilding or redeploying the OS image.
+#
+# We resolve the VM arch from `uname -m` inside the VM (not the host) because
+# the host may be macOS arm64/amd64 while the VM may have been started with a
+# different --arch, and the orchestrator needs the VM's arch. The build runs
+# inside a Linux Rust container at the right platform, so devs don't need a
+# Linux cross-toolchain on macOS.
+dev-deploy: ## Cross-build orchestrator for running VM and hot-swap+restart the service
+	@set -eu; \
+	command -v limactl >/dev/null 2>&1 || { echo "Error: 'limactl' not found." >&2; exit 1; }; \
+	command -v podman  >/dev/null 2>&1 || { echo "Error: 'podman' not found." >&2; exit 1; }; \
+	vm_arch=$$(limactl shell $(DEV_VM) -- uname -m | tr -d '\r'); \
+	case "$$vm_arch" in \
+	  aarch64) plat=linux/arm64 ;; \
+	  x86_64)  plat=linux/amd64 ;; \
+	  *) echo "unsupported VM arch: $$vm_arch" >&2; exit 1 ;; \
+	esac; \
+	target=$(CURDIR)/target/dev-vm-$$vm_arch; \
+	echo ">>> Building amos-orchestrator for VM ($$vm_arch, $$plat) -> $$target/release/"; \
+	mkdir -p $$target $(LIMA_TMP); \
+	podman run --rm --platform $$plat \
+	  -v $(CURDIR):/workspace \
+	  -w /workspace \
+	  $(RUST_BUILDER) \
+	  cargo build --release --package amos-orchestrator \
+	    --target-dir /workspace/target/dev-vm-$$vm_arch; \
+	cp $$target/release/amos-orchestrator $(LIMA_TMP)/amos-orchestrator.new; \
+	echo ">>> Installing into $(DEV_VM):/var/usrlocal/bin/amos-orchestrator and restarting"; \
+	limactl shell $(DEV_VM) -- sudo install -m755 $(LIMA_TMP)/amos-orchestrator.new /var/usrlocal/bin/amos-orchestrator; \
+	limactl shell $(DEV_VM) -- sudo systemctl restart orchestrator.service; \
+	echo ">>> Deployed. Tail logs: limactl shell $(DEV_VM) -- journalctl -u orchestrator.service -f"

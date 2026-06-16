@@ -15,9 +15,12 @@ ARG FEDORA_VERSION=latest
 FROM quay.io/fedora/fedora-bootc:${FEDORA_VERSION}
 ARG DEV_MODE
 
-# Copy the compiled binary from the build stage
-COPY --from=builder /workspace/target/release/amos-orchestrator /usr/local/bin/amos-orchestrator
-# TODO: path
+# Install the orchestrator binary into /usr/libexec — bootc's /usr is read-only
+# and ships with the image, so the prod binary updates atomically with OS
+# updates. /usr/libexec is the idiomatic spot for system-service binaries that
+# aren't meant to be invoked from PATH.
+# see https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch04s07.html
+COPY --from=builder /workspace/target/release/amos-orchestrator /usr/libexec/amos-orchestrator
 
 # Install the systemd unit and enable it
 COPY rootc-build/orchestrator.service /etc/systemd/system/orchestrator.service

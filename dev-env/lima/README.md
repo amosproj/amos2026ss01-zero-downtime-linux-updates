@@ -51,21 +51,59 @@ Tear down with `limactl stop edge-ipc && limactl delete edge-ipc`.
 
 ## Key paths inside the VM
 
-This is a bootc/ostree system, so the filesystem is split: `/usr` is a
-**read-only** part of the OS image, while `/etc` and `/var` are **writable** and
-**persist** across OS updates.
+This is a bootc/ostree system. See
+[`../../Documentation/architecture.md`](../../Documentation/architecture.md)
+for the full explanation of `/usr` (read-only, image), `/etc` (writable,
+merged) and `/var` (writable, first-boot-populated only). In the dev VM
+specifically:
 
-| Path                                       | What                                                                      | Notes                                                                                  |
-| ------------------------------------------ | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `/usr/local/bin/amos-orchestrator`         | The orchestrator binary                                                   | `/usr/local` is a symlink to writable `/var/usrlocal`; the rest of `/usr` is read-only |
-| `/etc/amos/config.toml`                    | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](./edge-ipc.yaml)                |
-| `/var/lib/amos/inventory.json`             | Device inventory the agent writes on startup                              | Standard place for app state; created by the service (runs as root)                    |
-| `/etc/systemd/system/orchestrator.service` | The systemd service that runs the agent                                   | Enabled at image-build time; starts on boot                                            |
+| Path                                                     | What                                                                      | Notes                                                                                       |
+| -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `/usr/libexec/amos-orchestrator`                         | The orchestrator binary shipped in the image                              | Read-only; updated atomically with the OS                                                   |
+| `/var/usrlocal/bin/amos-orchestrator`                    | The binary the dev VM's service actually runs                             | Writable; populated by `make dev-deploy`. Falls back to a symlink to `/usr/libexec` on boot |
+| `/etc/systemd/system/orchestrator.service.d/10-dev.conf` | Drop-in that redirects `ExecStart` at the writable path above             | Written by [`edge-ipc.yaml`](./edge-ipc.yaml); dev-only — not present in prod images        |
+| `/etc/amos/config.toml`                                  | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](./edge-ipc.yaml)                     |
+| `/var/lib/amos/inventory.json`                           | Device inventory the agent writes on startup                              | Standard place for app state; created by the service (runs as root)                         |
+| `/etc/systemd/system/orchestrator.service`               | The systemd service that runs the agent                                   | Enabled at image-build time; starts on boot                                                 |
 
 > **Heads-up:** run the agent via systemd (it runs as root). Running
 > `amos-orchestrator` by hand as your normal user fails to create `/var/lib/amos`
 > because only root may write under `/var/lib`. Use
 > `sudo systemctl start orchestrator.service` instead.
+
+## Iterating on the orchestrator (hot-swap)
+
+You don't need to rebuild the OS image to test orchestrator changes. The dev
+VM's systemd drop-in points the unit's `ExecStart` at
+`/var/usrlocal/bin/amos-orchestrator` (writable), and `make dev-deploy`
+cross-builds for the VM's arch, drops the binary, and restarts the service:
+
+```bash
+# from the project root, with the VM already running
+make dev-deploy            # defaults to VM name 'edge-ipc'
+make dev-deploy DEV_VM=my-vm
+
+# then watch it run
+limactl shell edge-ipc -- journalctl -u orchestrator.service -f
+```
+
+What `dev-deploy` does:
+
+1. Asks the running VM for its arch (`uname -m`) — this matters because your
+   **host may be macOS arm64 or amd64**, and the VM may have been started with
+   a different `--arch` than the host. The orchestrator must be built for the
+   **VM's** arch, not the host's.
+2. Builds inside a Linux `rust:1.95-slim` container at the right `--platform`
+   (so devs don't need a Linux cross-toolchain on macOS). Output goes to
+   `target/dev-vm-<arch>/release/` to keep it separate from your host-native
+   `target/release/`.
+3. Copies the binary into `/tmp/lima/` on the host (lima mounts this writable
+   into the VM at the same path), then `sudo install`s it into
+   `/var/usrlocal/bin/amos-orchestrator` and runs `systemctl restart`.
+
+If the VM isn't running yet, start it as usual — on first boot, the provision
+script symlinks `/var/usrlocal/bin/amos-orchestrator` to `/usr/libexec/...` so
+the service starts cleanly even before you've deployed a dev binary.
 
 ## Troubleshooting
 
