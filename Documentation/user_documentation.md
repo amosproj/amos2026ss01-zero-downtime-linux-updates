@@ -252,7 +252,7 @@ All routes are served under `/v1`. Fields marked `*` are required. Pagination is
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/audit-logs` | List audit logs. Query options: `?table_name=<string>&record_id=<string>&changed_by=<string>&operation=<string>` |
+| `GET` | `/v1/audit-logs` | List audit logs. Query options: `?table_name=<string>&record_id=<string>&changed_by=<int>&operation=<string>` |
 | `GET` | `/v1/audit-logs/{table_name}/{record_id}` | Get audit logs for a specific table and record id. |
 | `GET` | `/v1/audit-logs/by-device/{id}` | Get audit logs for a specific device. |
 

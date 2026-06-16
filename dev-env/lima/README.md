@@ -14,40 +14,68 @@ agent run end to end, without any physical hardware.
 - The VM image is defined in [`../../rootc-build/Containerfile`](../../rootc-build/Containerfile);
   the VM itself is defined in [`edge-ipc.yaml`](./edge-ipc.yaml).
 
+## Prerequisites
+
+- `limactl`
+- `oras`
+- `swtpm`
+- `podman`
+
 ## Run it
 
-Prerequisites (macOS): `limactl`, `oras`, and `podman` (`brew install lima oras podman`).
+
+0. *cd* into the project root
+1. Get a disk image into ./dist - pick ONE:
+   ```bash
+   make pull-image PULL_REF=main      # download the prebuilt image from CI (fast)
+   make image                         # OR build it locally from source
+   ```
+   Notice: When using *PULL_REF* to target a certain branch, replace `/` with `-`
+2. Create the VM (boots the image from ./dist)
+   ```bash
+   limactl create --name edge-ipc dev-env/lima/edge-ipc.yaml
+   ```
+3. Start the software TPM
+   ```bash
+   mkdir -p /tmp/emulated_tpm
+   swtpm socket --tpm2 -d --tpmstate dir=/tmp/emulated_tpm --ctrl type=unixio,path=/tmp/emulated_tpm/swtpm-sock --log level=20
+   ```
+   (The swtpm is forked to the background and terminates, as soon the VM is shut down once it has attached to the socket)
+
+   Using the command above, the TPM state is saved under */tmp/emulated_tpm*. Could be useful for testing, at important good to know.
+3. Start the VM (with the vTPM attached)
+   ```bash
+   QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
+       -chardev socket,id=chrtpm,path=/tmp/emulated_tpm/swtpm-sock \
+       -tpmdev emulator,id=tpm0,chardev=chrtpm \
+       -device tpm-tis,tpmdev=tpm0" \
+       limactl start edge-ipc
+   ```
+   For the TPM to work, QEMU *must* be used
+
+## Accessing the VM
+
+Get a (implicit ssh) shell into the VM: `limactl shell edge-ipc`
+
+Get the ssh config for the VM and use that for explicit ssh access or scp'ing sth. to the VM:
 
 ```bash
-# From the project root.
+edge_ssh_config=`limactl ls --format='{{.SSHConfigFile}}' edge-ipc`
 
-# 1. Get a disk image into ./dist — pick ONE:
-make pull-image PULL_REF=main      # download the prebuilt image from CI (fast)
-make image                         # OR build it locally from source
+ssh -F "$edge_ssh_config" lima-edge-ipc
 
-# 2. Start the VM (boots the image from ./dist).
-limactl start --name edge-ipc dev-env/lima/edge-ipc.yaml
-# optionally: --arch x86_64 --vm-type qemu
-# vm-type: https://lima-vm.io/docs/config/vmtype/
-
-# 3. Watch the orchestrator do its thing.
-limactl shell edge-ipc -- journalctl -u orchestrator.service -f
-
-# 4. Start the api-server and db on your host-machine (outside the vm)
-podman compose -f .devcontainer/docker-compose.yml up -d mock-api-container postgres-container
-
-# 5. Shell into the vm
-limactl shell edge-ipc
+scp -F "$edge_ssh_config" target/debug/amos-orchestrator lima-edge-ipc:/tmp/
 ```
 
-The orchestrator starts automatically (it's a systemd service enabled in the
-image). To inspect the inventory it produced:
+Inside the VM, watch the orchestrator systemd service: `journalctl -fu orchestrator.service`
 
-```bash
-limactl shell edge-ipc -- sudo cat /var/lib/amos/inventory.json
-```
+The host is rechable over the network via `host.lima.internal`. (When running the api server on the host its url would be `http://host.lima.internal:8080/` then)
 
-Tear down with `limactl stop edge-ipc && limactl delete edge-ipc`.
+## Stopping/deleting
+
+Stop the VM (state preserved, can be started again): `limactl stop edge-ipc`
+
+Delete the VM (state lost): `limactl delete edge-ipc`
 
 ## Key paths inside the VM
 
@@ -72,9 +100,3 @@ This is a bootc/ostree system, so the filesystem is split: `/usr` is a
 - **Connection errors in the log:** the agent polls the cloud API at the
   `cloud_url` in `config.toml` (by default the mock server on the host's port
   8080). Start the mock server if you want successful polls.
-
-
-### TPM
-
-Lima/Virtualization.framework does **not** expose TPM. When the TPM-backed
-device identity work needs a target, a libvirt + swtpm profile could be added.

@@ -4,22 +4,27 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = { workspace = true }
 amos-common = { workspace = true }
-chrono = { version = "0.4", features = ["serde"] }
+
+anyhow = { workspace = true }
 async-trait = "0.1"
+base64 = { workspace = true }
+chrono = { workspace = true }
 clap = { workspace = true }
 config = { workspace = true }
 ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
 env_logger = { workspace = true }
+futures-util = "0.3.32"
+jsonwebtoken = { workspace = true }
 log = { workspace = true }
 podman-api = { version = "0.11", default-features = false }
+reqwest = { version = "0.13.3", features = ["json"] }
+rsa = { version = "0.9.10", features = ["pem"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = "0.1.44"
-futures-util = "0.3.32"
-reqwest = { version = "0.13.3", features = ["json"] }
+tss-esapi = "7.7.0"
 
 [dev-dependencies]
 mockall = "0.14"

@@ -56,6 +56,10 @@ amos2026ss01-zero-downtime-linux-updates/
 | `git` | ≥ 2.x | Version control |
 | `make` | any | Developer setup shortcuts |
 
+Additionally the tss2 library is needed for the LSP to work, as the `tss-esapi` crate still needs certain headers to be present that are not included with the crate. For installation, the package name depends on yout distribution:
+- Debian(like): `libtss2-dev`
+- Fedora/RHEL: `tpm2-tss-devel`
+
 Optional (for full integration testing):
 - `podman` — container runtime
 - `bootc` — OS image tooling

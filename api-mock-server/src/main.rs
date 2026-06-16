@@ -1,9 +1,11 @@
 use clap::Parser;
 mod api_v1;
-mod auth;
+mod auth_device;
+mod auth_user;
 mod config;
 pub(crate) mod db_migration;
 pub(crate) mod dtos;
+pub(crate) mod ts_migration;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware as axum_middleware, routing::get};
 mod audit_context;
@@ -72,6 +74,14 @@ async fn main() {
         .await
         .unwrap_or_else(|err| {
             error!("Failed to initialize database connection: {}", err);
+            std::process::exit(1);
+        });
+
+    // Initialize TimescaleDB connection for time-series log data
+    api_v1::ts_db::initialize_timescale_db(config.timescale_database_url)
+        .await
+        .unwrap_or_else(|err| {
+            error!("Failed to initialize TimescaleDB connection: {}", err);
             std::process::exit(1);
         });
 

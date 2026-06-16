@@ -1,3 +1,5 @@
+pub mod device_jwt;
+
 pub mod entities;
 
 pub mod util;

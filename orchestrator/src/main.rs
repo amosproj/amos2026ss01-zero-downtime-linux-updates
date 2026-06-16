@@ -1,7 +1,7 @@
 mod config_loader;
 use clap::Parser;
 use config_loader::get_config;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 
 use crate::loop_os::run_os_tree_main_loop;
 use crate::state::OsState;
@@ -57,6 +57,14 @@ async fn main() {
     }
 
     env_logger::builder().filter_level(log_level).init();
+
+    let signer = match util::tpm::tpm_init() {
+        Ok(signer) => signer,
+        Err(err) => {
+            error!("TPM init failed: {}", err);
+            std::process::exit(1);
+        }
+    };
 
     let bootc_client = Arc::new(Bootc::new(Box::new(RealExecuter)));
 
@@ -116,7 +124,7 @@ async fn main() {
     );
 
     let download_manager = Arc::new(
-        match download_manager::DownloadManager::new(Arc::clone(&config)) {
+        match download_manager::DownloadManager::new(Arc::clone(&config), signer) {
             Ok(dm) => dm,
             Err(err) => {
                 error!("Failed to initialize secure cloud HTTP client: {:?}", err);
@@ -145,7 +153,9 @@ async fn main() {
     let _health_report_handle = tokio::spawn(async move {
         loop {
             healthcheck_interval.tick().await;
-            download_manager_clone.send_ping().await;
+            if let Err(err) = download_manager_clone.send_ping().await {
+                warn!("Aliveness report failed: {}", err);
+            }
         }
     });
 

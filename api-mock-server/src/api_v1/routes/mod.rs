@@ -4,6 +4,7 @@ pub mod applications;
 pub mod audit_log;
 pub mod devices;
 pub mod groups;
+pub mod logs;
 pub mod os_assignments;
 pub mod os_versions;
 pub mod pagination;
@@ -56,6 +57,7 @@ pub fn routes() -> Router {
         .merge(applications::routes())
         .merge(devices::routes())
         .merge(groups::routes())
+        .merge(logs::routes())
         .merge(os_assignments::routes())
         .merge(os_versions::routes())
         .merge(pings::routes())
