@@ -76,9 +76,12 @@ where
     }
 }
 
-/// Initialize the global tracing subscriber with three sinks: stdout, journald
-/// (when available), and an in-memory stub for the future DB shipper. Must be
-/// called from inside a Tokio runtime so the stub consumer task can be spawned.
+/// Initialize the global tracing subscriber with a console/journal sink plus an
+/// in-memory stub for the future DB shipper. Must be called from inside a Tokio
+/// runtime so the stub consumer task can be spawned.
+///
+/// log to journald *or* stdout, never both, to avoid duplicate journal
+/// entries: under systemd, stdout is already captured into the journal
 pub fn init(verbosity: u8, device_uuid: &str) {
     let level = match verbosity {
         0 => "warn",
@@ -93,8 +96,20 @@ pub fn init(verbosity: u8, device_uuid: &str) {
     let env_filter =
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_filter));
 
-    let stdout_layer = fmt::layer().with_target(true);
-    let journald_layer = tracing_journald::layer().ok();
+    // Try journald only when systemd has wired our stdout to the journal;
+    // otherwise we want plain console output for interactive/dev runs.
+    let journald_layer = if std::env::var_os("JOURNAL_STREAM").is_some() {
+        tracing_journald::layer().ok()
+    } else {
+        None
+    };
+    // Use stdout when not under systemd, or as a fallback if connecting to the
+    // journald socket failed
+    let stdout_layer = if journald_layer.is_none() {
+        Some(fmt::layer().with_target(true))
+    } else {
+        None
+    };
 
     let (tx, rx) = mpsc::unbounded_channel::<LogEntry>();
     let db_stub_layer = DbStubLayer { sender: tx };
