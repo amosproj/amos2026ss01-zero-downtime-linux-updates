@@ -59,6 +59,9 @@ image-arm64: ARCH := aarch64
 image-arm64: _image-build ## Build arm64 disk image (cross-arch if host is amd64; needs qemu-user-static)
 
 _image-build:
+	@for t in podman; do \
+	  command -v $$t >/dev/null 2>&1 || { echo "Error: '$$t' not found. Install it with your package manager (e.g. \`brew install $$t\`)." >&2; exit 1; }; \
+	done
 	@echo ">>> Building disk image for $(ARCH)"
 	mkdir -p $(TMP_DIR) $(DIST_DIR)/qcow2 $(DIST_DIR)/image
 	podman build \
@@ -86,8 +89,15 @@ pull-image-arm64: _image-pull ## Download prebuilt arm64 disk image (raw) from G
 # Lima's `location:` can't consume an OCI/oras ref, so we pull + decompress the
 # artifact into the same dist/ paths the local `image` targets write, which the
 # edge-ipc.yaml template points at.
+#
+# Each tag bundles both <name>.raw.xz and <name>.qcow2.xz. `oras pull` would
+# fetch both layers; resolve the digest of the one we need and `oras blob
+# fetch` just that.
 _image-pull:
 	@set -eu; \
+	for t in oras jq xz; do \
+	  command -v $$t >/dev/null 2>&1 || { echo "Error: '$$t' not found. Install it with your package manager (e.g. \`brew install $$t\`)." >&2; exit 1; }; \
+	done; \
 	if [ -z "$(PULL_REF)" ]; then \
 	  echo "PULL_REF is required, e.g. make pull-image PULL_REF=feat-create-test-setup (pulls feat-create-test-setup-amd64)" >&2; \
 	  exit 1; \
@@ -99,9 +109,14 @@ _image-pull:
 	esac; \
 	ref="$(GHCR_DISK):$(PULL_REF)-$$gharch"; \
 	art="amos-edge-$(PULL_REF)-$$gharch.$$fmt.xz"; \
-	echo ">>> Pulling $$ref"; \
+	echo ">>> Pulling $$art from $$ref"; \
 	mkdir -p $(TMP_DIR) $(DIST_DIR)/qcow2 $(DIST_DIR)/image; \
-	oras pull -o $(TMP_DIR) "$$ref"; \
+	digest=$$(oras manifest fetch "$$ref" | \
+	  jq -r --arg name "$$art" '.layers[] | select(.annotations."org.opencontainers.image.title" == $$name) | .digest'); \
+	if [ -z "$$digest" ]; then \
+	  echo "could not find layer $$art in $$ref" >&2; exit 1; \
+	fi; \
+	oras blob fetch --output "$(TMP_DIR)/$$art" "$(GHCR_DISK)@$$digest"; \
 	echo ">>> Decompressing $$art -> $$dest"; \
 	xz -dc "$(TMP_DIR)/$$art" > "$$dest"; \
 	echo ">>> Ready: $$dest"

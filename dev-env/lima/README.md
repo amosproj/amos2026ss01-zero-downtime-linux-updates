@@ -17,6 +17,7 @@ agent run end to end, without any physical hardware.
 ## Run it
 
 Prerequisites (macOS): `limactl` and `podman` (`brew install lima podman`).
+For `make pull-image` you also need `oras` and `jq` (`brew install oras jq`).
 
 ```bash
 # From the project root.
