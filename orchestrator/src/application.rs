@@ -16,7 +16,7 @@ pub struct Application {
 }
 
 impl Application {
-    pub fn wrap<P: PodmanContainer>(container: P) -> Self {
+    pub fn wrap(container: impl PodmanContainer) -> Self {
         let delete_notifier = Arc::new(tokio::sync::Notify::const_new());
         let event_recv = LogEventReceiver {
             app_name: container.name().to_owned(),
@@ -33,7 +33,7 @@ impl Application {
         }
     }
 
-    pub async fn launch_from_image<P: PodmanImage>(image: &P, name: &str) -> anyhow::Result<Self> {
+    pub async fn launch_from_image(image: &impl PodmanImage, name: &str) -> anyhow::Result<Self> {
         let container = image.create_container(name, Vec::new()).await?;
         Ok(Self::wrap(container))
     }
@@ -63,9 +63,9 @@ impl Drop for Application {
 
 /// Try to keep the container alive to best of ability
 /// and output some logs otherwise
-async fn run_lifecycle_loop<P: PodmanContainer, E: EventReceiver>(
-    mut container: P,
-    event_recv: E,
+async fn run_lifecycle_loop(
+    mut container: impl PodmanContainer,
+    event_recv: impl EventReceiver,
     delete_notifier: Arc<tokio::sync::Notify>,
 ) {
     loop {

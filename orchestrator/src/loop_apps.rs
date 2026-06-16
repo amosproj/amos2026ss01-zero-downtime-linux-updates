@@ -10,9 +10,9 @@ use crate::podman::PodmanPullBehaviour::PullIfMissing;
 use crate::podman::{Podman, PodmanImageInfo};
 use crate::state::AgentState;
 
-pub async fn run_apps_main_loop<P: Podman>(
+pub async fn run_apps_main_loop(
     agent_state: AgentState,
-    podman: P,
+    podman: impl Podman,
     download_manager: Arc<DownloadManager>,
 ) {
     let mut update_interval = tokio::time::interval(Duration::from_secs(
@@ -30,9 +30,9 @@ pub async fn run_apps_main_loop<P: Podman>(
     }
 }
 
-async fn try_update<P: Podman>(
+async fn try_update(
     apps_state: &Mutex<Vec<Application>>,
-    podman: &P,
+    podman: &impl Podman,
     download_manager: &DownloadManager,
 ) -> anyhow::Result<()> {
     let target_apps = download_manager.get_target_application_configs().await?;
