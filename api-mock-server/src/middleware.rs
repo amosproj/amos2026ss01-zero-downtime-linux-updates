@@ -47,7 +47,7 @@ pub async fn jwt_auth(
     if is_device {
         // 4. Validate the token for a device
         trace!("Received device JWT: {}", token);
-        match validate_device_token(token.to_owned(), token_data) {
+        match validate_device_token(token.to_owned(), token_data).await {
             Ok(claims) => {
                 // 5. Attach the claims to the request so handlers can use them
                 req.extensions_mut().insert(claims);

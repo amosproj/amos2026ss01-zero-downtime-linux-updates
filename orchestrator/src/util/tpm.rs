@@ -1,6 +1,7 @@
+use std::fs;
 use std::str::FromStr as _;
 
-use log::debug;
+use log::{debug, warn};
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
 use tss_esapi::constants::SessionType;
@@ -33,7 +34,9 @@ pub fn tpm_init() -> Result<TpmSigner, tss_esapi::Error> {
     // Read public area
     let (public, _name, _qualified_name) = ctx.read_public(key_handle)?;
     let pubkey = armor_rsa_public_key(public)?;
-    println!("{}", pubkey);
+    if let Err(e) = fs::write("/tmp/my_tpm_pubkey.pem", pubkey) {
+        warn!("Could not write own public key to /tpm: {}", e);
+    }
 
     let mut signer = TpmSigner { ctx, key_handle };
 
