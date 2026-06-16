@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use tracing::{info, warn};
 use serde::Serialize;
+use tracing::{info, warn};
 
 use crate::util::bootc_wrapper::{Bootc, BootcStatus};
 use crate::util::executer::Executer;

@@ -13,7 +13,6 @@ use futures_util::future::join_all;
 use reqwest::Client;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
-use tracing::{info, warn};
 
 pub struct TokenState {
     pub token: String,
