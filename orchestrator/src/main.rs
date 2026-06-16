@@ -53,7 +53,17 @@ struct Cli {
 async fn main() {
     let cli = Cli::parse();
 
-    logging::init(cli.debug);
+    // Load config first so logging can be tagged with the device UUID. The
+    // logging subscriber isn't up yet, so failures go straight to stderr.
+    // FIXME: think about how to handle/log failed config reads.
+    //   they should be logged and sent to remote db but also include the device UUID
+    //   depens on how UUID will be provided in the future.
+    let config = Arc::new(get_config(cli.config.clone()).unwrap_or_else(|err| {
+        eprintln!("Failed to load config: {err}");
+        std::process::exit(1);
+    }));
+
+    logging::init(cli.debug, &config.device_uuid);
 
     let signer = match util::tpm::tpm_init() {
         Ok(signer) => signer,
@@ -78,12 +88,6 @@ async fn main() {
     }
 
     info!("Started app...");
-
-    let config = Arc::new(get_config(cli.config).unwrap_or_else(|err| {
-        error!("Failed to load config: {}", err);
-        std::process::exit(1);
-    }));
-
     debug!("Loaded config: {:?}", config);
 
     info!("Collecting initial inventory");
