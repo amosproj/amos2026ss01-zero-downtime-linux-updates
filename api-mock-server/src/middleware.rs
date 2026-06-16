@@ -15,12 +15,6 @@ use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend};
 use serde_json::Value;
 use std::cell::RefCell;
 
-use crate::api_v1::db;
-use crate::audit_context::CURRENT_USER;
-use crate::auth_device::validate_device_token;
-use crate::auth_user::validate_user_token;
-use crate::config::JwtConfig;
-
 async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
     if db.get_database_backend() != DbBackend::Postgres {
         debug!("Skipping PG session variable on non-Postgres backend");
