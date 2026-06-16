@@ -1,9 +1,8 @@
+use amos_common::device_jwt::MAX_TOKEN_LIFETIME;
 use crate::util::tpm::TpmSigner;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-
-const LIFETIME: i64 = 300;
 
 fn prepare_jwt(device_uuid: String) -> (String, i64) {
     let header = jsonwebtoken::Header {
@@ -11,11 +10,11 @@ fn prepare_jwt(device_uuid: String) -> (String, i64) {
         ..Default::default()
     };
 
-    let expiry = chrono::Utc::now().timestamp() + LIFETIME;
+    let expiry = chrono::Utc::now().timestamp() + MAX_TOKEN_LIFETIME;
 
     let claims = amos_common::device_jwt::Claims {
         sub: device_uuid.to_owned(),
-        exp: expiry as usize,
+        exp: expiry,
         role: "device".to_owned(),
     };
 

@@ -1,9 +1,9 @@
 use jsonwebtoken::{DecodingKey, TokenData, Validation, decode};
-use log::trace;
+use log::{trace, warn};
 use serde_json::Value;
 
 use crate::{api_v1::db, auth_user::get_str};
-use amos_common::device_jwt::Claims;
+use amos_common::device_jwt::{Claims, MAX_TOKEN_LIFETIME};
 
 /// Validate a JWT string.
 /// Returns the decoded Claims on success, or an error if the token is invalid/expired.
@@ -34,6 +34,14 @@ pub async fn validate_device_token(
         &DecodingKey::from_rsa_pem(device_pubkey_decoded.as_bytes())?,
         &Validation::new(jsonwebtoken::Algorithm::RS256),
     )?;
+
+    // Ensure tokens is not issued for longer than their maximum lifetime
+    // Allow some drift due to (missing) clock synchronization
+    let difference_secs = verified_token.claims.exp - chrono::Utc::now().timestamp();
+    if (difference_secs -10) > MAX_TOKEN_LIFETIME {
+        warn!("Rejected device JWT due to too long lifetime: {} secs", difference_secs);
+        return Err(jsonwebtoken::errors::ErrorKind::InvalidToken.into());
+    }
 
     Ok(verified_token.claims)
 }

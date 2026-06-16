@@ -8,6 +8,7 @@ amos-common = { workspace = true }
 
 axum = { version = "0.8.9", default-features = false, features = ["http1", "http2", "json", "tokio", "query"] }
 serde_json = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
 clap = { workspace = true }
 config = { workspace = true }
 env_logger = { workspace = true }
