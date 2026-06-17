@@ -10,6 +10,13 @@ pub use self::log_level::LogLevel;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LogKind {
+    Device,
+    Application,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum LogEvent {
@@ -40,13 +47,15 @@ impl LogEvent {
     }
 }
 
-/// Query params for `GET /logs/stream`: `?device_id=&application_id=&level=`
+/// Query params for `GET /logs/stream`: `?device_id=&application_id=&level=&kind=`
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct LogStreamQuery {
     pub device_id: Option<i32>,
     pub application_id: Option<i32>,
     /// Minimum severity: events with a level lower than this are excluded.
     pub level: Option<LogLevel>,
+    /// Restrict to a single log kind: `device` or `application`.
+    pub kind: Option<LogKind>,
 }
 
 /// Query params for the historic log endpoints:

@@ -10,7 +10,7 @@ use crate::api_v1::routes::{
 };
 use crate::api_v1::ts_db;
 use amos_common::entities::{
-    ApplicationLog, DeviceLog, LogEvent, LogLevel, LogQuery, LogStreamQuery,
+    ApplicationLog, DeviceLog, LogEvent, LogKind, LogLevel, LogQuery, LogStreamQuery,
 };
 use axum::{
     Json, Router,
@@ -188,7 +188,18 @@ pub(super) fn matches(
     device_id: Option<i32>,
     application_id: Option<i32>,
     min_level: Option<LogLevel>,
+    kind: Option<LogKind>,
 ) -> bool {
+    if let Some(kind) = kind {
+        let event_kind = match event {
+            LogEvent::Device(_) => LogKind::Device,
+            LogEvent::Application(_) => LogKind::Application,
+        };
+        if event_kind != kind {
+            return false;
+        }
+    }
+
     if let Some(device_id) = device_id
         && event.device_id() != device_id
     {
@@ -217,7 +228,7 @@ async fn stream_logs(
     let rx = log_stream::sender().subscribe();
     let stream = BroadcastStream::new(rx)
         .filter_map(|item: Result<LogEvent, BroadcastStreamRecvError>| item.ok())
-        .filter(move |event| matches(event, params.device_id, params.application_id, params.level))
+        .filter(move |event| matches(event, params.device_id, params.application_id, params.level, params.kind))
         .map(|event| Ok(Event::default().json_data(&event).unwrap()));
 
     Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)))
@@ -256,34 +267,50 @@ mod tests {
     #[test]
     fn matches_with_no_filters_returns_true() {
         let event = device_log_event(1, LogLevel::Info);
-        assert!(matches(&event, None, None, None));
+        assert!(matches(&event, None, None, None, None));
     }
 
     #[test]
     fn matches_filters_by_device_id() {
         let event = device_log_event(1, LogLevel::Info);
-        assert!(matches(&event, Some(1), None, None));
-        assert!(!matches(&event, Some(2), None, None));
+        assert!(matches(&event, Some(1), None, None, None));
+        assert!(!matches(&event, Some(2), None, None, None));
     }
 
     #[test]
     fn matches_filters_by_application_id() {
         let event = application_log_event(1, 5, LogLevel::Info);
-        assert!(matches(&event, None, Some(5), None));
-        assert!(!matches(&event, None, Some(6), None));
+        assert!(matches(&event, None, Some(5), None, None));
+        assert!(!matches(&event, None, Some(6), None, None));
     }
 
     #[test]
     fn matches_application_id_filter_excludes_device_events() {
         let event = device_log_event(1, LogLevel::Info);
-        assert!(!matches(&event, None, Some(5), None));
+        assert!(!matches(&event, None, Some(5), None, None));
     }
 
     #[test]
     fn matches_filters_by_minimum_level() {
         let event = device_log_event(1, LogLevel::Warn);
-        assert!(matches(&event, None, None, Some(LogLevel::Warn)));
-        assert!(matches(&event, None, None, Some(LogLevel::Info)));
-        assert!(!matches(&event, None, None, Some(LogLevel::Error)));
+        assert!(matches(&event, None, None, Some(LogLevel::Warn), None));
+        assert!(matches(&event, None, None, Some(LogLevel::Info), None));
+        assert!(!matches(&event, None, None, Some(LogLevel::Error), None));
+    }
+
+    #[test]
+    fn matches_filters_by_kind_device() {
+        let device_event = device_log_event(1, LogLevel::Info);
+        let app_event = application_log_event(1, 5, LogLevel::Info);
+        assert!(matches(&device_event, None, None, None, Some(LogKind::Device)));
+        assert!(!matches(&app_event, None, None, None, Some(LogKind::Device)));
+    }
+
+    #[test]
+    fn matches_filters_by_kind_application() {
+        let device_event = device_log_event(1, LogLevel::Info);
+        let app_event = application_log_event(1, 5, LogLevel::Info);
+        assert!(matches(&app_event, None, None, None, Some(LogKind::Application)));
+        assert!(!matches(&device_event, None, None, None, Some(LogKind::Application)));
     }
 }
