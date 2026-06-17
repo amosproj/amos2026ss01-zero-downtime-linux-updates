@@ -40,6 +40,7 @@ RUN systemctl enable orchestrator.service
 
 # Install Greenboot health checks
 RUN dnf -y install greenboot greenboot-default-health-checks
+RUN systemctl enable greenboot-healthcheck.service
 
 # Install TPM library for interacting with the TPM (latter one only for debugging)
 RUN dnf -y install tpm2-tss tpm2-tools
@@ -85,5 +86,5 @@ RUN if [ "$BREAK_HEALTH" = "true" ]; then \
 #     cp /usr/share/containers/$src /etc/containers/policy.json; \
 #     rm /usr/share/containers/policy.prod.json /usr/share/containers/policy.dev.json
 
-# COPY rootc-build/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
-# RUN chmod 755 /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
+COPY rootc-build/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
+RUN chmod 755 /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
