@@ -11,7 +11,10 @@ HOST_ARCH     := $(shell uname -m | sed -e s/arm64/aarch64/ -e s/amd64/x86_64/)
 # VM, so files copied here are visible to the guest without an SSH round-trip.
 DEV_VM        ?= edge-ipc
 LIMA_TMP      ?= /tmp/lima
-RUST_BUILDER  ?= docker.io/rust:1.95-slim
+RUST_VERSION  ?= 1.95
+# Per-arch suffix (-amd64 / -arm64) is appended at use site to keep cross-arch
+# builds from clobbering each other in podman's local storage.
+RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
 
 # Prebuilt disk image published by .github/workflows/disk-image.yml as an OCI
 # artifact (each tag bundles both <name>.raw.xz and <name>.qcow2.xz).
@@ -154,12 +157,19 @@ dev-deploy: ## Cross-build orchestrator for running VM and hot-swap+restart the 
 	  *) echo "unsupported VM arch: $$vm_arch" >&2; exit 1 ;; \
 	esac; \
 	target=$(CURDIR)/target/dev-vm-$$vm_arch; \
+	plat_arch=$$(echo $$plat | cut -d/ -f2); \
+	builder_tag=$(RUST_BUILDER)-$$plat_arch; \
+	echo ">>> Ensuring rust builder image $$builder_tag (rust + libtss2-dev)"; \
+	podman build --platform $$plat \
+	  --build-arg RUST_VERSION=$(RUST_VERSION) \
+	  -f dev-env/rust-builder.Containerfile \
+	  -t $$builder_tag dev-env; \
 	echo ">>> Building amos-orchestrator for VM ($$vm_arch, $$plat) -> $$target/release/"; \
 	mkdir -p $$target $(LIMA_TMP); \
 	podman run --rm --platform $$plat \
 	  -v $(CURDIR):/workspace \
 	  -w /workspace \
-	  $(RUST_BUILDER) \
+	  $$builder_tag \
 	  cargo build --release --package amos-orchestrator \
 	    --target-dir /workspace/target/dev-vm-$$vm_arch; \
 	cp $$target/release/amos-orchestrator $(LIMA_TMP)/amos-orchestrator.new; \
