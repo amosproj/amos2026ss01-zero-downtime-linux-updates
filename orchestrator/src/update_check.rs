@@ -9,7 +9,7 @@ use std::sync::Arc;
 use amos_common::entities::{ApplicationConfig, OsVersion};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use log::debug;
+use tracing::debug;
 
 use crate::download_manager::DownloadManager;
 use crate::inventory::{ApplicationInfo, CollectionResult};
@@ -31,6 +31,7 @@ pub trait CheckForUpdate: Send + Sync {
 
     /// Returns `Ok(None)` when the local app inventory is unavailable and a
     /// meaningful comparison can't be made (e.g., podman not present).
+    #[expect(unused)]
     async fn check_apps(
         &self,
         current: &CollectionResult<Vec<ApplicationInfo>>,

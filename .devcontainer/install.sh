@@ -25,6 +25,12 @@ export DEBIAN_FRONTEND=noninteractive
 # This script runs when the container gets built
 # Use it e.g. to install additional packages from apt:
 #
-# apt-get update -y
-# apt-get install -y --no-install-recommends htop
-# rm -rf /var/lib/apt/lists/*
+apt-get update -y
+
+
+apt-get update -y
+# Podman CLI for interacting with the socket from podman-container
+apt-get install -y --no-install-recommends podman
+# for TPM stuff
+apt-get install -y --no-install-recommends libtss2-dev
+rm -rf /var/lib/apt/lists/*

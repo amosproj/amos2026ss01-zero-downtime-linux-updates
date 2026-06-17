@@ -1,29 +1,32 @@
 mod config_loader;
 use clap::Parser;
 use config_loader::get_config;
-use log::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
+use crate::application::Application;
 use crate::loop_os::run_os_tree_main_loop;
+use crate::podman::wrapper::PodmanWrapper;
 use crate::state::OsState;
 use crate::update_check::{CheckForUpdate, UpdateChecker};
 use crate::util::bootc_wrapper::Bootc;
 use crate::util::executer::RealExecuter;
 
 use crate::{
-    inventory::collect_and_save_inventory,
-    loop_apps::{get_initial_apps_state, run_apps_main_loop},
-    state::AgentState,
+    inventory::collect_and_save_inventory, loop_apps::run_apps_main_loop, state::AgentState,
 };
+mod application;
 mod download_manager;
 mod healthcheck;
 mod inventory;
+mod logging;
 mod loop_apps;
 mod loop_os;
+mod podman;
 mod state;
 mod update_check;
 mod util;
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -50,13 +53,25 @@ struct Cli {
 async fn main() {
     let cli = Cli::parse();
 
-    // Adjust log level according to verbosity specified via CLI
-    let mut log_level = log::LevelFilter::Warn;
-    for _ in 0..cli.debug {
-        log_level = log_level.increment_severity();
-    }
+    // Load config first so logging can be tagged with the device UUID. The
+    // logging subscriber isn't up yet, so failures go straight to stderr.
+    // FIXME: think about how to handle/log failed config reads.
+    //   they should be logged and sent to remote db but also include the device UUID
+    //   depens on how UUID will be provided in the future.
+    let config = Arc::new(get_config(cli.config.clone()).unwrap_or_else(|err| {
+        eprintln!("Failed to load config: {err}");
+        std::process::exit(1);
+    }));
 
-    env_logger::builder().filter_level(log_level).init();
+    logging::init(cli.debug, &config.device_uuid);
+
+    let signer = match util::tpm::tpm_init() {
+        Ok(signer) => signer,
+        Err(err) => {
+            error!("TPM init failed: {}", err);
+            std::process::exit(1);
+        }
+    };
 
     let bootc_client = Arc::new(Bootc::new(Box::new(RealExecuter)));
 
@@ -72,13 +87,11 @@ async fn main() {
         std::process::exit(0);
     }
 
-    info!("Started app...");
-
-    let config = Arc::new(get_config(cli.config).unwrap_or_else(|err| {
-        error!("Failed to load config: {}", err);
-        std::process::exit(1);
-    }));
-
+    info!(
+        version = VERSION,
+        device_uuid = %config.device_uuid,
+        "Orchestrator started",
+    );
     debug!("Loaded config: {:?}", config);
 
     info!("Collecting initial inventory");
@@ -105,7 +118,10 @@ async fn main() {
     };
 
     info!("Reading inital application state");
-    let apps_state = get_initial_apps_state();
+    let (podman, containers) = PodmanWrapper::connect(Path::new(&config.podman_path))
+        .await
+        .unwrap();
+    let apps_state = containers.into_iter().map(Application::wrap).collect();
 
     debug!("Creating AgentState");
     let agent_state = AgentState::new(VERSION, Arc::clone(&config), os_state, apps_state);
@@ -116,7 +132,7 @@ async fn main() {
     );
 
     let download_manager = Arc::new(
-        match download_manager::DownloadManager::new(Arc::clone(&config)) {
+        match download_manager::DownloadManager::new(Arc::clone(&config), signer) {
             Ok(dm) => dm,
             Err(err) => {
                 error!("Failed to initialize secure cloud HTTP client: {:?}", err);
@@ -130,8 +146,8 @@ async fn main() {
 
     let _apps_handle = tokio::spawn(run_apps_main_loop(
         agent_state.clone(),
+        podman,
         Arc::clone(&download_manager),
-        Arc::clone(&update_checker),
     ));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
         agent_state.clone(),
@@ -145,7 +161,9 @@ async fn main() {
     let _health_report_handle = tokio::spawn(async move {
         loop {
             healthcheck_interval.tick().await;
-            download_manager_clone.send_ping().await;
+            if let Err(err) = download_manager_clone.send_ping().await {
+                warn!("Aliveness report failed: {}", err);
+            }
         }
     });
 

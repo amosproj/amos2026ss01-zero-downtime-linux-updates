@@ -12,6 +12,8 @@ pub struct Model {
 
     pub uuid: String,
 
+    pub public_key: Option<String>,
+
     pub hostname: String,
 
     pub tenant_id: i32,
@@ -30,6 +32,7 @@ impl Model {
         amos_common::entities::Device::Model {
             id: self.id,
             uuid: self.uuid,
+            public_key: self.public_key,
             hostname: self.hostname,
             tenant_id: self.tenant_id,
             group_id: self.group_id,

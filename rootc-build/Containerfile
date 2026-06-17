@@ -13,6 +13,8 @@ ARG BREAK_HEALTH=false
 FROM docker.io/rust:1.95-slim AS builder
 COPY . /workspace
 WORKDIR /workspace
+# Headers needed for linking against TSS libs used for TPM communication (equiv. rpm package: tpm2-tss-devel)
+RUN apt-get update && apt-get install -y libtss2-dev
 RUN cargo build --package amos-orchestrator --release
 
 ARG FEDORA_VERSION=latest
@@ -38,6 +40,9 @@ RUN systemctl enable orchestrator.service
 
 # Install Greenboot health checks
 RUN dnf -y install greenboot greenboot-default-health-checks
+
+# Install TPM library for interacting with the TPM (latter one only for debugging)
+RUN dnf -y install tpm2-tss tpm2-tools
 
 # Install cloud-init so the resulting disk image is provisionable via NoCloud
 # (consumed by Lima, libvirt, virt-install, and most cloud providers)

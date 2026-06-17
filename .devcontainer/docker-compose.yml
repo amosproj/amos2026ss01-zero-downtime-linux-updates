@@ -1,8 +1,8 @@
-version: "3.8"
-
 services:
   dev-container:
     image: mcr.microsoft.com/devcontainers/base:ubuntu-24.04
+    environment:
+      CONTAINER_HOST: unix:/run/podman/podman.sock
     volumes:
       - ../..:/workspaces:cached
       - podman_socket:/run/podman
@@ -14,6 +14,9 @@ services:
       dockerfile: .devcontainer/mock-api.Dockerfile
     environment:
       APP_DATABASE_URL: "sqlite::memory:"
+      APP_TIMESCALE_DATABASE_URL: "postgres://app:4M0S@timescaledb-container:5432/amos_timeseries"
+    depends_on:
+      - timescaledb-container
     ports:
       # Exposed so the Lima edge-ipc VM can reach it at host.lima.internal:8080.
       - "127.0.0.1:8080:8080"
@@ -23,10 +26,20 @@ services:
     environment:
       POSTGRES_PASSWORD: dummy
     volumes:
-      - "./10_setup_app_db.sh:/docker-entrypoint-initdb.d/10_setup_amos.sh:ro,Z"
-      - "postgres_data:/var/lib/postgresql/data:rw"
+      - ./10_setup_app_db.sh:/docker-entrypoint-initdb.d/10_setup_amos.sh:ro,Z
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:5432:5432"
+
+  timescaledb-container:
+    image: docker.io/timescale/timescaledb:latest-pg18
+    environment:
+      POSTGRES_PASSWORD: dummy
+    volumes:
+      - "./20_setup_timescale_db.sh:/docker-entrypoint-initdb.d/20_setup_timescale_db.sh:ro,Z"
+      - "timescale_data:/var/lib/postgresql:rw"
+    ports:
+      - "127.0.0.1:5433:5432"
 
   podman-container:
     image: quay.io/podman/stable:v5.8
@@ -37,4 +50,5 @@ services:
 
 volumes:
   postgres_data:
+  timescale_data:
   podman_socket:

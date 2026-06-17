@@ -1,0 +1,11 @@
+[book]
+title = "AMOS Project Documentation"
+description = "Architecture, design, build, and user documentation for the AMOS zero-downtime Linux updates project."
+language = "en"
+src = "."
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates"
+edit-url-template = "https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/edit/main/Documentation/{path}"

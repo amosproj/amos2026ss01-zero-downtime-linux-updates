@@ -1,0 +1,67 @@
+// TODO: Remove this once this is integrated
+#![allow(dead_code)]
+
+use async_trait::async_trait;
+
+pub mod mock;
+pub mod wrapper;
+
+#[async_trait]
+pub trait Podman: 'static {
+    type PImage<'a>: PodmanImage
+    where
+        Self: 'a;
+    type PContainer: PodmanContainer;
+
+    async fn image<'a>(
+        &'a self,
+        reference: &str,
+        behaviour: PodmanPullBehaviour,
+    ) -> anyhow::Result<Option<Self::PImage<'a>>>;
+
+    async fn prune_images(&mut self) -> anyhow::Result<()>;
+}
+
+pub trait PodmanImageInfo {
+    /// Reference the image was tagged as, e.g. "docker.io/library/alpine:latest"
+    fn reference(&self) -> &str;
+
+    /// Unique fingerprint of the image, usually a SHA256
+    fn digest(&self) -> &str;
+}
+
+#[async_trait]
+pub trait PodmanImage: PodmanImageInfo + Send {
+    type PContainer: PodmanContainer;
+
+    async fn create_container(
+        &self,
+        name: &str,
+        environment: impl IntoIterator<Item = (&str, &str)> + Send,
+    ) -> anyhow::Result<Self::PContainer>;
+}
+
+#[async_trait]
+pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
+    async fn start(&mut self) -> anyhow::Result<()>;
+    async fn stop(&mut self) -> anyhow::Result<()>;
+    async fn destroy(self) -> anyhow::Result<()>;
+    async fn state(&self) -> anyhow::Result<PodmanContainerState>;
+    async fn wait_for_state_change(&self, current: PodmanContainerState) -> anyhow::Result<()>;
+    fn name(&self) -> &str;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PodmanPullBehaviour {
+    AlwaysPull,
+    PullIfMissingOrNewer,
+    PullIfMissing,
+    NeverPull,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PodmanContainerState {
+    Stopped,
+    Ambiguous,
+    Running,
+}
