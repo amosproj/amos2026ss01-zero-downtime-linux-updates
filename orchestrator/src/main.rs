@@ -63,7 +63,7 @@ async fn main() {
         std::process::exit(1);
     }));
 
-    logging::init(cli.debug, &config.device_uuid);
+    let log_rx = logging::init(cli.debug);
 
     let signer = match util::tpm::tpm_init() {
         Ok(signer) => signer,
@@ -140,6 +140,8 @@ async fn main() {
             }
         },
     );
+
+    logging::spawn_log_shipper(log_rx, Arc::clone(&download_manager));
 
     let update_checker: Arc<dyn CheckForUpdate> =
         Arc::new(UpdateChecker::new(Arc::clone(&download_manager)));
