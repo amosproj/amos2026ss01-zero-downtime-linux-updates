@@ -1,0 +1,14 @@
+#!/bin/sh
+# pre-commit hook: verify Rust code is formatted.
+# Installed by 'just setup-hooks'. Not mandatory — CI also checks.
+
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "pre-commit: cargo not found in PATH, skipping fmt check" >&2
+    exit 0
+fi
+
+if ! cargo fmt --all -- --check; then
+    echo >&2
+    echo "pre-commit: Rust code is not formatted. Run 'cargo fmt --all' and re-stage." >&2
+    exit 1
+fi

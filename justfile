@@ -20,7 +20,7 @@ setup: setup-template setup-hooks
     @echo "  Setup complete!"
     @echo ""
     @echo "  - Commit template configured (shows conventional commit format)"
-    @echo "  - Git hook installed (auto-adds DCO sign-off)"
+    @echo "  - Git hooks installed (auto-adds DCO sign-off, checks 'cargo fmt')"
     @echo ""
     @echo "  You can now commit normally. Use 'git commit -s' for explicit sign-off,"
     @echo "  or rely on the hook to add it automatically."
@@ -35,6 +35,8 @@ setup-template:
 setup-hooks:
     @cp scripts/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
     @chmod +x .git/hooks/prepare-commit-msg
+    @cp scripts/hooks/pre-commit .git/hooks/pre-commit
+    @chmod +x .git/hooks/pre-commit
     @echo "  Git hooks installed."
 
 # Build bootc disk image. arch: amd64|arm64 (also accepts x86_64|aarch64). format: qcow2|raw|all.
