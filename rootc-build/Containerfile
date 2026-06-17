@@ -1,5 +1,13 @@
 ARG FEDORA_VERSION=latest
 ARG DEV_MODE=false
+# Version marker baked into the image. Surfaces as the `version` field in
+# `bootc status`, so upgrade/rollback tests can tell two builds apart and
+# confirm which deployment is booted. Bump it for each test image (e.g. v1/v2).
+ARG IMAGE_VERSION=dev
+# When "true", install a greenboot check that always fails. The next boot is
+# marked unhealthy and bootc automatically rolls back to the previous
+# deployment — lets you build a deliberately "bad" image to test rollback.
+ARG BREAK_HEALTH=false
 
 # Compile the orchestrator binary
 FROM docker.io/rust:1.95-slim AS builder
@@ -9,10 +17,20 @@ RUN cargo build --package amos-orchestrator --release
 
 ARG FEDORA_VERSION=latest
 FROM quay.io/fedora/fedora-bootc:${FEDORA_VERSION}
+# ARGs don't cross FROM boundaries, so re-declare the ones this stage uses.
 ARG DEV_MODE
+ARG IMAGE_VERSION
+ARG BREAK_HEALTH
 
 # Copy the compiled binary from the build stage
 COPY --from=builder /workspace/target/release/amos-orchestrator /usr/local/bin/amos-orchestrator
+
+# Record the image version. The label is what `bootc status` reports as
+# `version`; the file is an easy human-readable marker. Both live in /usr, which
+# is immutable and per-deployment, so they always reflect the booted image
+# (including after a rollback) rather than persisting like /etc.
+LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
+RUN mkdir -p /usr/share/amos && echo "${IMAGE_VERSION}" > /usr/share/amos/image-version
 
 # Install the systemd unit and enable it
 COPY rootc-build/orchestrator.service /etc/systemd/system/orchestrator.service
@@ -22,7 +40,8 @@ RUN systemctl enable orchestrator.service
 RUN dnf -y install greenboot greenboot-default-health-checks
 
 # Install cloud-init so the resulting disk image is provisionable via NoCloud
-# + other lima dependencies
+# (consumed by Lima, libvirt, virt-install, and most cloud providers)
+# + other lima dependencies.
 RUN dnf -y install openssh-server cloud-init sshfs
 
 # Clean up DNF cache to reduce image size
@@ -31,13 +50,16 @@ RUN dnf clean all
 # RUN systemctl enable --root=/ cloud-init.service cloud-init-local.service \
 #                      cloud-config.service cloud-final.service
 
-# Install cloud-init so the resulting disk image is provisionable via NoCloud
-# (consumed by Lima, libvirt, virt-install, and most cloud providers).
-RUN dnf -y install cloud-init && \
-    dnf clean all
-
-# RUN systemctl enable --root=/ cloud-init.service cloud-init-local.service \
-#                      cloud-config.service cloud-final.service
+# Optional: build a deliberately "bad" image to exercise rollback. The failing
+# required check makes greenboot mark the boot unhealthy, so on the next boot
+# bootc rolls back to the previous deployment. Enable with
+# `--build-arg BREAK_HEALTH=true`.
+RUN if [ "$BREAK_HEALTH" = "true" ]; then \
+        mkdir -p /usr/lib/greenboot/check/required.d; \
+        printf '#!/bin/sh\necho "AMOS forced health-check failure (BREAK_HEALTH=true)" >&2\nexit 1\n' \
+            > /usr/lib/greenboot/check/required.d/99-amos-force-fail.sh; \
+        chmod 755 /usr/lib/greenboot/check/required.d/99-amos-force-fail.sh; \
+    fi
 
 # Embed the Cosign public key and container policy so podman enforces
 # signature verification when pulling future OS updates.
