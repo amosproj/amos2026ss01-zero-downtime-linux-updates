@@ -1,7 +1,7 @@
 # Lima template for the edge IPC VM.
 #
-# Boots the bootc disk image in ./dist, produced by either `make image` (build
-# locally) or `make pull-image` (download the prebuilt image from GHCR, for devs
+# Boots the bootc disk image in ./dist, produced by either `just image` (build
+# locally) or `just pull-image` (download the prebuilt image from GHCR, for devs
 # who don't build locally). See the images: block below.
 #
 # Quickstart (in the project root directory):
@@ -19,8 +19,8 @@ memory: "4GiB"
 disk: "20GiB"
 
 images:
-  # Local entries, populated either by `make image` (build locally) or by
-  # `make pull-image` (download the prebuilt image from GHCR — see below).
+  # Local entries, populated either by `just image` (build locally) or by
+  # `just pull-image` (download the prebuilt image from GHCR — see below).
   # raw works under both vz and qemu.
   - location: "dist/image/disk.raw"
     arch: "aarch64"

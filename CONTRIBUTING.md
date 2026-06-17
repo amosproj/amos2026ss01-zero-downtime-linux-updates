@@ -16,7 +16,7 @@
 ```bash
 git clone <your-fork-url>
 cd amos2026ss01-zero-downtime-linux-updates
-make setup
+just setup
 git checkout -b feature/my-change
 # ... make your changes ...
 git commit -s
@@ -31,7 +31,7 @@ git push origin feature/my-change
 After cloning, run:
 
 ```bash
-make setup
+just setup
 ```
 
 This configures:
@@ -39,7 +39,7 @@ This configures:
 - A **commit message template** that shows the expected format every time you commit
 - A **git hook** that automatically adds the DCO sign-off line to your commits
 
-Run `make help` to see all available targets.
+Run `just` to see all available recipes.
 
 ## Commit Messages
 
@@ -104,7 +104,7 @@ git commit -s -m "feat: add new feature"
 
 This adds a line like: `Signed-off-by: Your Name <your@email.com>`
 
-If you ran `make setup`, the git hook adds the sign-off automatically -- you don't need to remember `-s`.
+If you ran `just setup`, the git hook adds the sign-off automatically -- you don't need to remember `-s`.
 
 ### Fixing forgotten sign-offs
 

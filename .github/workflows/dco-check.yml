@@ -40,7 +40,7 @@ jobs:
             echo ""
             echo "To avoid this in the future:"
             echo "  Always use:   git commit -s"
-            echo "  Or run:       make setup  (installs a hook that auto-signs)"
+            echo "  Or run:       just setup  (installs a hook that auto-signs)"
             echo ""
             exit 1
           fi

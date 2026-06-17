@@ -79,10 +79,10 @@ After cloning the repository, run the one-time developer setup:
 ```bash
 git clone https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates.git
 cd amos2026ss01-zero-downtime-linux-updates
-make setup
+just setup
 ```
 
-`make setup` configures:
+`just setup` configures:
 - A **commit message template** (conventional commits format).
 - A **Git hook** that automatically appends the DCO sign-off line to commit messages.
 

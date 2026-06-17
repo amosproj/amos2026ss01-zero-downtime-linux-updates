@@ -15,7 +15,7 @@ Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our development
 workflow, commit conventions, and how to submit pull requests.
 
 This project uses the [Developer Certificate of Origin](./DCO). All commits
-must be signed off (`git commit -s`). Run `make setup` after cloning to
+must be signed off (`git commit -s`). Run `just setup` after cloning to
 configure your local environment.
 
 ## Try it out

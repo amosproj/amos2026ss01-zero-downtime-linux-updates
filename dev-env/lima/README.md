@@ -27,10 +27,12 @@ agent run end to end, without any physical hardware.
 0. *cd* into the project root
 1. Get a disk image into ./dist - pick ONE:
    ```bash
-   make pull-image PULL_REF=main      # download the prebuilt image from CI (fast)
-   make image                         # OR build it locally from source
+   just pull-image main               # download the prebuilt image from CI (fast)
+   just image                         # OR build it locally from source
    ```
-   Notice: When using *PULL_REF* to target a certain branch, replace `/` with `-`
+   Both recipes accept an optional `arch` (`amd64`|`arm64`) and `format`
+   (`qcow2`|`raw`) — e.g. `just pull-image main amd64 raw`. When targeting a
+   feature branch, replace `/` with `-` in the ref.
 2. Create the VM (boots the image from ./dist)
    ```bash
    limactl create --name edge-ipc dev-env/lima/edge-ipc.yaml
