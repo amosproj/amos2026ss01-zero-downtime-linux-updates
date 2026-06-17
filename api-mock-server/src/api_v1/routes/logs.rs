@@ -228,7 +228,15 @@ async fn stream_logs(
     let rx = log_stream::sender().subscribe();
     let stream = BroadcastStream::new(rx)
         .filter_map(|item: Result<LogEvent, BroadcastStreamRecvError>| item.ok())
-        .filter(move |event| matches(event, params.device_id, params.application_id, params.level, params.kind))
+        .filter(move |event| {
+            matches(
+                event,
+                params.device_id,
+                params.application_id,
+                params.level,
+                params.kind,
+            )
+        })
         .map(|event| Ok(Event::default().json_data(&event).unwrap()));
 
     Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)))
@@ -302,15 +310,39 @@ mod tests {
     fn matches_filters_by_kind_device() {
         let device_event = device_log_event(1, LogLevel::Info);
         let app_event = application_log_event(1, 5, LogLevel::Info);
-        assert!(matches(&device_event, None, None, None, Some(LogKind::Device)));
-        assert!(!matches(&app_event, None, None, None, Some(LogKind::Device)));
+        assert!(matches(
+            &device_event,
+            None,
+            None,
+            None,
+            Some(LogKind::Device)
+        ));
+        assert!(!matches(
+            &app_event,
+            None,
+            None,
+            None,
+            Some(LogKind::Device)
+        ));
     }
 
     #[test]
     fn matches_filters_by_kind_application() {
         let device_event = device_log_event(1, LogLevel::Info);
         let app_event = application_log_event(1, 5, LogLevel::Info);
-        assert!(matches(&app_event, None, None, None, Some(LogKind::Application)));
-        assert!(!matches(&device_event, None, None, None, Some(LogKind::Application)));
+        assert!(matches(
+            &app_event,
+            None,
+            None,
+            None,
+            Some(LogKind::Application)
+        ));
+        assert!(!matches(
+            &device_event,
+            None,
+            None,
+            None,
+            Some(LogKind::Application)
+        ));
     }
 }
