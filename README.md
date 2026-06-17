@@ -7,6 +7,8 @@ Something something something
 - [feature-board](https://github.com/orgs/amosproj/projects/97)
 - [imp-squared-backlog](https://github.com/orgs/amosproj/projects/101/views/1)
 
+- [documentation](https://amosproj.github.io/amos2026ss01-zero-downtime-linux-updates/)
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our development
