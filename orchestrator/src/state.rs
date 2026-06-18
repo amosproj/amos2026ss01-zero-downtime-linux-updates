@@ -2,15 +2,12 @@ use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::{application::Application, config_loader::Settings};
+use crate::{application::Application};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct OsState {
-    #[expect(unused)]
     pub update_pending: bool, // when an update is pending (updated but not yet rebooted)
-    #[expect(unused)]
     pub booted_image: String, // the current version and tag of the running image
-    #[expect(unused)]
     pub update_ostree_commit: Option<String>, // if update available -> the image tag for the update
 }
 
