@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 use tracing::warn;
 
 use crate::application::Application;
-use crate::download_manager::DownloadManager;
+use crate::api_client::ApiClient;
 use crate::podman::PodmanPullBehaviour::PullIfMissing;
 use crate::podman::log_registry::AppLogRegistry;
 use crate::podman::{Podman, PodmanImage, PodmanImageInfo};
@@ -16,7 +16,7 @@ use crate::state::AgentState;
 pub async fn run_apps_main_loop(
     agent_state: AgentState,
     podman: impl Podman,
-    download_manager: Arc<DownloadManager>,
+    download_manager: Arc<ApiClient>,
     registry: AppLogRegistry,
 ) {
     let mut update_interval = tokio::time::interval(Duration::from_secs(
@@ -71,7 +71,7 @@ pub fn resolve_application_ids<C: PodmanImageInfo>(
 async fn try_update(
     apps_state: &Mutex<Vec<Application>>,
     podman: &impl Podman,
-    download_manager: &DownloadManager,
+    download_manager: &ApiClient,
     registry: &AppLogRegistry,
 ) -> anyhow::Result<()> {
     struct TargetApp<'a, P: PodmanImage> {

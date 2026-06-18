@@ -1,4 +1,4 @@
-use crate::download_manager::DownloadManager;
+use crate::api_client::ApiClient;
 use crate::state::{AgentState, OsState};
 use crate::update_check::{CheckForUpdate, UpdateDecision};
 use crate::util::bootc_wrapper::Bootc;
@@ -10,7 +10,7 @@ use tracing::{error, info, warn};
 pub async fn run_os_tree_main_loop(
     agent_state: AgentState,
     client: Arc<Bootc>,
-    download_manager: Arc<DownloadManager>,
+    download_manager: Arc<ApiClient>,
     update_checker: Arc<dyn CheckForUpdate>,
 ) {
     let mut update_interval = interval(Duration::from_secs(

@@ -11,7 +11,7 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer, fmt};
 
-use crate::download_manager::DownloadManager;
+use crate::api_client::ApiClient;
 
 const LOG_INTERNAL_TARGET: &str = "amos_orchestrator::log_internal";
 
@@ -160,7 +160,7 @@ pub fn init(verbosity: u8) -> (UnboundedReceiver<LogMessage>, LogFlusher) {
 /// the first flush.
 pub fn spawn_log_shipper(
     mut rx: UnboundedReceiver<LogMessage>,
-    download_manager: Arc<DownloadManager>,
+    download_manager: Arc<ApiClient>,
 ) {
     let config = Arc::clone(&download_manager.config);
     tokio::spawn(async move {
@@ -202,7 +202,7 @@ pub fn spawn_log_shipper(
 
 async fn flush(
     buffer: &mut Vec<DeviceLog::CreateEntry>,
-    download_manager: &DownloadManager,
+    download_manager: &ApiClient,
     max_buffer: usize,
 ) {
     if buffer.is_empty() {

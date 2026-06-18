@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use tracing::debug;
 
-use crate::download_manager::DownloadManager;
+use crate::api_client::ApiClient;
 use crate::inventory::{ApplicationInfo, CollectionResult};
 use crate::util::bootc_wrapper::BootcStatus;
 
@@ -31,7 +31,6 @@ pub trait CheckForUpdate: Send + Sync {
 
     /// Returns `Ok(None)` when the local app inventory is unavailable and a
     /// meaningful comparison can't be made (e.g., podman not present).
-    #[expect(unused)]
     async fn check_apps(
         &self,
         current: &CollectionResult<Vec<ApplicationInfo>>,
@@ -39,11 +38,11 @@ pub trait CheckForUpdate: Send + Sync {
 }
 
 pub struct UpdateChecker {
-    download_manager: Arc<DownloadManager>,
+    download_manager: Arc<ApiClient>,
 }
 
 impl UpdateChecker {
-    pub fn new(download_manager: Arc<DownloadManager>) -> Self {
+    pub fn new(download_manager: Arc<ApiClient>) -> Self {
         Self { download_manager }
     }
 }
