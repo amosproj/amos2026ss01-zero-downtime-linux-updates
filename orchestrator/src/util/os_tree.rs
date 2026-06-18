@@ -9,7 +9,7 @@ pub struct RpmOstreeClient {
     executer: Arc<dyn Executer>,
 }
 
-#[allow(dead_code)]
+
 impl RpmOstreeClient {
     pub fn new(executer: Arc<dyn Executer>) -> Self {
         Self { executer }
@@ -55,7 +55,7 @@ impl RpmOstreeClient {
         Ok(())
     }
 
-    #[allow(dead_code)]
+    
     pub async fn rebase(&self, target_reference: &str) -> Result<()> {
         let res = self
             .executer
@@ -75,7 +75,7 @@ impl RpmOstreeClient {
         Ok(())
     }
 
-    #[allow(dead_code)]
+    
     pub async fn rollback(&self) -> Result<()> {
         let res = self
             .executer

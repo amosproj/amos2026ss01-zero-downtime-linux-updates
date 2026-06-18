@@ -1,6 +1,3 @@
-// TODO: Remove this once this is integrated
-#![allow(dead_code)]
-
 use async_trait::async_trait;
 
 pub mod mock;
