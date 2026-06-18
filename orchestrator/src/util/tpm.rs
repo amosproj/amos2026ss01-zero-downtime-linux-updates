@@ -42,13 +42,13 @@ impl TpmSigner {
         let mut signer = TpmSigner { ctx, key_handle };
 
         let data = "hello world";
-        let sig_bytes = signer.sign_data(data.to_string())?;
+        let sig_bytes = signer.sign_data(data)?;
         println!("Signature ({} bytes): {:02x?}", sig_bytes.len(), sig_bytes);
 
         Ok(signer)
     }
 
-    pub fn sign_data(&mut self, input: String) -> anyhow::Result<Vec<u8>> {
+    pub fn sign_data(&mut self, input: &str) -> anyhow::Result<Vec<u8>> {
         let input_buffer = MaxBuffer::try_from(input.as_bytes())?;
 
         // ensure NO session is active for TPM2_Hash
