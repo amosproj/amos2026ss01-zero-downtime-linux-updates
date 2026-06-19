@@ -2,6 +2,7 @@ use crate::dtos;
 use amos_common::entities::ApplicationAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
     QueryOrder,
@@ -20,6 +21,8 @@ pub async fn list_application_assignments(
 ) -> Result<(Vec<ApplicationAssignment::Model>, u64), DbErr> {
     let db = db!();
     let mut query = dtos::ApplicationAssignment::Entity::find()
+        .filter(dtos::ApplicationAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::ApplicationAssignment::Column::SupersededBy.is_null())
         .order_by_asc(dtos::ApplicationAssignment::Column::Id);
     if let Some(id) = application_config_id {
         query = query.filter(dtos::ApplicationAssignment::Column::ApplicationConfigId.eq(id));
@@ -61,6 +64,8 @@ pub async fn list_application_assignments_for_device(
     }
 
     let mut query = dtos::ApplicationAssignment::Entity::find()
+        .filter(dtos::ApplicationAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::ApplicationAssignment::Column::SupersededBy.is_null())
         .order_by_asc(dtos::ApplicationAssignment::Column::Id)
         .filter(applies_to_device);
     if let Some(id) = application_config_id {
@@ -81,6 +86,8 @@ pub async fn get_application_assignment(
 ) -> Result<Option<ApplicationAssignment::Model>, DbErr> {
     let db = db!();
     Ok(dtos::ApplicationAssignment::Entity::find_by_id(id)
+        .filter(dtos::ApplicationAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::ApplicationAssignment::Column::SupersededBy.is_null())
         .one(&db)
         .await?
         .map(|m| m.into_api()))
@@ -96,6 +103,8 @@ async fn add_application_assignment(
         application_config_id: Set(app_config_id),
         device_id: Set(device_id),
         group_id: Set(group_id),
+        deleted_at: NotSet,
+        superseded_by: NotSet,
     };
 
     let db = db!();
@@ -116,23 +125,67 @@ pub async fn update_application_assignment(
     group_id: Option<i32>,
 ) -> Result<ApplicationAssignment::Model, DbErr> {
     let db = db!();
-    let app_assignment = dtos::ApplicationAssignment::ActiveModel {
-        id: Set(id),
+
+    let current = dtos::ApplicationAssignment::Entity::find_by_id(id)
+        .filter(dtos::ApplicationAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::ApplicationAssignment::Column::SupersededBy.is_null())
+        .one(&db)
+        .await?
+        .ok_or(DbErr::RecordNotFound(
+            "ApplicationAssignment not found".into(),
+        ))?;
+
+    let new_assignment = dtos::ApplicationAssignment::ActiveModel {
+        id: NotSet,
         application_config_id: Set(app_config_id),
         device_id: Set(device_id),
         group_id: Set(group_id),
+        deleted_at: NotSet,
+        superseded_by: NotSet,
     };
-    let updated_group = app_assignment.update(&db).await?;
-    debug!("Updated application assignment: {:?}", updated_group);
-    Ok(updated_group.into_api())
+    let new_assignment = new_assignment.insert(&db).await?;
+
+    let old_active = dtos::ApplicationAssignment::ActiveModel {
+        id: Set(current.id),
+        application_config_id: Set(current.application_config_id),
+        device_id: Set(current.device_id),
+        group_id: Set(current.group_id),
+        deleted_at: Set(current.deleted_at),
+        superseded_by: Set(Some(new_assignment.id)),
+    };
+    old_active.update(&db).await?;
+
+    debug!(
+        "Updated application assignment via append-only: {:?}",
+        new_assignment
+    );
+    Ok(new_assignment.into_api())
 }
 
 pub async fn delete_application_assignment(id: i32) -> Result<u64, DbErr> {
     let db = db!();
-    let del = dtos::ApplicationAssignment::Entity::delete_by_id(id)
-        .exec(&db)
+
+    let current = dtos::ApplicationAssignment::Entity::find_by_id(id)
+        .filter(dtos::ApplicationAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::ApplicationAssignment::Column::SupersededBy.is_null())
+        .one(&db)
         .await?;
-    Ok(del.rows_affected)
+
+    match current {
+        Some(assignment) => {
+            let active = dtos::ApplicationAssignment::ActiveModel {
+                id: Set(assignment.id),
+                application_config_id: Set(assignment.application_config_id),
+                device_id: Set(assignment.device_id),
+                group_id: Set(assignment.group_id),
+                deleted_at: Set(Some(chrono::Utc::now())),
+                superseded_by: Set(assignment.superseded_by),
+            };
+            active.update(&db).await?;
+            Ok(1)
+        }
+        None => Ok(0),
+    }
 }
 
 pub async fn add_application_assignment_to_device(

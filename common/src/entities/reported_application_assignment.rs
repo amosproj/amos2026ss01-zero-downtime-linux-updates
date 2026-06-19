@@ -7,6 +7,8 @@ pub struct Model {
     pub application_config_id: i32,
     pub device_id: i32,
     pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub superseded_by: Option<i32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

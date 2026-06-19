@@ -12,6 +12,10 @@ pub struct Model {
 
     pub name: String,
 
+    pub deleted_at: Option<DateTimeUtc>,
+
+    pub superseded_by: Option<i32>,
+
     #[sea_orm(has_many)]
     pub devices: HasMany<Device::Entity>,
 }
@@ -23,6 +27,8 @@ impl Model {
         amos_common::entities::Group::Model {
             id: self.id,
             name: self.name,
+            deleted_at: self.deleted_at,
+            superseded_by: self.superseded_by,
         }
     }
 }

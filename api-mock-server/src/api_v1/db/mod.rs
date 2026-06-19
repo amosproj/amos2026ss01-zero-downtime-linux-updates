@@ -249,7 +249,7 @@ mod tests {
             .unwrap();
         let app_json = serde_json::to_string(&app).unwrap();
 
-        let expected = r#"{"id":1,"name":"app-a","description":"cool app"}"#;
+        let expected = r#"{"id":1,"name":"app-a","description":"cool app","deleted_at":null,"superseded_by":null}"#;
         assert_eq!(app_json, expected);
     }
 
@@ -359,6 +359,51 @@ mod tests {
                 .unwrap();
 
         assert_eq!(updated.device_id, Some(d2.id));
+        assert_ne!(updated.id, assignment.id, "assignments use append-only");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_application_config_update_uses_append_only() {
+        test_initialize_empty_inmem_db().await;
+
+        let app = super::add_application("app".to_owned(), "desc".to_owned())
+            .await
+            .unwrap();
+        let config =
+            super::add_application_config(app.id, "quay.io/app:1.0".to_owned(), None, None)
+                .await
+                .unwrap();
+        let updated = super::update_application_config(
+            config.id,
+            app.id,
+            "quay.io/app:2.0".to_owned(),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(updated.image, "quay.io/app:2.0");
+        assert_ne!(updated.id, config.id, "application configs use append-only");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_os_version_update_uses_append_only() {
+        test_initialize_empty_inmem_db().await;
+
+        let version = super::add_os_version("deadbeef".to_owned(), "1.0.0".to_owned(), None)
+            .await
+            .unwrap();
+        let updated =
+            super::update_os_version(version.id, "cafebabe".to_owned(), "2.0.0".to_owned(), None)
+                .await
+                .unwrap();
+
+        assert_eq!(updated.commit_hash, "cafebabe");
+        assert_eq!(updated.orchestrator_version, "2.0.0");
+        assert_ne!(updated.id, version.id, "os versions use append-only");
     }
 
     #[tokio::test]
@@ -388,6 +433,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(updated.hostname, "new-hostname");
+        assert_eq!(updated.id, device.id, "in-place update should keep same ID");
     }
 
     #[tokio::test]
@@ -403,6 +449,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(updated.description, "new");
+        assert_eq!(updated.id, app.id, "in-place update should keep same ID");
     }
 
     #[tokio::test]
@@ -547,7 +594,10 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(entries.len(), 2);
-        assert_eq!(entries[1].operation, "DELETE");
+        assert_eq!(
+            entries[1].operation, "UPDATE",
+            "soft delete triggers UPDATE in the DB"
+        );
     }
 
     #[tokio::test]

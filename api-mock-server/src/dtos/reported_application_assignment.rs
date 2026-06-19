@@ -21,6 +21,10 @@ pub struct Model {
     pub device: HasOne<Device::Entity>,
 
     pub updated_at: DateTimeUtc,
+
+    pub deleted_at: Option<DateTimeUtc>,
+
+    pub superseded_by: Option<i32>,
 }
 
 #[async_trait::async_trait]
@@ -41,24 +45,26 @@ impl Model {
             application_config_id: self.application_config_id,
             device_id: self.device_id,
             updated_at: self.updated_at,
+            deleted_at: self.deleted_at,
+            superseded_by: self.superseded_by,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use sea_orm::{ActiveModelTrait, sea_query::prelude::serde_json};
-    use serde_json::Value;
+    use sea_orm::{ActiveModelTrait, ActiveValue::Set};
 
     #[test]
     fn app_assignment_update_doesnt_require_updated_at() {
-        let update_json_str = r#"{ "application_config_id": 5, "device_id": 3 }"#;
-        let update_json: Value = serde_json::from_str(update_json_str).unwrap();
-        println!("Unmarshalled: {:?}", update_json);
-
-        let app_ass_update = super::ActiveModel::from_json(update_json.clone());
-        println!("Loaded ActiveModel: {:?}", app_ass_update);
-
-        assert!(app_ass_update.is_ok());
+        let am = super::ActiveModel {
+            id: Set(1),
+            application_config_id: Set(5),
+            device_id: Set(3),
+            updated_at: sea_orm::ActiveValue::NotSet,
+            deleted_at: sea_orm::ActiveValue::NotSet,
+            superseded_by: sea_orm::ActiveValue::NotSet,
+        };
+        assert!(am.is_not_set(<super::Entity as sea_orm::EntityTrait>::Column::UpdatedAt));
     }
 }

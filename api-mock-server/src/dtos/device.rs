@@ -23,6 +23,10 @@ pub struct Model {
     pub group_id: Option<i32>,
     #[sea_orm(belongs_to, from = "group_id", to = "id")]
     pub group: HasOne<Group::Entity>,
+
+    pub deleted_at: Option<DateTimeUtc>,
+
+    pub superseded_by: Option<i32>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -36,6 +40,8 @@ impl Model {
             hostname: self.hostname,
             tenant_id: self.tenant_id,
             group_id: self.group_id,
+            deleted_at: self.deleted_at,
+            superseded_by: self.superseded_by,
         }
     }
 }
