@@ -14,7 +14,8 @@ name: "Installer ISO"
 
 on:
   push:
-    tags: ["**"]
+    branches: ["**"]
+    # tags: ["**"]
   workflow_dispatch:
 
 jobs:
