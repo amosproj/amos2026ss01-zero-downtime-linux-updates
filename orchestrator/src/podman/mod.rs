@@ -66,7 +66,7 @@ pub trait PodmanImage: PodmanImageInfo + Send {
 #[async_trait]
 pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
     async fn start(&mut self) -> anyhow::Result<()>;
-    #[expect(unused)]
+    #[allow(dead_code)]
     async fn stop(&mut self) -> anyhow::Result<()>;
     async fn destroy(self) -> anyhow::Result<()>;
     async fn state(&self) -> anyhow::Result<PodmanContainerState>;

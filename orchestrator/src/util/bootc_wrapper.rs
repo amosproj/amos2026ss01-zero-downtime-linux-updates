@@ -163,7 +163,7 @@ impl Bootc {
         }
     }
 
-    #[expect(unused)]
+    #[allow(dead_code)]
     pub async fn rollback(&self) -> Result<()> {
         info!("Rolling back to previous bootc deployment");
         let args = vec!["rollback".to_string(), "--apply".to_string()];
