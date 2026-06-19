@@ -8,19 +8,6 @@
 #       https://bootc.dev/  (installer / kickstart)
 
 # ---------------------------------------------------------------------------
-# Login user. Replace the key with YOUR public key before building.
-# (For a prod image, manage users via the image instead of the installer.)
-# ---------------------------------------------------------------------------
-[[customizations.user]]
-name = "amos"
-# FIXME:change for prod / secure deployment
-# password "amos" hashed with `openssl passwd -6` — DEV ONLY, change for prod.
-password = "$6$JW.H/UVKqa6P8hSz$h2KzR3dc7k8W9YEhtLzK1pFdlHWzKCEfyBgCLmIhDvWV3lKDGXRMfmoYiFpvFKSiyE/OqFzs4jhkV5NmzdmQQ1"
-# TODO: ssh key
-key = "ssh-ed25519 AAAA_REPLACE_WITH_YOUR_PUBLIC_KEY amos@example"
-groups = ["wheel"]
-
-# ---------------------------------------------------------------------------
 # Disk layout. Keep it close to what the VM/raw image uses (ext4, no swap).
 # bootc-image-builder grows the root filesystem to fill the disk.
 # ---------------------------------------------------------------------------
@@ -32,9 +19,6 @@ minsize = "10 GiB"
 # [[customizations.filesystem]]
 # mountpoint = "/var/data"
 # minsize = "5 GiB"
-
-[customizations.installer]
-disable_kickstart_user = true
 
 # ---------------------------------------------------------------------------
 # Unattended kickstart. bootc-image-builder automatically appends the
