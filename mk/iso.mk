@@ -8,14 +8,14 @@
 #   make iso-clean   remove built ISO artifacts
 #
 # The ISO embeds our bootc image and installs it unattended via the kickstart in
-# rootc-build/iso/config.toml.
+# bootc/iso/config.toml.
 #
 # NOTE on tooling: the disk-image flow uses `image-builder-cli`. For the ISO we
 # use the canonical `bootc-image-builder` container, because its installer +
 # kickstart support (the `anaconda-iso` type, auto-reading /config.toml) is the
 # best-documented path. Both consume the same bootc image, so this is fine.
 
-ISO_CONFIG ?= rootc-build/iso/config.toml
+ISO_CONFIG ?= bootc/iso/config.toml
 BIB        ?= quay.io/centos-bootc/bootc-image-builder:latest
 ISO_TYPE   ?= anaconda-iso
 
@@ -37,7 +37,7 @@ _iso-build:
 	podman build \
 		--platform linux/$(ARCH) \
 		--build-arg DEV_MODE=true \
-		-f rootc-build/Containerfile \
+		-f bootc/Containerfile \
 		-t $(IMAGE) .
 	sudo podman run --rm --privileged --pull=newer \
 		--security-opt label=type:unconfined_t \

@@ -2,16 +2,16 @@ name: "Orchestrator Container Image"
 
 on:
   push:
-    tags: ['**']
+    tags: ["**"]
   pull_request:
     branches: [main]
 
   workflow_dispatch:
     inputs:
       fedora_version:
-        description: 'Fedora version to build with (e.g. 39, 40, latest)'
+        description: "Fedora version to build with (e.g. 39, 40, latest)"
         required: true
-        default: 'latest'
+        default: "latest"
         type: string
 
 env:
@@ -71,7 +71,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: rootc-build/Containerfile
+          file: bootc/Containerfile
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
@@ -107,7 +107,7 @@ jobs:
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
-      packages: write  # needed to push the manifest and attach signatures
+      packages: write # needed to push the manifest and attach signatures
 
     steps:
       - name: Download digests
