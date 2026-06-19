@@ -1,0 +1,84 @@
+name: "Installer ISO"
+
+# Builds installer ISO for a real IPC
+# Builds the bootc image itself. not dependent on pre-published one
+#
+# Triggers:
+#   - Manual run (workflow_dispatch) — UI button or `gh workflow run`.
+#   - Tag pushes
+#
+# Output:
+#   - Workflow artifact `amos-edge-<ref>-amd64-iso` containing install.iso.
+#     Download from the run page or with `gh run download <run-id>`.
+#     Retention: 30 days.
+
+on:
+  push:
+    tags: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    name: Build installer ISO (amd64)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Free up disk space
+        # we will need a lot of disk space which is limited on
+        # GitHub-hosted runners to something around 20-25 GB.
+        # remove the preinstalled .NET / Android / Haskell
+        # toolchains we don't need before starting.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      - name: Build bootc image into root podman storage
+        # sudo so the image lands in /var/lib/containers/storage, which the
+        # bootc-image-builder container mounts and reads via --local.
+        run: |
+          sudo podman build \
+            --platform linux/amd64 \
+            --build-arg DEV_MODE=true \
+            -f rootc-build/Containerfile \
+            -t localhost/amos-edge:dev .
+
+      - name: Build installer ISO with bootc-image-builder
+        run: |
+          mkdir -p "$PWD/output"
+          sudo podman run --rm --privileged --pull=newer \
+            --security-opt label=type:unconfined_t \
+            -v "$PWD/rootc-build/iso/config.toml:/config.toml:ro" \
+            -v "$PWD/output:/output" \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type anaconda-iso \
+            --config /config.toml \
+            --target-arch amd64 \
+            --local localhost/amos-edge:dev
+
+      - name: Rename ISO for download
+        id: rename
+        run: |
+          set -euo pipefail
+          sudo chown -R "$USER:$USER" output
+          SAFE_REF="${GITHUB_REF_NAME//\//-}"
+          ISO_NAME="amos-edge-${SAFE_REF}-amd64"
+          mkdir -p dist
+          mv output/bootiso/install.iso "dist/${ISO_NAME}.iso"
+          ls -lh "dist/${ISO_NAME}.iso"
+          echo "iso_name=${ISO_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload ISO as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rename.outputs.iso_name }}
+          path: dist/*.iso
+          if-no-files-found: error
+          retention-days: 30
+          # skip zipping
+          compression-level: 0
