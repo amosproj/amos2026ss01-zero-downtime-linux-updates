@@ -3,7 +3,6 @@ use chrono::{DateTime, Utc};
 use futures_util::stream::BoxStream;
 
 pub mod log_registry;
-pub mod mock;
 pub mod wrapper;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -67,6 +66,7 @@ pub trait PodmanImage: PodmanImageInfo + Send {
 #[async_trait]
 pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
     async fn start(&mut self) -> anyhow::Result<()>;
+    #[expect(unused)]
     async fn stop(&mut self) -> anyhow::Result<()>;
     async fn destroy(self) -> anyhow::Result<()>;
     async fn state(&self) -> anyhow::Result<PodmanContainerState>;
@@ -77,6 +77,7 @@ pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[expect(unused)]
 pub enum PodmanPullBehaviour {
     AlwaysPull,
     PullIfMissingOrNewer,

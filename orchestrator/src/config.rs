@@ -65,7 +65,7 @@ impl OrchestratorConfig {
     }
 
     fn validate(&self) -> anyhow::Result<()> {
-        if self.device_uuid.len() <= 0 {
+        if self.device_uuid.is_empty() {
             anyhow::bail!("Please specify a device UUID");
         }
 

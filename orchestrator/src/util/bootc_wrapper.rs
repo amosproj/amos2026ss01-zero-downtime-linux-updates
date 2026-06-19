@@ -98,7 +98,7 @@ impl Bootc {
     }
 
     // Helper fn
-    
+
     fn handle_exit_code(&self, code: Option<i32>) -> Result<()> {
         match code {
             Some(0) | Some(137) => Ok(()),
@@ -142,7 +142,6 @@ impl Bootc {
     }
 
     /// Pulls the image and stages it for the next boot.
-    
     pub async fn switch(&self, image: &str) -> Result<()> {
         let target = self.image_to_bootc_target(image)?;
 
@@ -164,7 +163,7 @@ impl Bootc {
         }
     }
 
-    
+    #[expect(unused)]
     pub async fn rollback(&self) -> Result<()> {
         info!("Rolling back to previous bootc deployment");
         let args = vec!["rollback".to_string(), "--apply".to_string()];
@@ -183,7 +182,6 @@ impl Bootc {
         }
     }
 
-    
     pub async fn apply(&self) -> Result<()> {
         let args = vec!["upgrade".to_string(), "--apply".to_string()];
         let res = self.run_bootc_root(args).await?;

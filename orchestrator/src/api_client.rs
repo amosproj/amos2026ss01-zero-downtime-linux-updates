@@ -12,11 +12,6 @@ use reqwest::Method;
 use serde::Serialize;
 use tracing::{debug, info};
 
-pub struct TokenState {
-    pub token: String,
-    pub expires_at: i64, // UTC timestamp
-}
-
 pub struct ApiClient {
     client: reqwest::Client,
     base_url: String,
@@ -118,7 +113,7 @@ impl ApiClient {
         )
         .await;
 
-        Ok(app_conf_results.into_iter().collect::<Result<Vec<_>>>()?)
+        app_conf_results.into_iter().collect::<Result<Vec<_>>>()
     }
 
     async fn get_target_application_assignments(
@@ -145,7 +140,7 @@ impl ApiClient {
         .await
     }
 
-    #[allow(dead_code)] // TODO: remove when implementing podman application logs
+    #[expect(unused)]
     /// Pushes application log entries for a given application to the API.
     /// POSTs to `/logs/applications?device_uuid=<uuid>`.
     pub async fn push_application_logs(

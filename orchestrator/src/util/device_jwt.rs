@@ -31,7 +31,7 @@ impl DeviceJwtProvider {
             self.current_token = self.create_signed_jwt(device_uuid, self.expire_time)?;
         }
 
-        return Ok(&self.current_token);
+        Ok(&self.current_token)
     }
 
     fn create_signed_jwt(
