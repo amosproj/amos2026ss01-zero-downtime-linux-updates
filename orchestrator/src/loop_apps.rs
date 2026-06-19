@@ -12,7 +12,7 @@ use crate::podman::{Podman, PodmanImage, PodmanImageInfo};
 
 pub async fn run_apps_main_loop(
     mut apps: Vec<Application>,
-    podman: impl Podman,
+    mut podman: impl Podman,
     api_client: Arc<ApiClient>,
     poll_interval: Duration,
 ) {
@@ -23,7 +23,7 @@ pub async fn run_apps_main_loop(
     loop {
         update_interval.tick().await;
 
-        if let Err(e) = try_update(&mut apps, &podman, &api_client).await {
+        if let Err(e) = try_update(&mut apps, &mut podman, &api_client).await {
             warn!("Failed to update applications: {:?}", e);
         }
     }
@@ -31,7 +31,7 @@ pub async fn run_apps_main_loop(
 
 async fn try_update(
     apps: &mut Vec<Application>,
-    podman: &impl Podman,
+    podman: &mut impl Podman,
     api_client: &ApiClient,
 ) -> anyhow::Result<()> {
     // First, pull target config and possibly new images
@@ -49,7 +49,7 @@ async fn try_update(
 
     apps.sort_by(order_reference);
 
-    for action in ReconcileIterator::new(&apps, target) {
+    for action in ReconcileIterator::new(apps, target) {
         match action {
             ReconcileAction::Create { image } => {
                 let app =
@@ -81,6 +81,8 @@ async fn try_update(
             .report_current_application_assignment(app.id)
             .await?;
     }
+
+    podman.prune_images().await?;
 
     Ok(())
 }

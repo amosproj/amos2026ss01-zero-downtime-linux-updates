@@ -148,8 +148,8 @@ impl OrchestratorLogger {
 
 impl Drop for OrchestratorLogger {
     // TODO: Try flushing out the last logs before the application stops
+    // just have to figure out how to get the api_client in here...
     fn drop(&mut self) {
-        println!("Dropping logger")
         //self.flush(api_client, max_buffer)
     }
 }

@@ -149,7 +149,6 @@ impl PodmanWrapper {
                 let image = self.podman.images().get(c.image_id?).inspect().await.ok()?;
                 Some(PodmanWrapperContainer {
                     container: self.podman.containers().get(c.id.as_deref()?),
-                    id: c.id?,
                     name: c.names?.pop()?,
                     image_ref: image.names_history?.pop()?,
                     image_digest: image.digest?,
@@ -203,7 +202,6 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
 
         Ok(PodmanWrapperContainer {
             container: pc.get(&output.id),
-            id: output.id,
             name: name.to_owned(),
             image_ref: self.reference.clone(),
             image_digest: self.digest.clone(),
@@ -213,7 +211,6 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
 
 pub struct PodmanWrapperContainer {
     container: podman_api::api::Container,
-    id: String,
     name: String,
     image_ref: String,
     image_digest: String,
