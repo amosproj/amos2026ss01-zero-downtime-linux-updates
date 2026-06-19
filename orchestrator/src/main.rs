@@ -1,33 +1,33 @@
-mod config_loader;
+mod config;
+use anyhow::Context;
 use clap::Parser;
-use config_loader::get_config;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
+use crate::api_client::ApiClient;
 use crate::application::Application;
-use crate::loop_os::run_os_tree_main_loop;
+use crate::config::OrchestratorConfig;
+use crate::logging::OrchestratorLogger;
+use crate::loop_os::{OsState, run_os_main_loop};
+use crate::loop_ping::run_ping_main_loop;
 use crate::podman::wrapper::PodmanWrapper;
-use crate::state::OsState;
-use crate::update_check::{CheckForUpdate, UpdateChecker};
 use crate::util::bootc_wrapper::Bootc;
+use crate::util::device_jwt::DeviceJwtProvider;
 use crate::util::executer::RealExecuter;
 
-use crate::{
-    inventory::collect_and_save_inventory, loop_apps::run_apps_main_loop, state::AgentState,
-};
+use crate::loop_apps::run_apps_main_loop;
+use crate::util::tpm::TpmSigner;
+mod api_client;
 mod application;
-mod download_manager;
-mod healthcheck;
-mod inventory;
 mod logging;
 mod loop_apps;
 mod loop_os;
+mod loop_ping;
 mod podman;
-mod state;
-mod update_check;
 mod util;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -53,130 +53,99 @@ struct Cli {
 async fn main() {
     let cli = Cli::parse();
 
+    if cli.self_check {
+        if let Err(e) = self_check(&cli).await {
+            error!("{:?}", e.context("Self check failed"));
+            std::process::exit(1);
+        }
+    } else {
+        if let Err(e) = run(&cli).await {
+            error!("{:?}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+async fn run(cli: &Cli) -> anyhow::Result<()> {
+    let logger = OrchestratorLogger::init(cli.debug);
+
     info!("Orchestrator starting ...");
 
-    // Load config first so logging can be tagged with the device UUID. The
-    // logging subscriber isn't up yet, so failures go straight to stderr.
-    // FIXME: think about how to handle/log failed config reads.
-    //   they should be logged and sent to remote db but also include the device UUID
-    //   depens on how UUID will be provided in the future.
-    let config = Arc::new(get_config(cli.config.clone()).unwrap_or_else(|err| {
-        eprintln!("Failed to load config: {err}");
-        std::process::exit(1);
-    }));
+    let config =
+        OrchestratorConfig::load(cli.config.as_deref()).context("Could not load configuration")?;
+    debug!("Loaded config: {:?}", config);
 
-    let log_rx = logging::init(cli.debug);
+    let signer = TpmSigner::new().context("Could not initialize the TPM")?;
+    let jwt_provider = DeviceJwtProvider::new(signer);
+    let api_client = Arc::new(
+        ApiClient::new(
+            config.https_proxy,
+            config.cloud_url,
+            config.device_uuid.clone(),
+            jwt_provider,
+        )
+        .context("Could not initialize the api client")?,
+    );
 
-    let signer = match util::tpm::tpm_init() {
-        Ok(signer) => signer,
-        Err(err) => {
-            error!("TPM init failed: {}", err);
-            std::process::exit(1);
-        }
-    };
+    let log_shipper_task = logger.into_spawned_shipper(
+        api_client.clone(),
+        Duration::from_secs(config.log_flush_interval_secs),
+        config.log_max_batch,
+        config.log_max_buffer,
+    );
 
-    let bootc_client = Arc::new(Bootc::new(Box::new(RealExecuter)));
+    let bootc = Bootc::new(Box::new(RealExecuter));
+    let os_state = OsState::new(bootc.status().await?)
+        .ok_or(anyhow::anyhow!("Could not retrieve current OS state"))?;
 
-    // run the selfcheck pipeline if --self-check is provided as commandline arg
-    if cli.self_check {
-        if let Err(err) =
-            crate::healthcheck::healthcheck(&bootc_client, &RealExecuter, cli.config.clone()).await
-        {
-            error!("Self check failed: {}", err);
-            std::process::exit(1);
-        }
-        info!("Self check passed");
-        std::process::exit(0);
-    }
+    let (podman, containers) = PodmanWrapper::connect(Path::new(&config.podman_path))
+        .await
+        .context("Could not initialize connection to Podman")?;
+    let apps = containers.into_iter().map(Application::wrap).collect();
+
+    let poll_interval = Duration::from_secs(config.poll_interval_secs as u64);
+    let apps_task = tokio::spawn(run_apps_main_loop(
+        apps,
+        podman,
+        api_client.clone(),
+        poll_interval,
+    ));
+    let os_task = tokio::spawn(run_os_main_loop(
+        os_state,
+        bootc,
+        api_client.clone(),
+        poll_interval,
+    ));
+    let ping_task = tokio::spawn(run_ping_main_loop(api_client, Duration::from_secs(60)));
 
     info!(
         version = VERSION,
         device_uuid = %config.device_uuid,
         "Orchestrator started",
     );
-    debug!("Loaded config: {:?}", config);
 
-    info!("Collecting initial inventory");
-    if let Err(err) = collect_and_save_inventory(
-        &bootc_client,
-        &RealExecuter,
-        std::path::Path::new(config.inventory_path.as_str()),
-    )
-    .await
-    {
-        error!("Failed to collect and save inventory: {}", err);
-        std::process::exit(1);
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {},
+        _ = log_shipper_task => {},
+        _ = apps_task => {},
+        _ = os_task => {},
+        _ = ping_task => {}
     }
 
-    info!("Reading inital OS State");
-    let bootc_status = bootc_client.status().await.unwrap_or_else(|err| {
-        error!("Failed to fetch initial bootc status: {}", err);
-        std::process::exit(1);
-    });
-    let os_state = OsState {
-        update_pending: bootc_status.staged.is_some(),
-        booted_image: bootc_status.booted.unwrap().checksum.clone(),
-        update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
-    };
+    Ok(())
+}
 
-    info!("Reading inital application state");
-    let (podman, containers) = PodmanWrapper::connect(Path::new(&config.podman_path))
-        .await
-        .unwrap();
-    let apps_state = containers.into_iter().map(Application::wrap).collect();
+async fn self_check(cli: &Cli) -> anyhow::Result<()> {
+    OrchestratorLogger::init(cli.debug);
+    let config = OrchestratorConfig::load(cli.config.as_deref())?;
 
-    debug!("Creating AgentState");
-    let agent_state = AgentState::new(VERSION, Arc::clone(&config), os_state, apps_state);
+    let bootc = Bootc::new(Box::new(RealExecuter));
+    bootc.status().await?;
 
-    info!(
-        "Running amos-zero-downtime with version: {}",
-        agent_state.self_version
-    );
+    // TODO: Maybe check if container can start properly?
+    PodmanWrapper::connect(Path::new(&config.podman_path)).await?;
 
-    let download_manager = Arc::new(
-        match download_manager::DownloadManager::new(Arc::clone(&config), signer) {
-            Ok(dm) => dm,
-            Err(err) => {
-                error!("Failed to initialize secure cloud HTTP client: {:?}", err);
-                std::process::exit(1);
-            }
-        },
-    );
-
-    info!("Log shipper starting");
-    logging::spawn_log_shipper(log_rx, Arc::clone(&download_manager));
-    info!("Log shipper started");
-
-    let update_checker: Arc<dyn CheckForUpdate> =
-        Arc::new(UpdateChecker::new(Arc::clone(&download_manager)));
-
-    let _apps_handle = tokio::spawn(run_apps_main_loop(
-        agent_state.clone(),
-        podman,
-        Arc::clone(&download_manager),
-    ));
-    let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
-        agent_state.clone(),
-        Arc::clone(&bootc_client),
-        Arc::clone(&download_manager),
-        Arc::clone(&update_checker),
-    ));
-
-    let mut healthcheck_interval = tokio::time::interval(std::time::Duration::from_secs(60));
-    let download_manager_clone = Arc::clone(&download_manager);
-    let _health_report_handle = tokio::spawn(async move {
-        loop {
-            healthcheck_interval.tick().await;
-            if let Err(err) = download_manager_clone.send_ping().await {
-                warn!("Aliveness report failed: {}", err);
-            }
-        }
-    });
-
-    info!("Background workers spawned, orchestrator is running");
-
-    tokio::signal::ctrl_c().await.unwrap();
-    info!("Received shutdown signal, stopping");
+    Ok(())
 }
 
 #[cfg(test)]
