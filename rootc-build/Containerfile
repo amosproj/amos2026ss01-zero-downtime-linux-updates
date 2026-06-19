@@ -2,11 +2,11 @@ ARG FEDORA_VERSION=latest
 ARG DEV_MODE=false
 
 # Compile the orchestrator binary
-FROM docker.io/rust:1.95-slim AS builder
+FROM registry.access.redhat.com/hi/rust:1.95-builder AS builder
 COPY . /workspace
 WORKDIR /workspace
 # Headers needed for linking against TSS libs used for TPM communication (equiv. rpm package: tpm2-tss-devel)
-RUN apt-get update && apt-get install -y libtss2-dev
+RUN dnf install -y tpm2-tss-devel
 RUN cargo build --package amos-orchestrator --release
 
 ARG FEDORA_VERSION=latest
