@@ -37,6 +37,9 @@ autopart --noswap --type=plain --fstype=ext4
 # DHCP on the first wired link. Set a hostname for the fleet.
 network --bootproto=dhcp --device=link --activate --onboot=on --hostname=amos-ipc-01
 
+# Set root password
+rootpw --iscrypted '$6$KrwO2kao2YR2Pdfy$ELmEte4Y9GZGr8DZGje/9To2NE11o3QHKlOkUWuSgJRFH2hux9ZDduG9Amz9pqz/wmLQfoJZebhwdoP3iVanX1'
+
 # Reboot into the installed system when done.
 reboot
 
