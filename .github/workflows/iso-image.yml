@@ -1,7 +1,7 @@
 name: "Installer ISO"
 
-# Builds installer ISO for a real IPC
-# Builds the bootc image itself. not dependent on pre-published one
+# Builds installer ISO for a real IPC.
+# This action is independent of a pre-published bootc image.
 #
 # Triggers:
 #   - Manual run (workflow_dispatch) — UI button or `gh workflow run`.
