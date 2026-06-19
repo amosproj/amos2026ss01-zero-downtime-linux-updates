@@ -17,6 +17,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-system
+  FEDORA_VERSION: ${{ inputs.fedora_version || 'latest' }}
 
 jobs:
   # Build each architecture natively on its own runner and push it to GHCR by
@@ -75,7 +76,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            FEDORA_VERSION=${{ inputs.fedora_version || 'latest' }}
+            FEDORA_VERSION=${{ env.FEDORA_VERSION }}
           # Per-arch cache scopes so the two runners don't clobber each other.
           cache-from: type=gha,scope=${{ env.PLATFORM_PAIR }}
           cache-to: type=gha,mode=max,scope=${{ env.PLATFORM_PAIR }}
@@ -139,7 +140,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
             type=sha
-            type=raw,value=fedora-${{ inputs.fedora_version }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=fedora-${{ env.FEDORA_VERSION }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
