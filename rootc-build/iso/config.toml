@@ -33,6 +33,9 @@ minsize = "10 GiB"
 # mountpoint = "/var/data"
 # minsize = "5 GiB"
 
+[customizations.installer]
+disable_kickstart_user = true
+
 # ---------------------------------------------------------------------------
 # Unattended kickstart. bootc-image-builder automatically appends the
 # `ostreecontainer ...` line that installs OUR embedded image, so we must NOT
