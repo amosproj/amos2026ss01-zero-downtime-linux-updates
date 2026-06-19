@@ -59,6 +59,7 @@ jobs:
             --type anaconda-iso \
             --config /config.toml \
             --target-arch amd64 \
+            --rootfs btrfs \
             --local localhost/amos-edge:dev
 
       - name: Rename ISO for download
