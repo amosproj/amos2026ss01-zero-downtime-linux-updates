@@ -1,12 +1,33 @@
 ARG FEDORA_VERSION=latest
 ARG DEV_MODE=false
 
-# Compile the orchestrator binary
-FROM registry.access.redhat.com/hi/rust:1.95-builder AS builder
-COPY . /workspace
+# Compile the orchestrator binary.
+#
+# cargo-chef splits dependency compilation into its own layer keyed only on the
+# Cargo manifests (recipe.json), so editing our own sources no longer forces a
+# full recompile of every crate. That layer is exported/restored by the build
+# cache (in CI: cache-to/from type=gha,mode=max in container-orchestrator.yml;
+# locally: podman's --layers), which is otherwise wasted because `COPY . .`
+# invalidates everything after it.
+FROM registry.access.redhat.com/hi/rust:1.95-builder AS chef
+RUN cargo install cargo-chef --locked
 WORKDIR /workspace
+
+# Distill the dependency "recipe" from the Cargo manifests only.
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
 # Headers needed for linking against TSS libs used for TPM communication (equiv. rpm package: tpm2-tss-devel)
 RUN dnf install -y tpm2-tss-devel
+# Cook (compile) just the orchestrator's dependencies. This layer is reused
+# across source-only changes because recipe.json only changes when
+# Cargo.toml/Cargo.lock do. Scoped to amos-orchestrator so we don't compile the
+# heavy sea-orm stack that only the other workspace members pull in.
+COPY --from=planner /workspace/recipe.json recipe.json
+RUN cargo chef cook --release --package amos-orchestrator --recipe-path recipe.json
+COPY . .
 RUN cargo build --package amos-orchestrator --release
 
 ARG FEDORA_VERSION=latest

@@ -1,7 +1,7 @@
 # bootc-image-builder config, a so-called 'Blueprint' for the AMOS edge installer ISO.
 #
 # Used by `make iso` (see mk/iso.mk) to produce an Anaconda installer ISO that
-# embeds our bootc image (localhost/amos-edge:dev) and installs it unattended
+# embeds our bootc image and installs it unattended
 # onto a real IPC's disk.
 #
 # Docs: https://osbuild.org/docs/bootc/#-build-config
