@@ -1,7 +1,7 @@
 # Local test setup — edge device in a Lima VM
 
 This boots a realistic **edge device** on your machinge so you can see the update
-agent run end to end, without any physical hardware.
+agent run end to end, without any physical hardware
 
 ## What it is
 
