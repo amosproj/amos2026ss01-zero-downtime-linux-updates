@@ -7,21 +7,6 @@
 # Docs: https://osbuild.org/docs/bootc/#-build-config
 # https://osbuild.org/docs/user-guide/blueprint-reference/
 
-[customizations]
-hostname = "edge-ipc-from-iso"
-
-# ---------------------------------------------------------------------------
-# Login user.
-# (For prod image, manage users via the image instead of the installer.)
-# ---------------------------------------------------------------------------
-[[customizations.user]]
-name = "amos"
-# FIXME:change/remove for prod / secure deployment
-# password "amos" hashed with `openssl passwd -6` — DEV ONLY, change for prod.
-password = "$6$JW.H/UVKqa6P8hSz$h2KzR3dc7k8W9YEhtLzK1pFdlHWzKCEfyBgCLmIhDvWV3lKDGXRMfmoYiFpvFKSiyE/OqFzs4jhkV5NmzdmQQ1"
-groups = ["wheel"]
-
-
 # ---------------------------------------------------------------------------
 # Disk layout. Keep it close to what the VM/raw image uses (ext4, no swap).
 # bootc-image-builder grows the root filesystem to fill the disk.
@@ -50,10 +35,15 @@ autopart --noswap --type=plain --fstype=ext4
 # For TPM-backed encryption later: autopart --encrypted --passphrase=... (+clevis)
 
 # DHCP on the first wired link. Set a hostname for the fleet.
-network --bootproto=dhcp --device=link --activate --onboot=on --hostname=amos-ipc-01
+network --bootproto=dhcp --device=link --activate --onboot=on --hostname=edge-ipc-from-iso
 
 # Set root password "root"
 rootpw --iscrypted '$6$rlL4ROw6/Qg9wUxk$n8IpLmwgKFdXVNeTKcu7vMVCE5wHiiVs4ksUiOl/OsJvuvkyaPrhYORpZPc0gz5HNOogUY6zU87ssp1/EyF55.'
+
+# Login user (moved here from [[customizations.user]] — see note above).
+# FIXME: change/remove for prod / secure deployment.
+# password "amos" hashed with `openssl passwd -6` — DEV ONLY, change for prod.
+user --name=amos --groups=wheel --iscrypted --password='$6$JW.H/UVKqa6P8hSz$h2KzR3dc7k8W9YEhtLzK1pFdlHWzKCEfyBgCLmIhDvWV3lKDGXRMfmoYiFpvFKSiyE/OqFzs4jhkV5NmzdmQQ1'
 
 # Reboot into the installed system when done.
 reboot

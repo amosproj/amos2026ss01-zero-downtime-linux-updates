@@ -38,49 +38,31 @@ jobs:
                       /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
           df -h /
 
-      - name: Build bootc image into root podman storage
-        # sudo so the image lands in /var/lib/containers/storage, which the
-        # bootc-image-builder container mounts and reads via --local.
-        run: |
-          sudo podman build \
-            --platform linux/amd64 \
-            --build-arg DEV_MODE=true \
-            -f bootc/Containerfile \
-            -t localhost/amos-edge:dev .
-
-      - name: Build installer ISO with bootc-image-builder
-        run: |
-          mkdir -p "$PWD/output"
-          sudo podman run --rm --privileged --pull=newer \
-            --security-opt label=type:unconfined_t \
-            -v "$PWD/bootc/iso/config.toml:/config.toml:ro" \
-            -v "$PWD/output:/output" \
-            -v /var/lib/containers/storage:/var/lib/containers/storage \
-            quay.io/centos-bootc/bootc-image-builder:latest \
-            --type anaconda-iso \
-            --config /config.toml \
-            --target-arch amd64 \
-            --rootfs btrfs \
-            --local localhost/amos-edge:dev
+      - name: Build installer ISO
+        # builds the bootc image into root podman storage and
+        # runs bootc-image-builder to emit dist/bootiso/install.iso.
+        # DEV_MODE defaults to false (prod). IMAGE name stays internal — it is
+        # built/consumed locally, never pushed. Output is always install.iso;
+        # the rename step below derives the ref-based artifact name.
+        # TODO: embed a real published bootc ref so `bootc upgrade` works on HW.
+        run: make iso-amd64
 
       - name: Rename ISO for download
         id: rename
         run: |
           set -euo pipefail
-          sudo chown -R "$USER:$USER" output
           SAFE_REF="${GITHUB_REF_NAME//\//-}"
           ISO_NAME="amos-edge-${SAFE_REF}-amd64"
-          mkdir -p dist
-          mv output/bootiso/install.iso "dist/${ISO_NAME}.iso"
+          mv dist/bootiso/install.iso "dist/${ISO_NAME}.iso"
           ls -lh "dist/${ISO_NAME}.iso"
           echo "iso_name=${ISO_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Upload ISO as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.rename.outputs.iso_name }}
           path: dist/*.iso
           if-no-files-found: error
           retention-days: 30
           # skip zipping
-          compression-level: 0
+          archive: false

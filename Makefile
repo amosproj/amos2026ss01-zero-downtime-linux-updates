@@ -23,6 +23,12 @@ BIB           ?= quay.io/centos-bootc/bootc-image-builder:latest
 ISO_TYPE      ?= anaconda-iso
 FS            ?= ext4
 
+# Dev-vs-prod image switch (Containerfile build-arg). When true, bakes in the
+# permissive dev signature policy and drops the /etc/amos-dev-image marker.
+# Defaults to false so CI builds (and any "real IPC" artifact) are prod by
+# default; pass DEV_MODE=true for local VM testing.
+DEV_MODE      ?= false
+
 # Shared image-builder-cli invocation; append the image type (qcow2 / raw).
 # Writes the disk straight into $(DIST_DIR) via --output-dir.
 IB_RUN = sudo podman run --rm --privileged --pull=newer \
@@ -73,7 +79,7 @@ _image-build:
 	mkdir -p $(TMP_DIR) $(DIST_DIR)/qcow2 $(DIST_DIR)/image
 	podman build \
 		--platform linux/$(DOCKER_ARCH) \
-		--build-arg DEV_MODE=true \
+		--build-arg DEV_MODE=$(DEV_MODE) \
 		-f bootc/Containerfile -t $(IMAGE) .
 	podman save --format oci-archive -o $(TMP_DIR)/amos-edge.tar $(IMAGE)
 	sudo podman load -i $(TMP_DIR)/amos-edge.tar
@@ -142,7 +148,7 @@ _iso-build:
 	mkdir -p $(TMP_DIR) $(DIST_DIR)
 	podman build \
 		--platform linux/$(DOCKER_ARCH) \
-		--build-arg DEV_MODE=true \
+		--build-arg DEV_MODE=$(DEV_MODE) \
 		-f bootc/Containerfile -t $(IMAGE) .
 	podman save --format oci-archive -o $(TMP_DIR)/amos-edge.tar $(IMAGE)
 	sudo podman load -i $(TMP_DIR)/amos-edge.tar
@@ -156,7 +162,7 @@ _iso-build:
 		--config /config.toml \
 		--rootfs $(FS) \
 		--target-arch $(DOCKER_ARCH) \
-		--local $(IMAGE)
+		$(IMAGE)
 	sudo chown -R $$USER $(DIST_DIR)/bootiso
 	@echo "Installer ISO -> $(DIST_DIR)/bootiso/install.iso"
 
