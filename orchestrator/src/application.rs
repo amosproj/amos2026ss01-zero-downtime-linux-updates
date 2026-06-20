@@ -1,3 +1,5 @@
+//! Wrap Podman containers, then manage their lifecycle and logs
+
 use std::{sync::Arc, time::Duration};
 use tracing::{debug, error, info, warn};
 

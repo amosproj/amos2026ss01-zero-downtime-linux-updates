@@ -1,3 +1,6 @@
+//! This program runs on the IPC and connects to the cloud via an API.
+//! From there, it pulls the desired state and tries to make the local configuration conform to it.
+
 mod config;
 use anyhow::Context;
 use clap::Parser;

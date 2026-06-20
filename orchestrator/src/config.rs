@@ -1,3 +1,5 @@
+//! Define and load configuration from different sources
+
 use serde::Deserialize;
 use std::path::Path;
 

@@ -1,3 +1,5 @@
+//! Sends logs to different sinks, including our own API
+
 use std::sync::Arc;
 use std::time::Duration;
 

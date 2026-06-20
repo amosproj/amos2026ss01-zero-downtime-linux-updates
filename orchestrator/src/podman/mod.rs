@@ -1,3 +1,5 @@
+//! Interact with the Podman socket
+
 use async_trait::async_trait;
 
 pub mod wrapper;

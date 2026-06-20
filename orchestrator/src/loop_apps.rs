@@ -1,3 +1,5 @@
+//! Logic to repeatedly check for application updates and apply them
+
 use std::iter::Peekable;
 use std::sync::Arc;
 use std::time::Duration;
@@ -10,12 +12,13 @@ use crate::application::Application;
 use crate::podman::PodmanPullBehaviour::PullIfMissing;
 use crate::podman::{Podman, PodmanImage, PodmanImageInfo};
 
+/// Repeatedly check for application updates and apply them
 pub async fn run_apps_main_loop(
     mut apps: Vec<Application>,
     mut podman: impl Podman,
     api_client: Arc<ApiClient>,
     poll_interval: Duration,
-) {
+) -> ! {
     let mut update_interval = tokio::time::interval(poll_interval);
     // Prevent bursting should an update cycle take longer than expected
     update_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
