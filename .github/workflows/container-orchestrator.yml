@@ -2,10 +2,10 @@ name: "Orchestrator Container Image"
 
 on:
   push:
-    branches: ["**"]
     tags: ["**"]
-  # pull_request:
-  #   branches: [main]
+    branches: ["**"]
+  pull_request:
+    branches: [main]
 
   workflow_dispatch:
     inputs:
@@ -130,8 +130,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Derive image tags from the Git ref automatically:
-      #   main branch  → latest + sha-<short>
-      #   sprint tags  → sprint-03-release + sha-<short>
+      #   main branch  → latest + main + commit-<short>
+      #   other branch → <branch-name> + commit-<short>
+      #   sprint tags  → sprint-03-release + commit-<short>
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -139,9 +140,10 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
             type=ref,event=tag
-            type=sha
-            type=raw,value=fedora-${{ env.FEDORA_VERSION }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=sha,prefix=commit-
+            type=raw,value=fedora-${{ inputs.fedora_version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
