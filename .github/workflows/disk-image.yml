@@ -3,6 +3,9 @@ name: "Edge Disk Image"
 on:
   push:
     tags: ["**"]
+  workflow_run:
+    workflows: ["Orchestrator Container Image"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       image_ref:
@@ -12,8 +15,40 @@ on:
         type: string
 
 jobs:
+  filter:
+    name: Check if build is needed
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      should-build: ${{ steps.check.outputs.should-build }}
+    steps:
+      - id: check
+        run: |
+          set -euo pipefail
+          # Tags and manual runs always build.
+          if [ "${{ github.event_name }}" = "push" ] || \
+             [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # For workflow_run (branch pushes): build on main or any branch whose
+          # name contains a keyword as a whole segment (delimited by - or /).
+          # This prevents e.g. "feat-device-logging" from matching "dev".
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          if [[ "$BRANCH" == "main" ]] || \
+             [[ "$BRANCH" =~ (^|[-/])(ci|dev|test|release|iso)([-/]|$) ]]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-build=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build-disk:
     name: Build disk image (${{ matrix.arch }})
+    needs: filter
+    if: needs.filter.outputs.should-build == 'true'
     permissions:
       contents: write
       packages: write
@@ -30,20 +65,42 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
+      # Use commit-<sha> so the disk is built from the exact container image that
+      # was produced by the same commit, not whatever "latest" resolves to.
       - name: Resolve bootc image reference
         run: |
           set -euo pipefail
-          REF="ghcr.io/${{ github.repository }}-system:${{ inputs.image_ref }}"
-          echo "IMAGE_REF=$REF" >> "$GITHUB_ENV"
-          echo "Using bootc image: $REF"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_ref }}" ]; then
+            TAG="${{ inputs.image_ref }}"
+            SAFE_REF="${{ github.ref_name }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            TAG="commit-${GITHUB_SHA:0:7}"
+            SAFE_REF="${GITHUB_REF_NAME//\//-}"
+          else
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            TAG="commit-${HEAD_SHA:0:7}"
+            SAFE_REF="${{ github.event.workflow_run.head_branch }}"
+          fi
+          SAFE_REF="${SAFE_REF//\//-}"
+          echo "IMAGE_REF=ghcr.io/${{ github.repository }}-system:${TAG}" >> "$GITHUB_ENV"
+          echo "SAFE_REF=${SAFE_REF}" >> "$GITHUB_ENV"
+          echo "Using bootc image: ghcr.io/${{ github.repository }}-system:${TAG}"
 
       - name: Log in to GHCR (root podman, for pulling the bootc image)
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      # Tag builds start concurrently with the container build; retry until the
+      # image is published (container build takes ~10-15 min; allow up to 20 min).
       - name: Pull the bootc image into root storage
-        run: sudo podman pull "${IMAGE_REF}"
+        run: |
+          for i in $(seq 1 20); do
+            sudo podman pull "${IMAGE_REF}" && break
+            [ "$i" -eq 20 ] && { echo "Timed out waiting for image"; exit 1; }
+            echo "Image not yet available, retrying in 60s (attempt $i/20)..."
+            sleep 60
+          done
 
       - name: Assert prod policy (no dev markers in image)
         run: |
@@ -102,7 +159,6 @@ jobs:
           set -euo pipefail
           sudo chown -R "$USER:$USER" output
           mkdir -p dist
-          SAFE_REF="${GITHUB_REF_NAME//\//-}"
           xz -T0 -9 output/*.qcow2 output/*.raw
           mv output/*.qcow2.xz "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.qcow2.xz"
           mv output/*.raw.xz   "dist/amos-edge-${SAFE_REF}-${{ matrix.arch }}.raw.xz"
@@ -132,7 +188,6 @@ jobs:
 
       - name: Push artifacts
         run: |
-          SAFE_REF="${GITHUB_REF_NAME//\//-}"
           cd dist
           oras push \
             ghcr.io/${{ github.repository }}-disk:${SAFE_REF}-${{ matrix.arch }} \

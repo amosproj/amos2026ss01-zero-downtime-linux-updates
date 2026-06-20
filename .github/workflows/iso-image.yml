@@ -6,8 +6,10 @@ name: "Installer ISO"
 
 on:
   push:
-    branches: ["iso-building"] # every-commit builds limited to the dev branch
-    tags: ["**"] # tags trigger on any branch
+    tags: ["**"]
+  workflow_run:
+    workflows: ["Orchestrator Container Image"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       image_ref:
@@ -17,15 +19,52 @@ on:
         type: string
 
 jobs:
+  filter:
+    name: Check if build is needed
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      should-build: ${{ steps.check.outputs.should-build }}
+    steps:
+      - id: check
+        run: |
+          set -euo pipefail
+          # Tags and manual runs always build.
+          if [ "${{ github.event_name }}" = "push" ] || \
+             [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # For workflow_run (branch pushes): build on main or any branch whose
+          # name contains a keyword as a whole segment (delimited by - or /).
+          # This prevents e.g. "feat-device-logging" from matching "dev".
+          # "iso-building" matches via the "iso" keyword.
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          if [[ "$BRANCH" == "main" ]] || \
+             [[ "$BRANCH" =~ (^|[-/])(ci|dev|test|release|iso)([-/]|$) ]]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-build=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build-iso:
     name: Build installer ISO (amd64)
     runs-on: ubuntu-latest
+    needs: filter
+    if: needs.filter.outputs.should-build == 'true'
     permissions:
       contents: read
       packages: read # to pull the -system image from GHCR
     steps:
+      # Check out the triggering commit so cache keys (hashFiles) and build
+      # configs reflect the state that produced the container image.
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Free up disk space
         # The image build needs ~20-25 GB; drop preinstalled toolchains we don't use.
@@ -34,24 +73,26 @@ jobs:
                       /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
           df -h /
 
-      # bib records its positional image arg verbatim as the installed system's
-      # bootc origin (no --target-imgref), so it must be the real GHCR ref or
-      # `bootc upgrade` breaks. Tag: input -> pushed tag -> latest (the input
-      # default only applies to manual runs).
+      # Use commit-<sha> so the ISO is built from the exact same container image
+      # as the push that triggered this run — not whatever "latest" resolves to.
       - name: Resolve bootc image reference
         run: |
           set -euo pipefail
-          TAG="${{ inputs.image_ref }}"
-          if [ -z "$TAG" ]; then
-            if [ "${{ github.ref_type }}" = "tag" ]; then
-              TAG="${{ github.ref_name }}"
-            else
-              TAG="latest"
-            fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_ref }}" ]; then
+            TAG="${{ inputs.image_ref }}"
+            SAFE_REF="${{ github.ref_name }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            TAG="commit-${GITHUB_SHA:0:7}"
+            SAFE_REF="${GITHUB_REF_NAME//\//-}"
+          else
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            TAG="commit-${HEAD_SHA:0:7}"
+            SAFE_REF="${{ github.event.workflow_run.head_branch }}"
           fi
-          REF="ghcr.io/${{ github.repository }}-system:${TAG}"
-          echo "IMAGE_REF=$REF" >> "$GITHUB_ENV"
-          echo "Building ISO from: $REF"
+          SAFE_REF="${SAFE_REF//\//-}"
+          echo "IMAGE_REF=ghcr.io/${{ github.repository }}-system:${TAG}" >> "$GITHUB_ENV"
+          echo "SAFE_REF=${SAFE_REF}" >> "$GITHUB_ENV"
+          echo "Building ISO from: ghcr.io/${{ github.repository }}-system:${TAG}"
 
       # Pull into root podman storage: bib runs as root and reads the image from
       # the root store bind-mounted below.
@@ -60,8 +101,16 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      # Tag builds start concurrently with the container build; retry until the
+      # image is published (container build takes ~10-15 min; allow up to 20 min).
       - name: Pull the bootc image into root storage
-        run: sudo podman pull "${IMAGE_REF}"
+        run: |
+          for i in $(seq 1 20); do
+            sudo podman pull "${IMAGE_REF}" && break
+            [ "$i" -eq 20 ] && { echo "Timed out waiting for image"; exit 1; }
+            echo "Image not yet available, retrying in 60s (attempt $i/20)..."
+            sleep 60
+          done
 
       # bib (the old builder) caches DNF metadata/RPMs in /rpmmd per its README, not
       # /var/cache/* like flightctl mounts. Persisting it skips re-downloading the
@@ -109,7 +158,6 @@ jobs:
         id: rename
         run: |
           set -euo pipefail
-          SAFE_REF="${GITHUB_REF_NAME//\//-}"
           ISO_NAME="amos-edge-${SAFE_REF}-amd64"
           mv dist/bootiso/install.iso "dist/${ISO_NAME}.iso"
           ls -lh "dist/${ISO_NAME}.iso"
