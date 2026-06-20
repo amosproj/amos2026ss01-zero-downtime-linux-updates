@@ -1,3 +1,5 @@
+//! Type-safe API client
+
 use std::time::Duration;
 
 use crate::util::device_jwt::DeviceJwtProvider;
@@ -12,6 +14,8 @@ use reqwest::Method;
 use serde::Serialize;
 use tracing::{debug, info};
 
+/// Type-safe API client.
+/// Handles proxies, base urls, authentication and filtering for the current device.
 pub struct ApiClient {
     client: reqwest::Client,
     base_url: String,

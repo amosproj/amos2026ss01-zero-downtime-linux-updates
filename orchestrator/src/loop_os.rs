@@ -1,3 +1,5 @@
+//! Logic to repeatedly check for OS updates and apply them
+
 use crate::util::bootc_wrapper::Bootc;
 use crate::{api_client::ApiClient, util::bootc_wrapper::BootcStatus};
 use anyhow::Context;
@@ -5,12 +7,13 @@ use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info, warn};
 
+/// Repeatedly check for OS updates and apply them.
 pub async fn run_os_main_loop(
     mut os_state: OsState,
     bootc: Bootc,
     api_client: Arc<ApiClient>,
     poll_interval: Duration,
-) {
+) -> ! {
     let mut update_interval = tokio::time::interval(poll_interval);
     // Prevent bursting should an update cycle take longer than expected
     update_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);

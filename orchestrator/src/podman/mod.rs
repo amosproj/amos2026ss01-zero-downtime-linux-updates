@@ -1,3 +1,5 @@
+//! Interact with the Podman socket
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures_util::stream::BoxStream;
