@@ -1,11 +1,26 @@
-# bootc-image-builder config for the AMOS edge installer ISO.
+# bootc-image-builder config, a so-called 'Blueprint' for the AMOS edge installer ISO.
 #
 # Used by `make iso` (see mk/iso.mk) to produce an Anaconda installer ISO that
 # embeds our bootc image (localhost/amos-edge:dev) and installs it unattended
 # onto a real IPC's disk.
 #
-# Docs: https://github.com/osbuild/bootc-image-builder#-customizing-the-image
-#       https://bootc.dev/  (installer / kickstart)
+# Docs: https://osbuild.org/docs/bootc/#-build-config
+# https://osbuild.org/docs/user-guide/blueprint-reference/
+
+[customizations]
+hostname = "edge-ipc-from-iso"
+
+# ---------------------------------------------------------------------------
+# Login user.
+# (For prod image, manage users via the image instead of the installer.)
+# ---------------------------------------------------------------------------
+[[customizations.user]]
+name = "amos"
+# FIXME:change/remove for prod / secure deployment
+# password "amos" hashed with `openssl passwd -6` — DEV ONLY, change for prod.
+password = "$6$JW.H/UVKqa6P8hSz$h2KzR3dc7k8W9YEhtLzK1pFdlHWzKCEfyBgCLmIhDvWV3lKDGXRMfmoYiFpvFKSiyE/OqFzs4jhkV5NmzdmQQ1"
+groups = ["wheel"]
+
 
 # ---------------------------------------------------------------------------
 # Disk layout. Keep it close to what the VM/raw image uses (ext4, no swap).
@@ -16,9 +31,9 @@ mountpoint = "/"
 minsize = "10 GiB"
 
 # Optional separate data partition for orchestrator state / inventory / persisting testing stuff / whatever.
-# [[customizations.filesystem]]
-# mountpoint = "/var/data"
-# minsize = "5 GiB"
+[[customizations.filesystem]]
+mountpoint = "/var/data"
+minsize = "5 GiB"
 
 # ---------------------------------------------------------------------------
 # Unattended kickstart. bootc-image-builder automatically appends the
@@ -37,8 +52,8 @@ autopart --noswap --type=plain --fstype=ext4
 # DHCP on the first wired link. Set a hostname for the fleet.
 network --bootproto=dhcp --device=link --activate --onboot=on --hostname=amos-ipc-01
 
-# Set root password
-rootpw --iscrypted '$6$KrwO2kao2YR2Pdfy$ELmEte4Y9GZGr8DZGje/9To2NE11o3QHKlOkUWuSgJRFH2hux9ZDduG9Amz9pqz/wmLQfoJZebhwdoP3iVanX1'
+# Set root password "root"
+rootpw --iscrypted '$6$rlL4ROw6/Qg9wUxk$n8IpLmwgKFdXVNeTKcu7vMVCE5wHiiVs4ksUiOl/OsJvuvkyaPrhYORpZPc0gz5HNOogUY6zU87ssp1/EyF55.'
 
 # Reboot into the installed system when done.
 reboot
