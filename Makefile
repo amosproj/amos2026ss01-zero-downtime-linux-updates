@@ -1,4 +1,4 @@
-.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull dev-deploy
+.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull dev-deploy dev-deploy-container _dev-deploy dev-deploy-native _dev-deploy
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
@@ -6,11 +6,11 @@ TMP_DIR       ?= /tmp/amos2026ss01-zero-downtime-linux-updates
 IMAGE_BUILDER ?= ghcr.io/osbuild/image-builder-cli:latest
 HOST_ARCH     := $(shell uname -m | sed -e s/arm64/aarch64/ -e s/amd64/x86_64/)
 
-# dev-deploy: name of the running Lima VM and the host-mounted share used as a
-# drop point. The lima yaml mounts host $(LIMA_TMP) at the same path inside the
-# VM, so files copied here are visible to the guest without an SSH round-trip.
+# dev-deploy: name of the running Lima VM and a scratch path inside the guest
+# used as the drop point for the freshly built binary, which `limactl copy`
+# (scp/sftp over the VM's SSH connection) uploads there.
 DEV_VM        ?= edge-ipc
-LIMA_TMP      ?= /tmp/lima
+DEV_VM_TMP    ?= /tmp
 RUST_VERSION  ?= 1.95
 # Per-arch suffix (-amd64 / -arm64) is appended at use site to keep cross-arch
 # builds from clobbering each other in podman's local storage.
@@ -135,21 +135,26 @@ image-clean: ## Remove locally built disk images
 	rm -rf $(DIST_DIR)
 	rm -rf $(TMP_DIR)
 
-# dev-deploy: cross-build the orchestrator for the running VM's arch, drop it
-# through the host-mounted /tmp/lima share, and restart the service. The VM's
-# systemd drop-in (10-dev.conf, written by edge-ipc.yaml) points ExecStart at
+# dev-deploy: build the orchestrator, copy it into the VM with `limactl copy`,
+# and restart the service. The VM's systemd drop-in points ExecStart at
 # /var/usrlocal/bin/amos-orchestrator, so this swaps the binary without
-# rebuilding or redeploying the OS image.
+# rebuilding the OS image.
 #
-# We resolve the VM arch from `uname -m` inside the VM (not the host) because
-# the host may be macOS arm64/amd64 while the VM may have been started with a
-# different --arch, and the orchestrator needs the VM's arch. The build runs
-# inside a Linux Rust container at the right platform, so devs don't need a
-# Linux cross-toolchain on macOS.
-dev-deploy: ## Cross-build orchestrator for running VM and hot-swap+restart the service
+# Two build backends, selected by BUILD:
+#   native (default)  - `make dev-deploy`: build with the host's cargo. No
+#                       podman, but only builds for the host's own arch, so run
+#                       it on a Linux host matching the VM (e.g. the devcontainer).
+#   container         - `make dev-deploy-container`: cross-build inside a Linux
+#                       Rust container; works on macOS and across arches.
+dev-deploy: BUILD := native
+dev-deploy: _dev-deploy ## Build orchestrator with the host's cargo (no container) and hot-swap+restart
+
+dev-deploy-container: BUILD := container
+dev-deploy-container: _dev-deploy ## Cross-build orchestrator in a container for the running VM and hot-swap+restart
+
+_dev-deploy:
 	@set -eu; \
 	command -v limactl >/dev/null 2>&1 || { echo "Error: 'limactl' not found." >&2; exit 1; }; \
-	command -v podman  >/dev/null 2>&1 || { echo "Error: 'podman' not found." >&2; exit 1; }; \
 	vm_arch=$$(limactl shell $(DEV_VM) -- uname -m | tr -d '\r'); \
 	case "$$vm_arch" in \
 	  aarch64) plat=linux/arm64 ;; \
@@ -157,23 +162,33 @@ dev-deploy: ## Cross-build orchestrator for running VM and hot-swap+restart the 
 	  *) echo "unsupported VM arch: $$vm_arch" >&2; exit 1 ;; \
 	esac; \
 	target=$(CURDIR)/target/dev-vm-$$vm_arch; \
-	plat_arch=$$(echo $$plat | cut -d/ -f2); \
-	builder_tag=$(RUST_BUILDER)-$$plat_arch; \
-	echo ">>> Ensuring rust builder image $$builder_tag (rust + libtss2-dev)"; \
-	podman build --platform $$plat \
-	  --build-arg RUST_VERSION=$(RUST_VERSION) \
-	  -f dev-env/rust-builder.Containerfile \
-	  -t $$builder_tag dev-env; \
-	echo ">>> Building amos-orchestrator for VM ($$vm_arch, $$plat) -> $$target/release/"; \
-	mkdir -p $$target $(LIMA_TMP); \
-	podman run --rm --platform $$plat \
-	  -v $(CURDIR):/workspace \
-	  -w /workspace \
-	  $$builder_tag \
-	  cargo build --release --package amos-orchestrator \
-	    --target-dir /workspace/target/dev-vm-$$vm_arch; \
-	cp $$target/release/amos-orchestrator $(LIMA_TMP)/amos-orchestrator.new; \
+	mkdir -p $$target; \
+	if [ "$(BUILD)" = native ]; then \
+	  command -v cargo >/dev/null 2>&1 || { echo "Error: 'cargo' not found. Install Rust or use 'make dev-deploy-container'." >&2; exit 1; }; \
+	  echo ">>> Building amos-orchestrator natively -> $$target/release/"; \
+	  cargo build --release --package amos-orchestrator --target-dir $$target; \
+	  bin=$$target/release/amos-orchestrator; \
+	else \
+	  command -v podman >/dev/null 2>&1 || { echo "Error: 'podman' not found." >&2; exit 1; }; \
+	  plat_arch=$$(echo $$plat | cut -d/ -f2); \
+	  builder_tag=$(RUST_BUILDER)-$$plat_arch; \
+	  echo ">>> Ensuring rust builder image $$builder_tag (rust + libtss2-dev)"; \
+	  podman build --platform $$plat \
+	    --build-arg RUST_VERSION=$(RUST_VERSION) \
+	    -f dev-env/rust-builder.Containerfile \
+	    -t $$builder_tag dev-env; \
+	  echo ">>> Building amos-orchestrator for VM ($$vm_arch, $$plat) -> $$target/release/"; \
+	  podman run --rm --platform $$plat \
+	    -v $(CURDIR):/workspace \
+	    -w /workspace \
+	    $$builder_tag \
+	    cargo build --release --package amos-orchestrator \
+	      --target-dir /workspace/target/dev-vm-$$vm_arch; \
+	  bin=$$target/release/amos-orchestrator; \
+	fi; \
+	echo ">>> Uploading $$bin to $(DEV_VM):$(DEV_VM_TMP)/amos-orchestrator.new"; \
+	limactl copy $$bin $(DEV_VM):$(DEV_VM_TMP)/amos-orchestrator.new; \
 	echo ">>> Installing into $(DEV_VM):/var/usrlocal/bin/amos-orchestrator and restarting"; \
-	limactl shell $(DEV_VM) -- sudo install -m755 $(LIMA_TMP)/amos-orchestrator.new /var/usrlocal/bin/amos-orchestrator; \
+	limactl shell $(DEV_VM) -- sudo install -m755 $(DEV_VM_TMP)/amos-orchestrator.new /var/usrlocal/bin/amos-orchestrator; \
 	limactl shell $(DEV_VM) -- sudo systemctl restart orchestrator.service; \
 	echo ">>> Deployed. Tail logs: limactl shell $(DEV_VM) -- journalctl -u orchestrator.service -f"

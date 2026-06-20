@@ -126,8 +126,9 @@ cross-builds for the VM's arch, drops the binary, and restarts the service:
 
 ```bash
 # from the project root, with the VM already running
-make dev-deploy            # defaults to VM name 'edge-ipc'
+make dev-deploy            # native build (host cargo), VM name 'edge-ipc'
 make dev-deploy DEV_VM=my-vm
+make dev-deploy-container   # build in a container instead (macOS / cross-arch)
 ```
 
 What `dev-deploy` does:
@@ -136,12 +137,16 @@ What `dev-deploy` does:
    **host may be macOS arm64 or amd64**, and the VM may have been started with
    a different `--arch` than the host. The orchestrator must be built for the
    **VM's** arch, not the host's.
-2. Builds inside a Linux `rust:1.95-slim` container at the right `--platform`
-   (so devs don't need a Linux cross-toolchain on macOS). Output goes to
-   `target/dev-vm-<arch>/release/` to keep it separate from your host-native
+2. Builds the orchestrator. By default (`make dev-deploy`) it builds with your
+   **host's own cargo** — fast and no podman, but it only produces a binary for
+   the host's arch, so run it on a Linux host matching the VM (e.g. inside the
+   devcontainer). On macOS or to cross-build for a different arch, use
+   `make dev-deploy-container`, which builds inside a Linux `rust:1.95-slim`
+   container at the right `--platform`. Either way output goes to
+   `target/dev-vm-<arch>/release/`, separate from your host-native
    `target/release/`.
-3. Copies the binary into `/tmp/lima/` on the host (lima mounts this writable
-   into the VM at the same path), then `sudo install`s it into
+3. Uploads the binary into the VM with `limactl copy` (scp/sftp over the VM's
+   SSH connection), then `sudo install`s it into
    `/var/usrlocal/bin/amos-orchestrator` and runs `systemctl restart`.
 
 If the VM isn't running yet, start it as usual — on first boot, the provision

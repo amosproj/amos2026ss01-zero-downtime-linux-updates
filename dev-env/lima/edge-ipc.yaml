@@ -27,6 +27,7 @@ images:
   - location: "dist/qcow2/disk.qcow2"
     arch: "x86_64"
 
+# default lima mounts
 mounts:
   - location: "~"
     writable: false
