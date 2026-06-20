@@ -38,22 +38,6 @@ RUN dnf -y install tpm2-tss tpm2-tools
 # + other lima dependencies
 RUN dnf -y install openssh-server cloud-init sshfs
 
-# Dev-only convenience tools. Skipped entirely in prod images (DEV_MODE=false).
-# lazyjournal: TUI for systemd journals — see dev-env/lima/README.md for usage.
-# Not packaged in Fedora repos; we pull the upstream static binary.
-ARG LAZYJOURNAL_VERSION=0.8.6
-RUN set -eu; \
-    if [ "$DEV_MODE" = "true" ]; then \
-        case "$(uname -m)" in \
-            x86_64)  arch=amd64 ;; \
-            aarch64) arch=arm64 ;; \
-            *) echo "lazyjournal: unsupported arch $(uname -m)" >&2; exit 1 ;; \
-        esac; \
-        curl -fsSL -o /usr/bin/lazyjournal \
-            "https://github.com/Lifailon/lazyjournal/releases/download/${LAZYJOURNAL_VERSION}/lazyjournal-${LAZYJOURNAL_VERSION}-linux-${arch}"; \
-        chmod 755 /usr/bin/lazyjournal; \
-    fi
-
 # Clean up DNF cache to reduce image size
 RUN dnf clean all
 
