@@ -5,8 +5,6 @@ name: "Installer ISO"
 # `bootc upgrade` works on hardware. Output: artifact `amos-edge-<ref>-amd64`.
 
 on:
-  push:
-    tags: ["**"]
   workflow_run:
     workflows: ["Orchestrator Container Image"]
     types: [completed]
@@ -23,7 +21,6 @@ jobs:
     name: Check if build is needed
     runs-on: ubuntu-latest
     if: >-
-      github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
     outputs:
@@ -32,14 +29,13 @@ jobs:
       - id: check
         run: |
           set -euo pipefail
-          # Tags and manual runs always build.
-          if [ "${{ github.event_name }}" = "push" ] || \
-             [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # Manual runs always build.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should-build=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # For workflow_run (branch pushes): build on main or any branch whose
-          # name contains a keyword as a whole segment (delimited by - or /).
+          # For workflow_run: build on main, any tag, or any branch whose name
+          # contains a keyword as a whole segment (delimited by - or /).
           # This prevents e.g. "feat-device-logging" from matching "dev".
           # "iso-building" matches via the "iso" keyword.
           BRANCH="${{ github.event.workflow_run.head_branch }}"
@@ -81,9 +77,6 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_ref }}" ]; then
             TAG="${{ inputs.image_ref }}"
             SAFE_REF="${{ github.ref_name }}"
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            TAG="commit-${GITHUB_SHA:0:7}"
-            SAFE_REF="${GITHUB_REF_NAME//\//-}"
           else
             HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
             TAG="commit-${HEAD_SHA:0:7}"
@@ -101,16 +94,8 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      # Tag builds start concurrently with the container build; retry until the
-      # image is published (container build takes ~10-15 min; allow up to 20 min).
       - name: Pull the bootc image into root storage
-        run: |
-          for i in $(seq 1 20); do
-            sudo podman pull "${IMAGE_REF}" && break
-            [ "$i" -eq 20 ] && { echo "Timed out waiting for image"; exit 1; }
-            echo "Image not yet available, retrying in 60s (attempt $i/20)..."
-            sleep 60
-          done
+        run: sudo podman pull "${IMAGE_REF}"
 
       # bib (the old builder) caches DNF metadata/RPMs in /rpmmd per its README, not
       # /var/cache/* like flightctl mounts. Persisting it skips re-downloading the
