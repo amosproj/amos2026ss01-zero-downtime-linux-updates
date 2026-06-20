@@ -67,7 +67,7 @@ async fn try_update(
     bootc
         .apply()
         .await
-        .with_context(|| "Critical: switch succeeded but apply failed")?;
+        .context("Critical: switch succeeded but apply failed")?;
     info!("bootc apply succeeded; reboot imminent");
 
     Ok(())
