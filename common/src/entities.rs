@@ -15,7 +15,7 @@ pub use crate::entities::group as Group;
 
 pub mod log;
 pub use crate::entities::log::{
-    ApplicationLog, DeviceLog, LogEvent, LogLevel, LogQuery, LogStreamQuery,
+    ApplicationLog, DeviceLog, LogEvent, LogKind, LogLevel, LogQuery, LogStreamQuery,
 };
 
 pub mod os_assignment;

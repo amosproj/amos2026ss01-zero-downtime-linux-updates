@@ -53,6 +53,8 @@ struct Cli {
 async fn main() {
     let cli = Cli::parse();
 
+    info!("Orchestrator starting ...");
+
     // Load config first so logging can be tagged with the device UUID. The
     // logging subscriber isn't up yet, so failures go straight to stderr.
     // FIXME: think about how to handle/log failed config reads.
@@ -63,7 +65,7 @@ async fn main() {
         std::process::exit(1);
     }));
 
-    logging::init(cli.debug, &config.device_uuid);
+    let log_rx = logging::init(cli.debug);
 
     let signer = match util::tpm::tpm_init() {
         Ok(signer) => signer,
@@ -141,6 +143,10 @@ async fn main() {
         },
     );
 
+    info!("Log shipper starting");
+    logging::spawn_log_shipper(log_rx, Arc::clone(&download_manager));
+    info!("Log shipper started");
+
     let update_checker: Arc<dyn CheckForUpdate> =
         Arc::new(UpdateChecker::new(Arc::clone(&download_manager)));
 
@@ -167,7 +173,10 @@ async fn main() {
         }
     });
 
+    info!("Background workers spawned, orchestrator is running");
+
     tokio::signal::ctrl_c().await.unwrap();
+    info!("Received shutdown signal, stopping");
 }
 
 #[cfg(test)]

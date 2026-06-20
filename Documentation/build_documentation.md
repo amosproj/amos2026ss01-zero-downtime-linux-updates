@@ -15,7 +15,7 @@ This document covers how to build, test, and deploy the project components.
 5. [Running Tests](#running-tests)
 6. [Running Locally](#running-locally)
 7. [Deploying to an Edge Device](#deploying-to-an-edge-device)
-8. [Container / rootc Build](#container--bootc)
+8. [Container / bootc Build](#container--bootc-build)
 9. [CI / CD](#ci--cd)
 10. [Environment Variables Reference](#environment-variables-reference)
 
@@ -38,7 +38,7 @@ amos2026ss01-zero-downtime-linux-updates/
 ├── api-mock-server/        — Development mock server binary
 │   ├── Cargo.toml
 │   └── src/
-└── bootc/            — Container image build files
+└── bootc-build/            — Container image build files
     ├── Containerfile
     └── orchestrator.service
 ```
@@ -238,7 +238,7 @@ scp orchestrator/config.example.toml user@edge-device:/etc/amos/config.toml
 ### 3. Install and enable the systemd service
 
 ```bash
-scp bootc/orchestrator.service user@edge-device:/tmp/
+scp bootc-build/orchestrator.service user@edge-device:/tmp/
 ssh user@edge-device "sudo cp /tmp/orchestrator.service /etc/systemd/system/ && \
   sudo systemctl daemon-reload && \
   sudo systemctl enable --now amos-orchestrator"
@@ -255,19 +255,19 @@ ssh user@edge-device "sudo journalctl -u amos-orchestrator -n 50"
 
 ## Container / rootc Build
 
-The `bootc/` directory contains the files needed to embed the Orchestrator into an OS container image.
+The `bootc-build/` directory contains the files needed to embed the Orchestrator into an OS container image.
 
 ### Files
 
 | File | Description |
 |------|-------------|
-| `bootc/Containerfile` | OCI image definition for the root container build |
-| `bootc/orchestrator.service` | systemd unit file bundled into the image |
+| `bootc-build/Containerfile` | OCI image definition for the root container build |
+| `bootc-build/orchestrator.service` | systemd unit file bundled into the image |
 
 ### Build the container image
 
 ```bash
-podman build -f bootc/Containerfile -t amos-orchestrator:latest .
+podman build -f bootc-build/Containerfile -t amos-orchestrator:latest .
 ```
 
 ### Push to GHCR
