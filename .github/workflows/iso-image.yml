@@ -119,7 +119,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: rpmmd-cache
-          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc/iso/config.toml') }}
+          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('rootc-build/iso/config.toml') }}
           restore-keys: |
             ${{ runner.os }}-iso-rpmmd-
 
@@ -152,7 +152,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: rpmmd-cache
-          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc/iso/config.toml') }}
+          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('rootc-build/iso/config.toml') }}
 
       - name: Rename ISO for download
         id: rename

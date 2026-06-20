@@ -118,7 +118,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: rpmmd-cache
-          key: ${{ runner.os }}-disk-rpmmd-${{ matrix.arch }}-${{ hashFiles('bootc/Containerfile') }}
+          key: ${{ runner.os }}-disk-rpmmd-${{ matrix.arch }}-${{ hashFiles('rootc-build/Containerfile') }}
           restore-keys: |
             ${{ runner.os }}-disk-rpmmd-${{ matrix.arch }}-
 
@@ -174,7 +174,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: rpmmd-cache
-          key: ${{ runner.os }}-disk-rpmmd-${{ matrix.arch }}-${{ hashFiles('bootc/Containerfile') }}
+          key: ${{ runner.os }}-disk-rpmmd-${{ matrix.arch }}-${{ hashFiles('rootc-build/Containerfile') }}
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
