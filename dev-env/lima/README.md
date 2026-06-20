@@ -11,7 +11,7 @@ agent run end to end, without any physical hardware.
   checks the cloud for OS/app updates, applies them, and reports a device
   **inventory** back. On boot it writes the inventory to a JSON file and then
   polls the cloud API on an interval.
-- The VM image is defined in [`../../rootc-build/Containerfile`](../../rootc-build/Containerfile);
+- The VM image is defined in [`../../bootc-build/Containerfile`](../../bootc-build/Containerfile);
   the VM itself is defined in [`edge-ipc.yaml`](./edge-ipc.yaml).
 
 ## Prerequisites

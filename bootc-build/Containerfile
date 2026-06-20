@@ -17,7 +17,7 @@ ARG DEV_MODE
 COPY --from=builder /workspace/target/release/amos-orchestrator /usr/local/bin/amos-orchestrator
 
 # Install the systemd unit and enable it
-COPY rootc-build/orchestrator.service /etc/systemd/system/orchestrator.service
+COPY bootc-build/orchestrator.service /etc/systemd/system/orchestrator.service
 RUN systemctl enable orchestrator.service
 
 # Install Greenboot health checks
@@ -55,5 +55,5 @@ RUN dnf clean all
 #     cp /usr/share/containers/$src /etc/containers/policy.json; \
 #     rm /usr/share/containers/policy.prod.json /usr/share/containers/policy.dev.json
 
-# COPY rootc-build/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
+# COPY bootc-build/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
 # RUN chmod 755 /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
