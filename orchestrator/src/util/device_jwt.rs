@@ -24,7 +24,7 @@ impl DeviceJwtProvider {
     }
 
     pub fn token<'a>(&'a mut self, device_uuid: &str) -> anyhow::Result<&'a str> {
-        if SystemTime::now() - REFRESH_BEFORE > self.expire_time {
+        if SystemTime::now() > self.expire_time - REFRESH_BEFORE {
             debug!("Refreshing device JWT token");
 
             self.expire_time = SystemTime::now() + Duration::from_secs(MAX_TOKEN_LIFETIME as u64);
