@@ -106,6 +106,12 @@ provision:
       if [ -n "$TERM" ] && ! infocmp "$TERM" >/dev/null 2>&1; then
         export TERM=xterm-256color
       fi
+  # TODO: Remove this when bootc file has been fixed to have the podman socket
+  #       enabled there
+  - mode: boot
+    script: |
+      systemctl enable podman.socket
+      systemctl start podman.socket
 
 # Extra environment variables that will be loaded into the VM at start up.
 # These variables are consumed by internal init scripts, and also added
