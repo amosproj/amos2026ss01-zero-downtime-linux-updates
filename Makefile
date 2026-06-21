@@ -191,4 +191,5 @@ _dev-deploy:
 	echo ">>> Installing into $(DEV_VM):/var/usrlocal/bin/amos-orchestrator and restarting"; \
 	limactl shell $(DEV_VM) -- sudo install -m755 $(DEV_VM_TMP)/amos-orchestrator.new /var/usrlocal/bin/amos-orchestrator; \
 	limactl shell $(DEV_VM) -- sudo systemctl restart orchestrator.service; \
+	limactl shell $(DEV_VM) -- sudo systemctl daemon-reload; \
 	echo ">>> Deployed. Tail logs: limactl shell $(DEV_VM) -- journalctl -u orchestrator.service -f"
