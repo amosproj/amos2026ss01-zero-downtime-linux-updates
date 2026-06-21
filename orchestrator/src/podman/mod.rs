@@ -2,9 +2,35 @@
 #![allow(dead_code)]
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use futures_util::stream::BoxStream;
 
+pub mod log_registry;
 pub mod mock;
 pub mod wrapper;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LogStreamKind {
+    Stdout,
+    Stderr,
+}
+
+#[derive(Clone, Debug)]
+pub struct LogChunk {
+    pub stream: LogStreamKind,
+    pub time: Option<DateTime<Utc>>,
+    pub message: String,
+}
+
+pub trait PodmanLogHandle: Send + 'static {
+    fn logs(
+        self,
+        follow: bool,
+        since: Option<DateTime<Utc>>,
+    ) -> BoxStream<'static, anyhow::Result<LogChunk>>;
+
+    fn name(&self) -> &str;
+}
 
 #[async_trait]
 pub trait Podman: 'static {
@@ -49,6 +75,8 @@ pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
     async fn state(&self) -> anyhow::Result<PodmanContainerState>;
     async fn wait_for_state_change(&self, current: PodmanContainerState) -> anyhow::Result<()>;
     fn name(&self) -> &str;
+    type LogHandle: PodmanLogHandle;
+    fn log_handle(&self) -> Self::LogHandle;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
