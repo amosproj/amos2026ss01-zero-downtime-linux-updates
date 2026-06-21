@@ -1,10 +1,11 @@
-.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull dev-deploy dev-deploy-container _dev-deploy dev-deploy-native _dev-deploy
+.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
 TMP_DIR       ?= /tmp/amos2026ss01-zero-downtime-linux-updates
 IMAGE_BUILDER ?= ghcr.io/osbuild/image-builder-cli:latest
 HOST_ARCH     := $(shell uname -m | sed -e s/arm64/aarch64/ -e s/amd64/x86_64/)
+DOCKER_ARCH    = $(subst aarch64,arm64,$(subst x86_64,amd64,$(ARCH)))
 
 # dev-deploy: name of the running Lima VM and a scratch path inside the guest
 # used as the drop point for the freshly built binary, which `limactl copy`
@@ -22,6 +23,21 @@ RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
 # e.g. `make pull-image PULL_REF=feat-create-test-setup` pulls feat-create-test-setup-amd64.
 GHCR_DISK     ?= ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-disk
 PULL_REF      ?=
+
+# Installer ISO (see the `iso` targets below). Unlike the disk flow, the ISO is
+# produced by the older `bootc-image-builder` container: its installer +
+# kickstart support (the `anaconda-iso` type, auto-reading /config.toml) is the
+# best-documented path. Both flows consume the same bootc image, so this is fine.
+ISO_CONFIG    ?= bootc/iso/config.toml
+BIB           ?= quay.io/centos-bootc/bootc-image-builder:latest
+ISO_TYPE      ?= anaconda-iso
+FS            ?= ext4
+
+# Dev-vs-prod image switch (Containerfile build-arg). When true, bakes in the
+# permissive dev signature policy and drops the /etc/amos-dev-image marker.
+# Defaults to false so CI builds (and any "real IPC" artifact) are prod by
+# default; pass DEV_MODE=true for local VM testing.
+DEV_MODE      ?= false
 
 # Shared image-builder-cli invocation; append the image type (qcow2 / raw).
 # Writes the disk straight into $(DIST_DIR) via --output-dir.
@@ -75,9 +91,9 @@ _image-build:
 	@echo ">>> Building disk image for $(ARCH)"
 	mkdir -p $(TMP_DIR) $(DIST_DIR)/qcow2 $(DIST_DIR)/image
 	podman build \
-		--platform linux/$$(echo $(ARCH) | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/) \
-		--build-arg DEV_MODE=true \
-		-f bootc-build/Containerfile -t $(IMAGE) .
+		--platform linux/$(DOCKER_ARCH) \
+		--build-arg DEV_MODE=$(DEV_MODE) \
+		-f bootc/Containerfile -t $(IMAGE) .
 	podman save --format oci-archive -o $(TMP_DIR)/amos-edge.tar $(IMAGE)
 	sudo podman load -i $(TMP_DIR)/amos-edge.tar
 	$(IB_RUN) qcow2
@@ -193,3 +209,46 @@ _dev-deploy:
 	limactl shell $(DEV_VM) -- sudo systemctl restart orchestrator.service; \
 	limactl shell $(DEV_VM) -- sudo systemctl daemon-reload; \
 	echo ">>> Deployed. Tail logs: limactl shell $(DEV_VM) -- journalctl -u orchestrator.service -f"
+
+# ---------------------------------------------------------------------------
+# Installer ISO for bare-metal IPCs. The ISO embeds our bootc image and
+# installs it unattended via the kickstart in $(ISO_CONFIG). Cross-arch builds
+# need qemu-user-static registered on the host.
+# ---------------------------------------------------------------------------
+iso: ARCH ?= $(HOST_ARCH)
+iso: _iso-build ## Build installer ISO for host arch into ./dist/bootiso/install.iso
+
+iso-amd64: ARCH := x86_64
+iso-amd64: _iso-build ## Build amd64 installer ISO (cross-arch if host is arm64; needs qemu-user-static)
+
+iso-arm64: ARCH := aarch64
+iso-arm64: _iso-build ## Build arm64 installer ISO (cross-arch if host is amd64; needs qemu-user-static)
+
+# Build the bootc image (same as the disk flow) into root podman storage, then
+# have bootc-image-builder emit the installer ISO embedding it. The save/load
+# dance puts the image where the root `sudo podman run` below can read it.
+_iso-build:
+	@echo ">>> Building installer ISO for $(ARCH)"
+	mkdir -p $(TMP_DIR) $(DIST_DIR)
+	podman build \
+		--platform linux/$(DOCKER_ARCH) \
+		--build-arg DEV_MODE=$(DEV_MODE) \
+		-f bootc/Containerfile -t $(IMAGE) .
+	podman save --format oci-archive -o $(TMP_DIR)/amos-edge.tar $(IMAGE)
+	sudo podman load -i $(TMP_DIR)/amos-edge.tar
+	sudo podman run --rm --privileged --pull=newer \
+		--security-opt label=type:unconfined_t \
+		-v $(CURDIR)/$(ISO_CONFIG):/config.toml:ro \
+		-v $(DIST_DIR):/output \
+		-v /var/lib/containers/storage:/var/lib/containers/storage \
+		$(BIB) \
+		--type $(ISO_TYPE) \
+		--config /config.toml \
+		--rootfs $(FS) \
+		--target-arch $(DOCKER_ARCH) \
+		$(IMAGE)
+	sudo chown -R $$USER $(DIST_DIR)/bootiso
+	@echo "Installer ISO -> $(DIST_DIR)/bootiso/install.iso"
+
+iso-clean: ## Remove built installer ISO artifacts
+	rm -rf $(DIST_DIR)/bootiso
