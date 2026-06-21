@@ -77,7 +77,7 @@ _image-build:
 	podman build \
 		--platform linux/$$(echo $(ARCH) | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/) \
 		--build-arg DEV_MODE=true \
-		-f rootc-build/Containerfile -t $(IMAGE) .
+		-f bootc-build/Containerfile -t $(IMAGE) .
 	podman save --format oci-archive -o $(TMP_DIR)/amos-edge.tar $(IMAGE)
 	sudo podman load -i $(TMP_DIR)/amos-edge.tar
 	$(IB_RUN) qcow2

@@ -14,6 +14,15 @@ fn default_inventory_path() -> String {
 fn default_podman_path() -> String {
     "/run/podman/podman.sock".to_owned()
 }
+fn default_log_flush_interval_secs() -> u64 {
+    60
+}
+fn default_log_max_batch() -> usize {
+    256
+}
+fn default_log_max_buffer() -> usize {
+    10_000
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
@@ -32,6 +41,15 @@ pub struct Settings {
     pub https_proxy: Option<String>,
 
     pub device_uuid: String,
+
+    #[serde(default = "default_log_flush_interval_secs")]
+    pub log_flush_interval_secs: u64,
+
+    #[serde(default = "default_log_max_batch")]
+    pub log_max_batch: usize,
+
+    #[serde(default = "default_log_max_buffer")]
+    pub log_max_buffer: usize,
 }
 
 /// Loads and validates the orchestrator configuration.
@@ -88,6 +106,9 @@ mod tests {
             podman_path: default_podman_path(),
             https_proxy: None,
             device_uuid: "00000000-0000-0000-0000-000000000000".into(),
+            log_flush_interval_secs: default_log_flush_interval_secs(),
+            log_max_batch: default_log_max_batch(),
+            log_max_buffer: default_log_max_buffer(),
         }
     }
 
