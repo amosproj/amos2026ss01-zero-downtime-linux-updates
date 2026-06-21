@@ -68,7 +68,9 @@ limactl copy target/debug/amos-orchestrator edge-ipc:/tmp/
 Alternatively:
 Get the ssh config for the VM and use that for explicit ssh access or scp'ing sth. to the VM:
 ```bash
-ssh -F ~/.lima/edge-ipc/ssh.config edge-ipc 
+edge_ssh_config=`limactl ls --format='{{.SSHConfigFile}}' edge-ipc`
+
+ssh -F "$edge_ssh_config" edge-ipc 
 
 scp -F "$edge_ssh_config" target/debug/amos-orchestrator lima-edge-ipc:/tmp/
 ```
