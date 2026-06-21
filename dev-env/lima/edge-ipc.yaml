@@ -35,15 +35,10 @@ mounts:
     writable: true
 
 provision:
-  # Prevent lima from installing random sh*t into the VM and therefore having
-  # failed cloud-init services because our bootc system is read-only.
-  - mode: dependency
-    skipDefaultDependencyResolution: true
-    script: "true"
-
-  # AMOS dev override: redirect the orchestrator service's ExecStart to a
-  # writable path so devs can swap the binary on a live VM. Empty ExecStart=
-  # clears the unit's value before setting the new one (systemd requires this).
+  ### Dev setup: make updating the orchestrator binary inside the VM easier
+  # Redirect the orchestrator service's ExecStart to a writable path so we can
+  # swap the binary on a live VM. Empty ExecStart= clears the unit's value
+  # before setting the new one (systemd requires this).
   - mode: data
     path: /etc/systemd/system/orchestrator.service.d/10-dev.conf
     content: |
@@ -68,6 +63,14 @@ provision:
   - mode: system
     script: "systemctl daemon-reload"
 
+  ### Config file setup
+  # Write config file the orchestrator reads.
+  # `file:` is resolved relative to this YAML.
+  - mode: data
+    path: /etc/amos/config.toml
+    file: orchestrator-config.toml
+
+  ### vTPM initialization
   # Initialize the vTPM - see dev-env/tpm.md for explanation of the commands.
   # If a persistent handle (aka. signing key) is detected, we are already initalized
   - mode: boot
@@ -86,6 +89,12 @@ provision:
       tpm2_evictcontrol -C o -c key.ctx 0x81000000
       echo "TPM initalized successfully!"
 
+  ### Random fixes
+  # Prevent lima from installing random sh*t into the VM and therefore having
+  # failed cloud-init services because our bootc system is read-only.
+  - mode: dependency
+    skipDefaultDependencyResolution: true
+    script: "true"
   # Fall back to xterm-256color when the host terminal's terminfo entry
   # isn't shipped in the VM (e.g. xterm-ghostty, xterm-kitty). Without this,
   # `systemctl status` and other pager-using commands fail with
@@ -97,12 +106,6 @@ provision:
       if [ -n "$TERM" ] && ! infocmp "$TERM" >/dev/null 2>&1; then
         export TERM=xterm-256color
       fi
-
-  # AMOS: write config file the orchestrator reads.
-  # `file:` is resolved relative to this YAML.
-  - mode: data
-    path: /etc/amos/config.toml
-    file: orchestrator-config.toml
 
 # Extra environment variables that will be loaded into the VM at start up.
 # These variables are consumed by internal init scripts, and also added
