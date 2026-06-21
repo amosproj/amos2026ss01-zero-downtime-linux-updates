@@ -179,11 +179,11 @@ _dev-deploy:
 	esac; \
 	target=$(CURDIR)/target/dev-vm-$$vm_arch; \
 	mkdir -p $$target; \
+	bin=$$target/debug/amos-orchestrator; \
 	if [ "$(BUILD)" = native ]; then \
 	  command -v cargo >/dev/null 2>&1 || { echo "Error: 'cargo' not found. Install Rust or use 'make dev-deploy-container'." >&2; exit 1; }; \
 	  echo ">>> Building amos-orchestrator natively -> $$target/release/"; \
-	  cargo build --release --package amos-orchestrator --target-dir $$target; \
-	  bin=$$target/release/amos-orchestrator; \
+	  cargo build --package amos-orchestrator --target-dir $$target; \
 	else \
 	  command -v podman >/dev/null 2>&1 || { echo "Error: 'podman' not found." >&2; exit 1; }; \
 	  plat_arch=$$(echo $$plat | cut -d/ -f2); \
@@ -198,9 +198,8 @@ _dev-deploy:
 	    -v $(CURDIR):/workspace \
 	    -w /workspace \
 	    $$builder_tag \
-	    cargo build --release --package amos-orchestrator \
+	    cargo build --package amos-orchestrator \
 	      --target-dir /workspace/target/dev-vm-$$vm_arch; \
-	  bin=$$target/release/amos-orchestrator; \
 	fi; \
 	echo ">>> Uploading $$bin to $(DEV_VM):$(DEV_VM_TMP)/amos-orchestrator.new"; \
 	limactl copy $$bin $(DEV_VM):$(DEV_VM_TMP)/amos-orchestrator.new; \
