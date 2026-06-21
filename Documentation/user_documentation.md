@@ -180,10 +180,10 @@ Log output is written to **stderr**. Default level is `WARN`. Use `-d` / `-dd` f
 
 ## Running as a systemd Service
 
-A systemd unit file is provided in [`rootc-build/orchestrator.service`](../rootc-build/orchestrator.service). To install it:
+A systemd unit file is provided in [`bootc-build/orchestrator.service`](../bootc-build/orchestrator.service). To install it:
 
 ```bash
-sudo cp rootc-build/orchestrator.service /etc/systemd/system/
+sudo cp bootc-build/orchestrator.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now amos-orchestrator
 ```
