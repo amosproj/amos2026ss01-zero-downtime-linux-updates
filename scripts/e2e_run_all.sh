@@ -9,6 +9,7 @@ export VM_NAME="edge-ipc"
 SERVER_PID=""
 FAILED_COUNT=0
 PASSED_COUNT=0
+TPM_DIR="/tmp/emulated_tpm"
 
 # Color outputs
 GREEN='\033[0;32m'
@@ -27,6 +28,10 @@ cleanup() {
     echo -e "\n${NC}=== Cleaning up background processes ==="
     
     limactl shell "${VM_NAME}" -- sudo systemctl stop orchestrator.service 2>/dev/null || true
+
+    # Shut down the VM, also automatically terminates the backgrounded swtpm process
+    echo "Stopping Lima VM '${VM_NAME}'..."
+    limactl stop "${VM_NAME}" 2>/dev/null || true
 
     # 2. Terminate the mock server process group on the host machine
     if [ -n "${SERVER_PID:-}" ]; then
@@ -51,6 +56,27 @@ cleanup() {
     fi
 }
 trap cleanup EXIT
+
+echo "========================================="
+echo " Starting TPM and VM "
+echo "========================================="
+
+echo "Initializing emulated TPM in ${TPM_DIR}..."
+mkdir -p "${TPM_DIR}"
+swtpm socket --tpm2 -d --tpmstate dir="${TPM_DIR}" --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" --log level=20
+
+sleep 5
+
+echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
+set -x
+QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
+    -chardev socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock \
+    -tpmdev emulator,id=tpm0,chardev=chrtpm \
+    -device tpm-tis,tpmdev=tpm0" \
+    limactl --debug start "${VM_NAME}"
+set +x
+
+sleep 2
 
 echo "========================================="
 echo " Starting api-mock-server in Background "
