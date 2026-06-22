@@ -1,8 +1,10 @@
 use std::{sync::Arc, time::Duration};
 use tracing::{debug, error, info, warn};
 
-use crate::podman::{PodmanContainer, PodmanContainerState, PodmanImage, PodmanImageInfo};
-
+use crate::podman::log_registry::AppLogRegistry;
+use crate::podman::{
+    PodmanContainer, PodmanContainerState, PodmanImage, PodmanImageInfo, PodmanLogHandle,
+};
 /// Struct to manage lifecycle of an application.
 /// Create it from an existing container by calling PodmanContainer::into,
 /// then it will try to keep it alive.
@@ -12,19 +14,32 @@ use crate::podman::{PodmanContainer, PodmanContainerState, PodmanImage, PodmanIm
 pub struct Application {
     image_reference: String,
     image_digest: String,
+    application_id: i32,
     lifecycle_loop: tokio::task::JoinHandle<()>,
     delete_notifier: Arc<tokio::sync::Notify>,
 }
 
 impl Application {
-    pub fn wrap(container: impl PodmanContainer) -> Self {
+    pub fn wrap(
+        container: impl PodmanContainer,
+        application_id: i32,
+        registry: &AppLogRegistry,
+    ) -> Self {
         let delete_notifier = Arc::new(tokio::sync::Notify::const_new());
         let event_recv = LogEventReceiver {
             app_name: container.name().to_owned(),
         };
+
+        registry.add(
+            application_id,
+            container.name().to_owned(),
+            container.log_handle().logs(true, None),
+        );
+
         Application {
             image_reference: container.reference().to_owned(),
             image_digest: container.digest().to_owned(),
+            application_id,
             lifecycle_loop: tokio::spawn(run_lifecycle_loop(
                 container,
                 event_recv,
@@ -38,12 +53,15 @@ impl Application {
         image: &impl PodmanImage,
         name: &str,
         environment: impl IntoIterator<Item = (&str, &str)> + Send,
+        application_id: i32,
+        registry: &AppLogRegistry,
     ) -> anyhow::Result<Self> {
         let container = image.create_container(name, environment).await?;
-        Ok(Self::wrap(container))
+        Ok(Self::wrap(container, application_id, registry))
     }
 
-    pub async fn remove(mut self) -> anyhow::Result<()> {
+    pub async fn remove(mut self, registry: &AppLogRegistry) -> anyhow::Result<()> {
+        registry.remove(self.application_id);
         self.delete_notifier.notify_one();
         (&mut self.lifecycle_loop).await?;
         Ok(())
@@ -197,6 +215,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use async_trait::async_trait;
+    use futures_util::StreamExt;
 
     use super::{LifecycleEvent::*, *};
     use crate::podman::PodmanContainerState::{Ambiguous, Running, Stopped};
@@ -217,6 +236,23 @@ mod tests {
     impl EventReceiver for ChannelEventReceiver {
         fn send(&self, event: LifecycleEvent) {
             self.tx.send(event).unwrap()
+        }
+    }
+
+    struct NoopLogHandle;
+
+    impl crate::podman::PodmanLogHandle for NoopLogHandle {
+        fn logs(
+            self,
+            _follow: bool,
+            _since: Option<chrono::DateTime<chrono::Utc>>,
+        ) -> futures_util::stream::BoxStream<'static, anyhow::Result<crate::podman::LogChunk>>
+        {
+            futures_util::stream::empty().boxed()
+        }
+
+        fn name(&self) -> &str {
+            "testname"
         }
     }
 
@@ -248,6 +284,11 @@ mod tests {
                     panic!("Waiting forever in test");
                 }
                 Ok(())
+            }
+
+            type LogHandle = NoopLogHandle;
+            fn log_handle(&self) -> Self::LogHandle {
+                NoopLogHandle
             }
             fn name(&self) -> &str {
                 "testname"
@@ -308,6 +349,10 @@ mod tests {
                     tokio::time::sleep(Duration::MAX).await;
                 }
                 Ok(())
+            }
+            type LogHandle = NoopLogHandle;
+            fn log_handle(&self) -> Self::LogHandle {
+                NoopLogHandle
             }
             fn name(&self) -> &str {
                 "testname"
@@ -380,6 +425,10 @@ mod tests {
                 }
                 Ok(())
             }
+            type LogHandle = NoopLogHandle;
+            fn log_handle(&self) -> Self::LogHandle {
+                NoopLogHandle
+            }
             fn name(&self) -> &str {
                 "testname"
             }
@@ -451,6 +500,10 @@ mod tests {
                     _ => {}
                 }
                 Ok(())
+            }
+            type LogHandle = NoopLogHandle;
+            fn log_handle(&self) -> Self::LogHandle {
+                NoopLogHandle
             }
             fn name(&self) -> &str {
                 "testname"

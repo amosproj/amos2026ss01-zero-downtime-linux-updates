@@ -1,0 +1,161 @@
+name: "Installer ISO"
+
+# Builds the installer ISO for a real IPC from the published bootc image
+# (ghcr.io/<repo>-system). The ISO records that GHCR ref as its bootc origin so
+# `bootc upgrade` works on hardware. Output: artifact `amos-edge-<ref>-amd64`.
+
+on:
+  workflow_run:
+    workflows: ["Orchestrator Container Image"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image_ref:
+        description: "tag of the -system image to build the ISO from (published by container-orchestrator.yml)"
+        required: false
+        default: "latest"
+        type: string
+
+jobs:
+  filter:
+    name: Check if build is needed
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      should-build: ${{ steps.check.outputs.should-build }}
+    steps:
+      - id: check
+        run: |
+          set -euo pipefail
+          # Manual runs always build.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # For workflow_run: build on main, any tag, or any branch whose name
+          # contains a keyword as a whole segment (delimited by - or /).
+          # This prevents e.g. "feat-device-logging" from matching "dev".
+          # "iso-building" matches via the "iso" keyword.
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          if [[ "$BRANCH" == "main" ]] || \
+             [[ "$BRANCH" =~ (^|[-/])(ci|dev|test|release|iso)([-/]|$) ]]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-iso:
+    name: Build installer ISO (amd64)
+    runs-on: ubuntu-latest
+    needs: filter
+    if: needs.filter.outputs.should-build == 'true'
+    permissions:
+      contents: read
+      packages: read # to pull the -system image from GHCR
+    steps:
+      # Check out the triggering commit so cache keys (hashFiles) and build
+      # configs reflect the state that produced the container image.
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Free up disk space
+        # The image build needs ~20-25 GB; drop preinstalled toolchains we don't use.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      # Use commit-<sha> so the ISO is built from the exact same container image
+      # as the push that triggered this run — not whatever "latest" resolves to.
+      - name: Resolve bootc image reference
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_ref }}" ]; then
+            TAG="${{ inputs.image_ref }}"
+            SAFE_REF="${{ github.ref_name }}"
+(??)
+          else
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            TAG="commit-${HEAD_SHA:0:7}"
+            SAFE_REF="${{ github.event.workflow_run.head_branch }}"
+          fi
+          SAFE_REF="${SAFE_REF//\//-}"
+          echo "IMAGE_REF=ghcr.io/${{ github.repository }}-system:${TAG}" >> "$GITHUB_ENV"
+          echo "SAFE_REF=${SAFE_REF}" >> "$GITHUB_ENV"
+          echo "Building ISO from: ghcr.io/${{ github.repository }}-system:${TAG}"
+
+      # Pull into root podman storage: bib runs as root and reads the image from
+      # the root store bind-mounted below.
+      - name: Log in to GHCR (root podman, for pulling the bootc image)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+(??)
+      - name: Pull the bootc image into root storage
+        run: sudo podman pull "${IMAGE_REF}"
+
+      # bib (the old builder) caches DNF metadata/RPMs in /rpmmd per its README, not
+      # /var/cache/* like flightctl mounts. Persisting it skips re-downloading the
+      # anaconda installer payload; the large osbuild store stays ephemeral.
+      - name: Restore DNF cache
+        uses: actions/cache/restore@v4
+        with:
+          path: rpmmd-cache
+          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc/iso/config.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-iso-rpmmd-
+
+      # Positional ${IMAGE_REF} is both the embedded image (local copy, pulled
+      # above) and the recorded upgrade origin. Emits dist/bootiso/install.iso.
+      - name: Build installer ISO with bootc-image-builder
+        run: |
+          mkdir -p "$PWD/dist" "$PWD/rpmmd-cache"
+          sudo podman run --rm --privileged --pull=newer \
+            --security-opt label=type:unconfined_t \
+            -v "$PWD/bootc/iso/config.toml":/config.toml:ro \
+            -v "$PWD/dist":/output \
+            -v "$PWD/rpmmd-cache":/rpmmd:Z \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type anaconda-iso \
+            --config /config.toml \
+            --rootfs ext4 \
+            --target-arch amd64 \
+            "${IMAGE_REF}"
+          sudo chown -R "$USER:$USER" dist
+
+      # bib writes the cache as root; chown it back so actions/cache can read it.
+      # Runs on failure too, to save a partial cache.
+      - name: Fix DNF cache permissions
+        if: always()
+        run: sudo chown -R "$USER:$USER" rpmmd-cache 2>/dev/null || true
+      - name: Save DNF cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: rpmmd-cache
+          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc/iso/config.toml') }}
+
+      - name: Rename ISO for download
+        id: rename
+        run: |
+          set -euo pipefail
+          ISO_NAME="amos-edge-${SAFE_REF}-amd64"
+          mv dist/bootiso/install.iso "dist/${ISO_NAME}.iso"
+          ls -lh "dist/${ISO_NAME}.iso"
+          echo "iso_name=${ISO_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload ISO as workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.rename.outputs.iso_name }}
+          path: dist/*.iso
+          if-no-files-found: error
+          retention-days: 30
+          # skip zipping
+          archive: false
