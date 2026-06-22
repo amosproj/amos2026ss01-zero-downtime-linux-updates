@@ -65,7 +65,7 @@ async fn main() {
         std::process::exit(1);
     }));
 
-    let log_rx = logging::init(cli.debug);
+    let (log_rx, log_flusher) = logging::init(cli.debug);
 
     let signer = match util::tpm::tpm_init() {
         Ok(signer) => signer,
@@ -75,6 +75,24 @@ async fn main() {
         }
     };
 
+    // Stand up the download manager and log shipper before any step that can
+    // fail/panic (inventory, bootc status, podman connect), so failures in
+    // those steps are captured by tracing and have a chance to reach the
+    // cloud instead of only landing in the local journal.
+    let download_manager = Arc::new(
+        match download_manager::DownloadManager::new(Arc::clone(&config), signer) {
+            Ok(dm) => dm,
+            Err(err) => {
+                error!("Failed to initialize secure cloud HTTP client: {:?}", err);
+                std::process::exit(1);
+            }
+        },
+    );
+
+    info!("Log shipper starting");
+    logging::spawn_log_shipper(log_rx, Arc::clone(&download_manager));
+    info!("Log shipper started");
+
     let bootc_client = Arc::new(Bootc::new(Box::new(RealExecuter)));
 
     // run the selfcheck pipeline if --self-check is provided as commandline arg
@@ -83,6 +101,7 @@ async fn main() {
             crate::healthcheck::healthcheck(&bootc_client, &RealExecuter, cli.config.clone()).await
         {
             error!("Self check failed: {}", err);
+            log_flusher.flush().await;
             std::process::exit(1);
         }
         info!("Self check passed");
@@ -105,14 +124,19 @@ async fn main() {
     .await
     {
         error!("Failed to collect and save inventory: {}", err);
+        log_flusher.flush().await;
         std::process::exit(1);
     }
 
     info!("Reading inital OS State");
-    let bootc_status = bootc_client.status().await.unwrap_or_else(|err| {
-        error!("Failed to fetch initial bootc status: {}", err);
-        std::process::exit(1);
-    });
+    let bootc_status = match bootc_client.status().await {
+        Ok(status) => status,
+        Err(err) => {
+            error!("Failed to fetch initial bootc status: {}", err);
+            log_flusher.flush().await;
+            std::process::exit(1);
+        }
+    };
     let os_state = OsState {
         update_pending: bootc_status.staged.is_some(),
         booted_image: bootc_status.booted.unwrap().checksum.clone(),
@@ -120,9 +144,14 @@ async fn main() {
     };
 
     info!("Reading inital application state");
-    let (podman, containers) = PodmanWrapper::connect(Path::new(&config.podman_path))
-        .await
-        .unwrap();
+    let (podman, containers) = match PodmanWrapper::connect(Path::new(&config.podman_path)).await {
+        Ok(v) => v,
+        Err(err) => {
+            error!("Failed to connect to podman: {}", err);
+            log_flusher.flush().await;
+            std::process::exit(1);
+        }
+    };
     let apps_state = containers.into_iter().map(Application::wrap).collect();
 
     debug!("Creating AgentState");
@@ -132,20 +161,6 @@ async fn main() {
         "Running amos-zero-downtime with version: {}",
         agent_state.self_version
     );
-
-    let download_manager = Arc::new(
-        match download_manager::DownloadManager::new(Arc::clone(&config), signer) {
-            Ok(dm) => dm,
-            Err(err) => {
-                error!("Failed to initialize secure cloud HTTP client: {:?}", err);
-                std::process::exit(1);
-            }
-        },
-    );
-
-    info!("Log shipper starting");
-    logging::spawn_log_shipper(log_rx, Arc::clone(&download_manager));
-    info!("Log shipper started");
 
     let update_checker: Arc<dyn CheckForUpdate> =
         Arc::new(UpdateChecker::new(Arc::clone(&download_manager)));

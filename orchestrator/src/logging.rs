@@ -3,6 +3,7 @@ use std::sync::Arc;
 use amos_common::entities::{DeviceLog, LogLevel};
 use chrono::Utc;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::sync::oneshot;
 use tracing::field::{Field, Visit};
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::layer::{Context, SubscriberExt};
@@ -13,6 +14,37 @@ use tracing_subscriber::{EnvFilter, Layer, fmt};
 use crate::download_manager::DownloadManager;
 
 const LOG_INTERNAL_TARGET: &str = "amos_orchestrator::log_internal";
+
+/// Message flowing through the log channel: either a captured tracing event,
+/// or a request to flush whatever is buffered right now. Both share one
+/// channel so a flush request is guaranteed to be processed after every
+/// entry sent ahead of it (FIFO), instead of racing it via a separate channel.
+pub enum LogMessage {
+    Entry(DeviceLog::CreateEntry),
+    Flush(oneshot::Sender<()>),
+}
+
+/// Handle for requesting an out-of-band flush of buffered device logs.
+///
+/// Used on fatal-error exit paths to give the last log entries (e.g. the
+/// error that's about to kill the process) a chance to reach the cloud before
+/// `std::process::exit` tears down the process, instead of waiting for the
+/// shipper's periodic flush.
+#[derive(Clone)]
+pub struct LogFlusher {
+    sender: UnboundedSender<LogMessage>,
+}
+
+impl LogFlusher {
+    /// Flushes the buffer and waits for it to complete. A no-op if the
+    /// shipper task isn't running (e.g. it hasn't been spawned yet).
+    pub async fn flush(&self) {
+        let (tx, rx) = oneshot::channel();
+        if self.sender.send(LogMessage::Flush(tx)).is_ok() {
+            let _ = rx.await;
+        }
+    }
+}
 
 struct MessageVisitor {
     message: Option<String>,
@@ -42,7 +74,7 @@ fn tracing_level_to_log_level(level: &Level) -> LogLevel {
 }
 
 struct DeviceLogLayer {
-    sender: UnboundedSender<DeviceLog::CreateEntry>,
+    sender: UnboundedSender<LogMessage>,
 }
 
 impl<S> Layer<S> for DeviceLogLayer
@@ -67,18 +99,19 @@ where
             message,
             source: metadata.module_path().map(str::to_owned),
         };
-        let _ = self.sender.send(entry);
+        let _ = self.sender.send(LogMessage::Entry(entry));
     }
 }
 
 /// Initialize the global tracing subscriber and capture layer.
 ///
-/// Returns the receiver end of the log channel. Pass it to
-/// `spawn_log_shipper` once the `DownloadManager` is ready.
+/// Returns the receiver end of the log channel (pass it to
+/// `spawn_log_shipper` once the `DownloadManager` is ready) and a
+/// `LogFlusher` for requesting an immediate flush on fatal-error paths.
 ///
 /// log to journald *or* stdout, never both, to avoid duplicate journal
 /// entries: under systemd, stdout is already captured into the journal
-pub fn init(verbosity: u8) -> UnboundedReceiver<DeviceLog::CreateEntry> {
+pub fn init(verbosity: u8) -> (UnboundedReceiver<LogMessage>, LogFlusher) {
     let level = match verbosity {
         0 => "warn",
         1 => "info",
@@ -107,8 +140,8 @@ pub fn init(verbosity: u8) -> UnboundedReceiver<DeviceLog::CreateEntry> {
         None
     };
 
-    let (tx, rx) = mpsc::unbounded_channel::<DeviceLog::CreateEntry>();
-    let device_log_layer = DeviceLogLayer { sender: tx };
+    let (tx, rx) = mpsc::unbounded_channel::<LogMessage>();
+    let device_log_layer = DeviceLogLayer { sender: tx.clone() };
 
     tracing_subscriber::registry()
         .with(env_filter)
@@ -117,7 +150,7 @@ pub fn init(verbosity: u8) -> UnboundedReceiver<DeviceLog::CreateEntry> {
         .with(device_log_layer)
         .init();
 
-    rx
+    (rx, LogFlusher { sender: tx })
 }
 
 /// Spawn the background task that ships buffered device log entries to the API.
@@ -126,7 +159,7 @@ pub fn init(verbosity: u8) -> UnboundedReceiver<DeviceLog::CreateEntry> {
 /// between `init` and this call are buffered in the channel and shipped on
 /// the first flush.
 pub fn spawn_log_shipper(
-    mut rx: UnboundedReceiver<DeviceLog::CreateEntry>,
+    mut rx: UnboundedReceiver<LogMessage>,
     download_manager: Arc<DownloadManager>,
 ) {
     let config = Arc::clone(&download_manager.config);
@@ -139,13 +172,17 @@ pub fn spawn_log_shipper(
 
         loop {
             tokio::select! {
-                maybe_entry = rx.recv() => {
-                    match maybe_entry {
-                        Some(entry) => {
+                maybe_msg = rx.recv() => {
+                    match maybe_msg {
+                        Some(LogMessage::Entry(entry)) => {
                             buffer.push(entry);
                             if buffer.len() >= config.log_max_batch {
                                 flush(&mut buffer, &download_manager, config.log_max_buffer).await;
                             }
+                        }
+                        Some(LogMessage::Flush(ack)) => {
+                            flush(&mut buffer, &download_manager, config.log_max_buffer).await;
+                            let _ = ack.send(());
                         }
                         None => {
                             flush(&mut buffer, &download_manager, config.log_max_buffer).await;
@@ -203,13 +240,15 @@ mod tests {
 
     #[test]
     fn device_log_layer_captures_event_fields() {
-        let (tx, mut rx) = mpsc::unbounded_channel::<DeviceLog::CreateEntry>();
+        let (tx, mut rx) = mpsc::unbounded_channel::<LogMessage>();
         let layer = DeviceLogLayer { sender: tx };
         let subscriber = tracing_subscriber::registry().with(layer);
         tracing::subscriber::with_default(subscriber, || {
             tracing::info!("hello from test");
         });
-        let entry = rx.try_recv().expect("expected one entry");
+        let LogMessage::Entry(entry) = rx.try_recv().expect("expected one entry") else {
+            panic!("expected a LogMessage::Entry");
+        };
         assert_eq!(entry.level, LogLevel::Info);
         assert_eq!(entry.message, "hello from test");
         let source = entry.source.expect("module_path should be set");
@@ -221,7 +260,7 @@ mod tests {
 
     #[test]
     fn device_log_layer_skips_its_own_target() {
-        let (tx, mut rx) = mpsc::unbounded_channel::<DeviceLog::CreateEntry>();
+        let (tx, mut rx) = mpsc::unbounded_channel::<LogMessage>();
         let layer = DeviceLogLayer { sender: tx };
         let subscriber = tracing_subscriber::registry().with(layer);
         tracing::subscriber::with_default(subscriber, || {
