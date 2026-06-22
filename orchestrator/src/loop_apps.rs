@@ -9,7 +9,6 @@ use tracing::warn;
 use crate::application::Application;
 use crate::download_manager::DownloadManager;
 use crate::podman::PodmanPullBehaviour::PullIfMissing;
-use crate::podman::log_registry::AppLogRegistry;
 use crate::podman::{Podman, PodmanImage, PodmanImageInfo};
 use crate::state::AgentState;
 
@@ -17,7 +16,6 @@ pub async fn run_apps_main_loop(
     agent_state: AgentState,
     podman: impl Podman,
     download_manager: Arc<DownloadManager>,
-    registry: AppLogRegistry,
 ) {
     let mut update_interval = tokio::time::interval(Duration::from_secs(
         agent_state.config.poll_interval_secs as u64,
@@ -28,19 +26,13 @@ pub async fn run_apps_main_loop(
     loop {
         update_interval.tick().await;
 
-        if let Err(e) = try_update(
-            &agent_state.apps_state,
-            &podman,
-            &download_manager,
-            &registry,
-        )
-        .await
-        {
+        if let Err(e) = try_update(&agent_state.apps_state, &podman, &download_manager).await {
             warn!("Failed to update applications: {:?}", e);
         }
     }
 }
 
+#[allow(dead_code)]
 pub fn resolve_application_ids<C: PodmanImageInfo>(
     containers: Vec<C>,
     target_app_configs: &[ApplicationConfig::Model],
@@ -71,13 +63,11 @@ async fn try_update(
     apps_state: &Mutex<Vec<Application>>,
     podman: &impl Podman,
     download_manager: &DownloadManager,
-    registry: &AppLogRegistry,
 ) -> anyhow::Result<()> {
     struct TargetApp<'a, P: PodmanImage> {
         image: P,
         name: &'a str,
         environment: Vec<(&'a str, &'a str)>,
-        application_id: i32,
     }
 
     impl<'a, P: PodmanImage> TargetApp<'a, P> {
@@ -99,7 +89,6 @@ async fn try_update(
                     .next()
                     .unwrap_or(&cfg.image),
                 environment: vec![],
-                application_id: cfg.id,
             })
         }
     }
@@ -135,33 +124,26 @@ async fn try_update(
         for action in ReconcileIterator::new(&apps, target) {
             match action {
                 ReconcileAction::Create { image } => {
-                    let app = Application::launch_from_image(
-                        &image.image,
-                        image.name,
-                        image.environment,
-                        image.application_id,
-                        registry,
-                    )
-                    .await?;
+                    let app =
+                        Application::launch_from_image(&image.image, image.name, image.environment)
+                            .await?;
                     apps.push(app);
                 }
                 ReconcileAction::Update {
                     application_index,
                     target_image,
                 } => {
-                    apps.swap_remove(application_index).remove(registry).await?;
+                    apps.swap_remove(application_index).remove().await?;
                     let app = Application::launch_from_image(
                         &target_image.image,
                         target_image.name,
                         target_image.environment,
-                        target_image.application_id,
-                        registry,
                     )
                     .await?;
                     apps.push(app);
                 }
                 ReconcileAction::Remove { application_index } => {
-                    apps.swap_remove(application_index).remove(registry).await?;
+                    apps.swap_remove(application_index).remove().await?;
                 }
             }
         }
