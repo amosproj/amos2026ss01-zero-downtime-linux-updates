@@ -41,6 +41,11 @@ COPY --from=builder /workspace/target/release/amos-orchestrator /usr/local/bin/a
 COPY bootc/orchestrator.service /etc/systemd/system/orchestrator.service
 RUN systemctl enable orchestrator.service
 
+# The orchestrator connects to podman over /run/podman/podman.sock; without
+# enabling the socket unit it's never created at boot, and the orchestrator
+# panics trying to connect to it.
+RUN systemctl enable podman.socket
+
 # Install following components:
 #  - greenboot: health checks after bootc switch
 #  - tpm2: library for TPM communication (tss-esapi crate only FFI's with it) (tpm2-tools only for debugging)
