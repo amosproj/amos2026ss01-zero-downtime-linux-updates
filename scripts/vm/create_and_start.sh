@@ -200,8 +200,43 @@ curl -i -X PUT "${api_base_path}/devices/1" \
     -d "{ \"uuid\": \"${device_uuid}\", \"hostname\": \"bla\", \"tenant_id\": 1, \"public_key\": \"${tpm_pubkey_json}\" }"
 echo
 
+# Build the orchestrator binary on the host and copy it into the VM so the
+# VM runs whatever local changes are currently checked out, instead of
+# whatever got baked into the image at build time.
+echo "Building orchestrator binary on host..."
+cargo build --package amos-orchestrator
+
+echo "Copying orchestrator binary into the VM..."
+limactl copy target/debug/amos-orchestrator edge-ipc:/tmp/amos-orchestrator
+# /usr is part of the bootc image's read-only composefs root, so the
+# image-baked binary under /usr/local/bin (or /usr/libexec, depending on
+# which image version is deployed) can't be overwritten in place. Install
+# into /var/usrlocal/bin instead, which the Lima template already
+# provisions as a writable stand-in for /usr/local (see edge-ipc.yaml).
+limactl shell edge-ipc -- sudo install -m 0755 /tmp/amos-orchestrator /var/usrlocal/bin/amos-orchestrator
+
+# limactl copy leaves the file with whatever SELinux context new files get
+# by default (usr_t), not the bin_t the original, image-baked binary had,
+# which a confined systemd service is not allowed to exec. Relabel it
+# according to policy instead of disabling enforcement. (SELinux has a
+# path equivalence between /var/usrlocal and /usr/local, so this still
+# resolves to bin_t.)
+limactl shell edge-ipc -- sudo restorecon -v /var/usrlocal/bin/amos-orchestrator
+
+# Point orchestrator.service at the binary we just copied in via a
+# drop-in override (written to the writable /etc), rather than relying on
+# whatever ExecStart path was baked into the image.
+echo "Overriding orchestrator.service to run the freshly copied binary..."
+limactl shell edge-ipc -- sudo mkdir -p /etc/systemd/system/orchestrator.service.d
+limactl shell edge-ipc -- sudo tee /etc/systemd/system/orchestrator.service.d/override.conf >/dev/null <<'EOF'
+[Service]
+ExecStart=
+ExecStart=/var/usrlocal/bin/amos-orchestrator --config /etc/amos/config.toml
+EOF
+limactl shell edge-ipc -- sudo systemctl daemon-reload
+
 # Restart the orchestrator inside the VM so it picks up the newly registered
-# device/public key.
+# device/public key and the freshly copied binary.
 echo "Restarting orchestrator inside the VM..."
 limactl shell edge-ipc -- sudo systemctl restart orchestrator
 
