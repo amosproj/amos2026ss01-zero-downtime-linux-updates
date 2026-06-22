@@ -200,6 +200,7 @@ _dev-deploy:
 	    $$builder_tag \
 	    cargo build --package amos-orchestrator \
 	      --target-dir /workspace/target/dev-vm-$$vm_arch; \
+	  bin=$$target/debug/amos-orchestrator; \
 	fi; \
 	echo ">>> Uploading $$bin to $(DEV_VM):$(DEV_VM_TMP)/amos-orchestrator.new"; \
 	limactl copy $$bin $(DEV_VM):$(DEV_VM_TMP)/amos-orchestrator.new; \
