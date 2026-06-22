@@ -15,7 +15,7 @@ use super::{LogChunk, LogStreamKind};
 fn stream_to_level(stream: LogStreamKind) -> LogLevel {
     match stream {
         LogStreamKind::Stdout => LogLevel::Info,
-        LogStreamKind::Stderr => LogLevel::Warn,
+        LogStreamKind::Stderr => LogLevel::Error,
     }
 }
 
