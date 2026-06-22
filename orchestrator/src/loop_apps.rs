@@ -90,7 +90,13 @@ async fn try_update(
                     .image(&cfg.image, PullIfMissing)
                     .await?
                     .ok_or(anyhow::anyhow!("Could not pull image"))?,
-                name: &cfg.image,
+                name: cfg.image
+                    .split('/')
+                    .last()
+                    .unwrap_or(&cfg.image)
+                    .split(':')
+                    .next()
+                    .unwrap_or(&cfg.image),
                 environment: vec![],
                 application_id: cfg.id,
             })
