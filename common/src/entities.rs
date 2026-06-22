@@ -10,6 +10,9 @@ pub use crate::entities::application_config as ApplicationConfig;
 pub mod device;
 pub use crate::entities::device as Device;
 
+pub mod device_application_config;
+pub use crate::entities::device_application_config as DeviceApplicationConfig;
+
 pub mod group;
 pub use crate::entities::group as Group;
 

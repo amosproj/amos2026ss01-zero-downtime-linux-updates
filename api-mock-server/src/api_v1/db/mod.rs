@@ -2,6 +2,7 @@ pub mod application_assignments;
 pub mod application_configs;
 pub mod applications;
 pub mod audit_log;
+pub mod device_application_configs;
 pub mod device_summaries;
 pub mod devices;
 pub mod groups;
@@ -18,6 +19,7 @@ pub use application_configs::*;
 pub use applications::*;
 #[allow(unused_imports)]
 pub use audit_log::*;
+pub use device_application_configs::*;
 pub use device_summaries::*;
 pub use devices::*;
 pub use groups::*;
@@ -76,6 +78,7 @@ const DEFAULT_AUDIT_TABLES: &[(&str, &str)] = &[
     ("applications", "id"),
     ("application_configs", "id"),
     ("application_assignments", "id"),
+    ("device_application_configs", "id"),
     ("os_versions", "id"),
     ("os_assignments", "id"),
     ("reported_application_assignments", "id"),
@@ -237,6 +240,78 @@ mod tests {
         println!("Created application assignment: {:?}", result);
 
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_device_application_config_crud_round_trip() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("X".to_owned(), None).await.unwrap();
+        let device = super::add_device("uuid".to_owned(), None, "host".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned())
+            .await
+            .unwrap();
+
+        let config =
+            super::add_device_application_config(device.id, app.id, r#"{"foo":1}"#.to_owned(), 1)
+                .await
+                .unwrap();
+        assert_eq!(config.version, 1);
+
+        let fetched = super::get_device_application_config(config.id)
+            .await
+            .unwrap()
+            .expect("config should exist");
+        assert_eq!(fetched.config, r#"{"foo":1}"#);
+
+        let updated = super::update_device_application_config(
+            config.id,
+            device.id,
+            app.id,
+            r#"{"foo":2}"#.to_owned(),
+            2,
+        )
+        .await
+        .unwrap();
+        assert_eq!(updated.version, 2);
+        assert_eq!(updated.config, r#"{"foo":2}"#);
+
+        let deleted = super::delete_device_application_config(config.id)
+            .await
+            .unwrap();
+        assert_eq!(deleted, 1);
+        assert!(
+            super::get_device_application_config(config.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_device_application_config_rejects_duplicate_device_and_application() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("X".to_owned(), None).await.unwrap();
+        let device = super::add_device("uuid".to_owned(), None, "host".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned())
+            .await
+            .unwrap();
+
+        super::add_device_application_config(device.id, app.id, "{}".to_owned(), 1)
+            .await
+            .unwrap();
+
+        let result =
+            super::add_device_application_config(device.id, app.id, "{}".to_owned(), 1).await;
+
+        assert!(result.is_err());
     }
 
     #[tokio::test]
