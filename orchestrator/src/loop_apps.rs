@@ -9,6 +9,7 @@ use tracing::warn;
 use crate::application::Application;
 use crate::download_manager::DownloadManager;
 use crate::podman::PodmanPullBehaviour::PullIfMissing;
+use crate::podman::log_registry::AppLogRegistry;
 use crate::podman::{Podman, PodmanImage, PodmanImageInfo};
 use crate::state::AgentState;
 
@@ -16,6 +17,7 @@ pub async fn run_apps_main_loop(
     agent_state: AgentState,
     podman: impl Podman,
     download_manager: Arc<DownloadManager>,
+    registry: AppLogRegistry,
 ) {
     let mut update_interval = tokio::time::interval(Duration::from_secs(
         agent_state.config.poll_interval_secs as u64,
@@ -26,21 +28,56 @@ pub async fn run_apps_main_loop(
     loop {
         update_interval.tick().await;
 
-        if let Err(e) = try_update(&agent_state.apps_state, &podman, &download_manager).await {
+        if let Err(e) = try_update(
+            &agent_state.apps_state,
+            &podman,
+            &download_manager,
+            &registry,
+        )
+        .await
+        {
             warn!("Failed to update applications: {:?}", e);
         }
     }
+}
+
+pub fn resolve_application_ids<C: PodmanImageInfo>(
+    containers: Vec<C>,
+    target_app_configs: &[ApplicationConfig::Model],
+) -> (Vec<(C, i32)>, Vec<C>) {
+    let mut matched = Vec::new();
+    let mut unmatched = Vec::new();
+
+    for container in containers {
+        let app_ref = container
+            .reference()
+            .split(':')
+            .next()
+            .unwrap_or(container.reference());
+        let found = target_app_configs
+            .iter()
+            .find(|cfg| cfg.image.split(':').next().unwrap_or(&cfg.image) == app_ref);
+
+        match found {
+            Some(cfg) => matched.push((container, cfg.id)),
+            None => unmatched.push(container),
+        }
+    }
+
+    (matched, unmatched)
 }
 
 async fn try_update(
     apps_state: &Mutex<Vec<Application>>,
     podman: &impl Podman,
     download_manager: &DownloadManager,
+    registry: &AppLogRegistry,
 ) -> anyhow::Result<()> {
     struct TargetApp<'a, P: PodmanImage> {
         image: P,
         name: &'a str,
         environment: Vec<(&'a str, &'a str)>,
+        application_id: i32,
     }
 
     impl<'a, P: PodmanImage> TargetApp<'a, P> {
@@ -53,8 +90,16 @@ async fn try_update(
                     .image(&cfg.image, PullIfMissing)
                     .await?
                     .ok_or(anyhow::anyhow!("Could not pull image"))?,
-                name: &cfg.image,
+                name: cfg
+                    .image
+                    .split('/')
+                    .next_back()
+                    .unwrap_or(&cfg.image)
+                    .split(':')
+                    .next()
+                    .unwrap_or(&cfg.image),
                 environment: vec![],
+                application_id: cfg.id,
             })
         }
     }
@@ -90,26 +135,33 @@ async fn try_update(
         for action in ReconcileIterator::new(&apps, target) {
             match action {
                 ReconcileAction::Create { image } => {
-                    let app =
-                        Application::launch_from_image(&image.image, image.name, image.environment)
-                            .await?;
+                    let app = Application::launch_from_image(
+                        &image.image,
+                        image.name,
+                        image.environment,
+                        image.application_id,
+                        registry,
+                    )
+                    .await?;
                     apps.push(app);
                 }
                 ReconcileAction::Update {
                     application_index,
                     target_image,
                 } => {
-                    apps.swap_remove(application_index).remove().await?;
+                    apps.swap_remove(application_index).remove(registry).await?;
                     let app = Application::launch_from_image(
                         &target_image.image,
                         target_image.name,
                         target_image.environment,
+                        target_image.application_id,
+                        registry,
                     )
                     .await?;
                     apps.push(app);
                 }
                 ReconcileAction::Remove { application_index } => {
-                    apps.swap_remove(application_index).remove().await?;
+                    apps.swap_remove(application_index).remove(registry).await?;
                 }
             }
         }
@@ -299,5 +351,23 @@ mod tests {
             })
         ));
         assert!(iter.next().is_none())
+    }
+
+    #[test]
+    fn resolve_application_ids_matches_by_reference() {
+        let configs = vec![ApplicationConfig::Model {
+            id: 1,
+            application_id: 1,
+            config: Some("testconfig".into()),
+            image: "docker.io/alpine:1.0".into(),
+            comment: Some("testcomment".into()),
+            deleted_at: None,
+            superseded_by: None,
+        }];
+        let containers = vec![MockApplication::new("docker.io/alpine:1.0", "digest1")];
+        let (matched, unmatched) = resolve_application_ids(containers, &configs);
+        assert_eq!(matched.len(), 1);
+        assert_eq!(matched[0].1, 1);
+        assert!(unmatched.is_empty());
     }
 }
