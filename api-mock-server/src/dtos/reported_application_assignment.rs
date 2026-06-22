@@ -21,10 +21,6 @@ pub struct Model {
     pub device: HasOne<Device::Entity>,
 
     pub updated_at: DateTimeUtc,
-
-    pub deleted_at: Option<DateTimeUtc>,
-
-    pub superseded_by: Option<i32>,
 }
 
 #[async_trait::async_trait]
@@ -45,26 +41,26 @@ impl Model {
             application_config_id: self.application_config_id,
             device_id: self.device_id,
             updated_at: self.updated_at,
-            deleted_at: self.deleted_at,
-            superseded_by: self.superseded_by,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use sea_orm::{ActiveModelTrait, ActiveValue::Set};
+    use sea_orm::ActiveModelTrait;
+    use sea_orm::ActiveValue::NotSet;
 
     #[test]
     fn app_assignment_update_doesnt_require_updated_at() {
-        let am = super::ActiveModel {
-            id: Set(1),
-            application_config_id: Set(5),
-            device_id: Set(3),
-            updated_at: sea_orm::ActiveValue::NotSet,
-            deleted_at: sea_orm::ActiveValue::NotSet,
-            superseded_by: sea_orm::ActiveValue::NotSet,
+        let app_ass_update = super::ActiveModel {
+            id: NotSet,
+            application_config_id: sea_orm::ActiveValue::Set(5),
+            device_id: sea_orm::ActiveValue::Set(3),
+            updated_at: NotSet,
         };
-        assert!(am.is_not_set(<super::Entity as sea_orm::EntityTrait>::Column::UpdatedAt));
+
+        assert!(
+            app_ass_update.is_not_set(<super::Entity as sea_orm::EntityTrait>::Column::UpdatedAt)
+        );
     }
 }

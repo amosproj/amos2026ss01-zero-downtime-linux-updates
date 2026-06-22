@@ -14,10 +14,6 @@ pub struct Model {
 
     pub description: Option<String>,
 
-    pub deleted_at: Option<DateTimeUtc>,
-
-    pub superseded_by: Option<i32>,
-
     #[sea_orm(has_many)]
     pub devices: HasMany<Device::Entity>,
 }
@@ -30,8 +26,6 @@ impl Model {
             id: self.id,
             name: self.name,
             description: self.description,
-            deleted_at: self.deleted_at,
-            superseded_by: self.superseded_by,
         }
     }
 }

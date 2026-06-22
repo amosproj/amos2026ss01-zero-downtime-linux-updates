@@ -21,10 +21,6 @@ pub struct Model {
     pub device: HasOne<Device::Entity>,
 
     pub updated_at: DateTimeUtc,
-
-    pub deleted_at: Option<DateTimeUtc>,
-
-    pub superseded_by: Option<i32>,
 }
 
 #[async_trait::async_trait]
@@ -45,8 +41,6 @@ impl Model {
             os_version_id: self.os_version_id,
             device_id: self.device_id,
             updated_at: self.updated_at,
-            deleted_at: self.deleted_at,
-            superseded_by: self.superseded_by,
         }
     }
 }

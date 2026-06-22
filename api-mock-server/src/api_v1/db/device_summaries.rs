@@ -44,10 +44,7 @@ pub async fn assemble_device_summary(
 ) -> Result<(Vec<serde_json::Value>, u64), DbErr> {
     let db = db!();
 
-    let mut query = dtos::Device::Entity::find()
-        .filter(dtos::Device::Column::DeletedAt.is_null())
-        .filter(dtos::Device::Column::SupersededBy.is_null())
-        .order_by_asc(dtos::Device::Column::Id);
+    let mut query = dtos::Device::Entity::find().order_by_asc(dtos::Device::Column::Id);
     if let Some(id) = device_id {
         query = query.filter(dtos::Device::Column::Id.eq(id));
     }
@@ -77,8 +74,6 @@ pub async fn assemble_device_summary(
 
     let os_rows = dtos::ReportedOsAssignment::Entity::find()
         .filter(dtos::ReportedOsAssignment::Column::DeviceId.is_in(device_ids.clone()))
-        .filter(dtos::ReportedOsAssignment::Column::DeletedAt.is_null())
-        .filter(dtos::ReportedOsAssignment::Column::SupersededBy.is_null())
         .find_also_related(dtos::OsVersion::Entity)
         .all(&db)
         .await?;
@@ -103,8 +98,6 @@ pub async fn assemble_device_summary(
 
     let app_rows = dtos::ReportedApplicationAssignment::Entity::find()
         .filter(dtos::ReportedApplicationAssignment::Column::DeviceId.is_in(device_ids.clone()))
-        .filter(dtos::ReportedApplicationAssignment::Column::DeletedAt.is_null())
-        .filter(dtos::ReportedApplicationAssignment::Column::SupersededBy.is_null())
         .find_also_related(dtos::ApplicationConfig::Entity)
         .all(&db)
         .await?;

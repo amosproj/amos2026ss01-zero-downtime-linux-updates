@@ -1,16 +1,10 @@
 use sea_orm_migration::prelude::*;
 
 const SOFT_DELETE_TABLES: &[&str] = &[
-    "tenants",
-    "groups",
-    "devices",
-    "applications",
     "application_configs",
     "application_assignments",
     "os_versions",
     "os_assignments",
-    "reported_application_assignments",
-    "reported_os_assignments",
 ];
 
 #[derive(DeriveMigrationName)]

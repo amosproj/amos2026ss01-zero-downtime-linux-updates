@@ -249,7 +249,7 @@ mod tests {
             .unwrap();
         let app_json = serde_json::to_string(&app).unwrap();
 
-        let expected = r#"{"id":1,"name":"app-a","description":"cool app","deleted_at":null,"superseded_by":null}"#;
+        let expected = r#"{"id":1,"name":"app-a","description":"cool app"}"#;
         assert_eq!(app_json, expected);
     }
 
@@ -433,7 +433,6 @@ mod tests {
         .unwrap();
 
         assert_eq!(updated.hostname, "new-hostname");
-        assert_eq!(updated.id, device.id, "in-place update should keep same ID");
     }
 
     #[tokio::test]
@@ -449,7 +448,6 @@ mod tests {
             .unwrap();
 
         assert_eq!(updated.description, "new");
-        assert_eq!(updated.id, app.id, "in-place update should keep same ID");
     }
 
     #[tokio::test]
@@ -594,10 +592,7 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(entries.len(), 2);
-        assert_eq!(
-            entries[1].operation, "UPDATE",
-            "soft delete triggers UPDATE in the DB"
-        );
+        assert_eq!(entries[1].operation, "DELETE");
     }
 
     #[tokio::test]
