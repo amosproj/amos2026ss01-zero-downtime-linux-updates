@@ -30,7 +30,11 @@ impl Application {
             app_name: container.name().to_owned(),
         };
 
-        registry.add(application_id, container.log_handle().logs(true, None));
+        registry.add(
+            application_id,
+            container.name().to_owned(),
+            container.log_handle().logs(true, None),
+        );
 
         Application {
             image_reference: container.reference().to_owned(),

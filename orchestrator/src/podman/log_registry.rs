@@ -27,6 +27,7 @@ enum RegistryCommand {
     /// existing stream registered under the same application_id
     Add {
         application_id: i32,
+        name: String,
         stream: AppLogStream,
     },
     /// Stop tailing logs for application_id
@@ -40,10 +41,11 @@ pub struct AppLogRegistry {
 
 impl AppLogRegistry {
     /// Start tailing stream under application_id
-    pub fn add(&self, application_id: i32, stream: AppLogStream) {
+    pub fn add(&self, application_id: i32, name: String, stream: AppLogStream) {
         // Send failures mean the registry task has shut down
         let _ = self.tx.send(RegistryCommand::Add {
             application_id,
+            name,
             stream,
         });
     }
@@ -61,6 +63,7 @@ pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogR
     tokio::spawn(async move {
         let mut streams: StreamMap<i32, AppLogStream> = StreamMap::new();
         let mut buffers: HashMap<i32, Vec<ApplicationLog::CreateEntry>> = HashMap::new();
+        let mut names: HashMap<i32, String> = HashMap::new();
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(
             config.log_flush_interval_secs,
         ));
@@ -70,13 +73,15 @@ pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogR
             tokio::select! {
                 cmd = rx.recv() => {
                     match cmd {
-                        Some(RegistryCommand::Add { application_id, stream }) => {
+                        Some(RegistryCommand::Add { application_id, name, stream }) => {
                             debug!(application_id, "Registering application log stream");
                             streams.insert(application_id, stream);
+                            names.insert(application_id, name);
                         }
                         Some(RegistryCommand::Remove { application_id }) => {
                             debug!(application_id, "Unregistering application log stream");
                             streams.remove(&application_id);
+                            names.remove(&application_id);
                             if let Some(mut buffer) = buffers.remove(&application_id) {
                                 flush_application_logs(&mut buffer, application_id, &download_manager, config.log_max_buffer).await;
                             }
@@ -97,7 +102,7 @@ pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogR
                                 time: chunk.time.or_else(|| Some(Utc::now())),
                                 level: stream_to_level(chunk.stream),
                                 message: chunk.message,
-                                source: None,
+                                source: names.get(&application_id).cloned(),
                             };
                             let buffer = buffers.entry(application_id).or_default();
                             buffer.push(entry);
