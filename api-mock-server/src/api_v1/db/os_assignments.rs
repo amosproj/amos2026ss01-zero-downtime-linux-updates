@@ -101,14 +101,8 @@ pub async fn update_os_assignment(
     };
     let new_assignment = new_assignment.insert(&db).await?;
 
-    let old_active = dtos::OsAssignment::ActiveModel {
-        id: Set(current.id),
-        os_version_id: Set(current.os_version_id),
-        device_id: Set(current.device_id),
-        group_id: Set(current.group_id),
-        deleted_at: Set(current.deleted_at),
-        superseded_by: Set(Some(new_assignment.id)),
-    };
+    let mut old_active: dtos::OsAssignment::ActiveModel = current.into();
+    old_active.superseded_by = Set(Some(new_assignment.id));
     old_active.update(&db).await?;
 
     debug!(
@@ -129,14 +123,8 @@ pub async fn delete_os_assignment(id: i32) -> Result<u64, DbErr> {
 
     match current {
         Some(assignment) => {
-            let active = dtos::OsAssignment::ActiveModel {
-                id: Set(assignment.id),
-                os_version_id: Set(assignment.os_version_id),
-                device_id: Set(assignment.device_id),
-                group_id: Set(assignment.group_id),
-                deleted_at: Set(Some(chrono::Utc::now())),
-                superseded_by: Set(assignment.superseded_by),
-            };
+            let mut active: dtos::OsAssignment::ActiveModel = assignment.into();
+            active.deleted_at = Set(Some(chrono::Utc::now()));
             active.update(&db).await?;
             Ok(1)
         }

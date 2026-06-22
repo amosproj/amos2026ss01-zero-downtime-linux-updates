@@ -34,8 +34,14 @@ impl ActiveModelBehavior for ActiveModel {
     where
         C: ConnectionTrait,
     {
-        let has_device = matches!(self.device_id.clone(), ActiveValue::Set(Some(_)));
-        let has_group = matches!(self.group_id.clone(), ActiveValue::Set(Some(_)));
+        let has_device = matches!(
+            self.device_id.clone(),
+            ActiveValue::Set(Some(_)) | ActiveValue::Unchanged(Some(_))
+        );
+        let has_group = matches!(
+            self.group_id.clone(),
+            ActiveValue::Set(Some(_)) | ActiveValue::Unchanged(Some(_))
+        );
 
         if !has_device && !has_group {
             return Err(DbErr::Custom(

@@ -94,15 +94,8 @@ pub async fn update_application_config(
     };
     let new_config = new_config.insert(&db).await?;
 
-    let old_active = dtos::ApplicationConfig::ActiveModel {
-        id: Set(current.id),
-        application_id: Set(current.application_id),
-        image: Set(current.image),
-        config: Set(current.config),
-        comment: Set(current.comment),
-        deleted_at: Set(current.deleted_at),
-        superseded_by: Set(Some(new_config.id)),
-    };
+    let mut old_active: dtos::ApplicationConfig::ActiveModel = current.into();
+    old_active.superseded_by = Set(Some(new_config.id));
     old_active.update(&db).await?;
 
     debug!(
@@ -123,15 +116,8 @@ pub async fn delete_application_config(id: i32) -> Result<u64, DbErr> {
 
     match current {
         Some(config) => {
-            let active = dtos::ApplicationConfig::ActiveModel {
-                id: Set(config.id),
-                application_id: Set(config.application_id),
-                image: Set(config.image),
-                config: Set(config.config),
-                comment: Set(config.comment),
-                deleted_at: Set(Some(chrono::Utc::now())),
-                superseded_by: Set(config.superseded_by),
-            };
+            let mut active: dtos::ApplicationConfig::ActiveModel = config.into();
+            active.deleted_at = Set(Some(chrono::Utc::now()));
             active.update(&db).await?;
             Ok(1)
         }

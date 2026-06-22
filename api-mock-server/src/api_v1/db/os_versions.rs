@@ -86,14 +86,8 @@ pub async fn update_os_version(
     };
     let new_version = new_version.insert(&db).await?;
 
-    let old_active = dtos::OsVersion::ActiveModel {
-        id: Set(current.id),
-        commit_hash: Set(current.commit_hash),
-        orchestrator_version: Set(current.orchestrator_version),
-        description: Set(current.description),
-        deleted_at: Set(current.deleted_at),
-        superseded_by: Set(Some(new_version.id)),
-    };
+    let mut old_active: dtos::OsVersion::ActiveModel = current.into();
+    old_active.superseded_by = Set(Some(new_version.id));
     old_active.update(&db).await?;
 
     debug!("Updated OS version via append-only: {:?}", new_version);
@@ -111,14 +105,8 @@ pub async fn delete_os_version(id: i32) -> Result<u64, DbErr> {
 
     match current {
         Some(os_version) => {
-            let active = dtos::OsVersion::ActiveModel {
-                id: Set(os_version.id),
-                commit_hash: Set(os_version.commit_hash),
-                orchestrator_version: Set(os_version.orchestrator_version),
-                description: Set(os_version.description),
-                deleted_at: Set(Some(chrono::Utc::now())),
-                superseded_by: Set(os_version.superseded_by),
-            };
+            let mut active: dtos::OsVersion::ActiveModel = os_version.into();
+            active.deleted_at = Set(Some(chrono::Utc::now()));
             active.update(&db).await?;
             Ok(1)
         }

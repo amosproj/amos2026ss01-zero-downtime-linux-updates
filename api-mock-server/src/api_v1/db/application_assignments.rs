@@ -145,14 +145,8 @@ pub async fn update_application_assignment(
     };
     let new_assignment = new_assignment.insert(&db).await?;
 
-    let old_active = dtos::ApplicationAssignment::ActiveModel {
-        id: Set(current.id),
-        application_config_id: Set(current.application_config_id),
-        device_id: Set(current.device_id),
-        group_id: Set(current.group_id),
-        deleted_at: Set(current.deleted_at),
-        superseded_by: Set(Some(new_assignment.id)),
-    };
+    let mut old_active: dtos::ApplicationAssignment::ActiveModel = current.into();
+    old_active.superseded_by = Set(Some(new_assignment.id));
     old_active.update(&db).await?;
 
     debug!(
@@ -173,14 +167,8 @@ pub async fn delete_application_assignment(id: i32) -> Result<u64, DbErr> {
 
     match current {
         Some(assignment) => {
-            let active = dtos::ApplicationAssignment::ActiveModel {
-                id: Set(assignment.id),
-                application_config_id: Set(assignment.application_config_id),
-                device_id: Set(assignment.device_id),
-                group_id: Set(assignment.group_id),
-                deleted_at: Set(Some(chrono::Utc::now())),
-                superseded_by: Set(assignment.superseded_by),
-            };
+            let mut active: dtos::ApplicationAssignment::ActiveModel = assignment.into();
+            active.deleted_at = Set(Some(chrono::Utc::now()));
             active.update(&db).await?;
             Ok(1)
         }

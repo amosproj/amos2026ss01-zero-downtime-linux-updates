@@ -51,7 +51,7 @@ mod tests {
     use sea_orm::ActiveValue::NotSet;
 
     #[test]
-    fn app_assignment_update_doesnt_require_updated_at() {
+    fn app_assignment_active_model_allows_omitting_updated_at() {
         let app_ass_update = super::ActiveModel {
             id: NotSet,
             application_config_id: sea_orm::ActiveValue::Set(5),

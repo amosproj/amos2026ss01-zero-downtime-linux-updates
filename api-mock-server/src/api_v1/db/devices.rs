@@ -95,14 +95,16 @@ pub async fn update_device(
     group_id: Option<i32>,
 ) -> Result<Device::Model, DbErr> {
     let db = db!();
-    let device = dtos::Device::ActiveModel {
-        id: Set(id),
-        uuid: Set(uuid),
-        public_key: Set(public_key),
-        hostname: Set(hostname),
-        tenant_id: Set(tenant_id),
-        group_id: Set(group_id),
-    };
+    let device = dtos::Device::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .ok_or(DbErr::RecordNotFound("Device not found".into()))?;
+    let mut device: dtos::Device::ActiveModel = device.into();
+    device.uuid = Set(uuid);
+    device.public_key = Set(public_key);
+    device.hostname = Set(hostname);
+    device.tenant_id = Set(tenant_id);
+    device.group_id = Set(group_id);
     let updated_device = device.update(&db).await?;
     debug!("Updated device: {:?}", updated_device);
     Ok(updated_device.into_api())
