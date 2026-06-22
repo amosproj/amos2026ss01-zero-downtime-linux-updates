@@ -612,10 +612,7 @@ mod tests {
             .unwrap();
 
         let container = img
-            .create_container(
-                "test-logs-container",
-                vec![],
-            )
+            .create_container("test-logs-container", vec![])
             .await
             .unwrap();
 

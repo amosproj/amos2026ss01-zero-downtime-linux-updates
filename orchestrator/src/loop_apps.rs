@@ -90,9 +90,10 @@ async fn try_update(
                     .image(&cfg.image, PullIfMissing)
                     .await?
                     .ok_or(anyhow::anyhow!("Could not pull image"))?,
-                name: cfg.image
+                name: cfg
+                    .image
                     .split('/')
-                    .last()
+                    .next_back()
                     .unwrap_or(&cfg.image)
                     .split(':')
                     .next()

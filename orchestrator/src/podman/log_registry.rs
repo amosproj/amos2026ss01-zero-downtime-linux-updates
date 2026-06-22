@@ -33,7 +33,6 @@ enum RegistryCommand {
     Remove { application_id: i32 },
 }
 
-
 #[derive(Clone)]
 pub struct AppLogRegistry {
     tx: mpsc::UnboundedSender<RegistryCommand>,
@@ -55,16 +54,16 @@ impl AppLogRegistry {
     }
 }
 
-pub fn spawn_app_log_registry(
-    download_manager: Arc<DownloadManager>,
-) -> AppLogRegistry {
+pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogRegistry {
     let config = Arc::clone(&download_manager.config);
     let (tx, mut rx) = mpsc::unbounded_channel::<RegistryCommand>();
 
     tokio::spawn(async move {
         let mut streams: StreamMap<i32, AppLogStream> = StreamMap::new();
         let mut buffers: HashMap<i32, Vec<ApplicationLog::CreateEntry>> = HashMap::new();
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(config.log_flush_interval_secs));
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+            config.log_flush_interval_secs,
+        ));
         interval.tick().await;
 
         loop {
