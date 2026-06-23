@@ -359,9 +359,11 @@ mod tests {
         let configs = vec![ApplicationConfig::Model {
             id: 1,
             application_id: 1,
+            device_id: Some(1),
+            group_id: None,
+            version: 1,
             config: Some("testconfig".into()),
             image: "docker.io/alpine:1.0".into(),
-            comment: Some("testcomment".into()),
             deleted_at: None,
             superseded_by: None,
         }];

@@ -152,20 +152,6 @@ async fn main() {
         update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
     };
 
-    let download_manager = Arc::new(
-        match download_manager::DownloadManager::new(Arc::clone(&config), signer) {
-            Ok(dm) => dm,
-            Err(err) => {
-                error!("Failed to initialize secure cloud HTTP client: {:?}", err);
-                std::process::exit(1);
-            }
-        },
-    );
-
-    info!("Log shipper starting");
-    logging::spawn_log_shipper(log_rx, Arc::clone(&download_manager));
-    info!("Log shipper started");
-
     info!("Application log registry starting");
     let app_log_registry = spawn_app_log_registry(Arc::clone(&download_manager));
     info!("Application log registry started");
