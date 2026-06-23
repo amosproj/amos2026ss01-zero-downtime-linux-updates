@@ -148,13 +148,7 @@ impl Bootc {
 
         info!(?target, "Switching system image");
 
-        let args = vec![
-            "switch".to_string(),
-            "--transport".to_string(),
-            "containers-storage".to_string(),
-            "--retain".to_string(),
-            target,
-        ];
+        let args = vec!["switch".to_string(), "--retain".to_string(), target];
 
         let res = self.run_bootc_root(args).await?;
 
@@ -329,8 +323,6 @@ mod tests {
                 eq(vec![
                     "bootc".to_string(),
                     "switch".to_string(),
-                    "--transport".to_string(),
-                    "containers-storage".to_string(),
                     "--retain".to_string(),
                     target_image.to_string(),
                 ]),
