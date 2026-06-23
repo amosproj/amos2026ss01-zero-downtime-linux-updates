@@ -28,7 +28,7 @@ PULL_REF      ?=
 # produced by the older `bootc-image-builder` container: its installer +
 # kickstart support (the `anaconda-iso` type, auto-reading /config.toml) is the
 # best-documented path. Both flows consume the same bootc image, so this is fine.
-ISO_CONFIG    ?= bootc/iso/config.toml
+ISO_CONFIG    ?= bootc-build/iso/config.toml
 BIB           ?= quay.io/centos-bootc/bootc-image-builder:latest
 ISO_TYPE      ?= anaconda-iso
 FS            ?= ext4

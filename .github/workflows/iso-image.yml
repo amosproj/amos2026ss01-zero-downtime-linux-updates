@@ -104,7 +104,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: rpmmd-cache
-          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc/iso/config.toml') }}
+          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc-build/iso/config.toml') }}
           restore-keys: |
             ${{ runner.os }}-iso-rpmmd-
 
@@ -115,7 +115,7 @@ jobs:
           mkdir -p "$PWD/dist" "$PWD/rpmmd-cache"
           sudo podman run --rm --privileged --pull=newer \
             --security-opt label=type:unconfined_t \
-            -v "$PWD/bootc/iso/config.toml":/config.toml:ro \
+            -v "$PWD/bootc-build/iso/config.toml":/config.toml:ro \
             -v "$PWD/dist":/output \
             -v "$PWD/rpmmd-cache":/rpmmd:Z \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
@@ -137,7 +137,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: rpmmd-cache
-          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc/iso/config.toml') }}
+          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc-build/iso/config.toml') }}
 
       - name: Rename ISO for download
         id: rename
