@@ -106,7 +106,6 @@ async fn create_application_config(Json(body): Json<ApplicationConfigCreate>) ->
         body.application_id,
         body.image,
         body.config,
-        body.version,
     )
     .await
     {
@@ -132,7 +131,6 @@ async fn update_application_config(
         body.application_id,
         body.image,
         body.config,
-        body.version,
     )
     .await
     {
@@ -155,12 +153,6 @@ fn validate_app_config_body(body: &ApplicationConfigCreate) -> Option<Response> 
         return Some(err(
             StatusCode::UNPROCESSABLE_ENTITY,
             "ApplicationConfig image cannot be empty",
-        ));
-    }
-    if body.config.trim().is_empty() {
-        return Some(err(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "ApplicationConfig config cannot be empty",
         ));
     }
     if body.device_id.is_none() && body.group_id.is_none() {

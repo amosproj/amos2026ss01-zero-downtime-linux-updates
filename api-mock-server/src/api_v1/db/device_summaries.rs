@@ -134,7 +134,6 @@ pub async fn assemble_device_summary(
                 "application_name": application.map(|a| a.name.as_str()),
                 "application_description": application.map(|a| a.description.as_str()),
                 "image": config.as_ref().map(|c| &c.image),
-                "config": config.as_ref().map(|c| c.config.as_str()),
                 "version": config.as_ref().map(|c| c.version),
             }))
     }

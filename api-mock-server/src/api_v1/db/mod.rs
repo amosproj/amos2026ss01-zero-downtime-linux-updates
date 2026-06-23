@@ -232,8 +232,7 @@ mod tests {
             None,
             app.id,
             "quay.io/bla".to_owned(),
-            "{}".to_owned(),
-            1,
+            None,
         )
         .await
         .unwrap();
@@ -263,8 +262,7 @@ mod tests {
             None,
             app.id,
             "quay.io/app".to_owned(),
-            r#"{"foo":1}"#.to_owned(),
-            1,
+            Some(r#"{"foo":1}"#.into()),
         )
         .await
         .unwrap();
@@ -274,7 +272,7 @@ mod tests {
             .await
             .unwrap()
             .expect("config should exist");
-        assert_eq!(fetched.config, r#"{"foo":1}"#);
+        assert_eq!(fetched.config.unwrap(), r#"{"foo":1}"#);
 
         let updated = super::update_application_config(
             config.id,
@@ -282,13 +280,12 @@ mod tests {
             None,
             app.id,
             "quay.io/app".to_owned(),
-            r#"{"foo":2}"#.to_owned(),
-            2,
+            Some(r#"{"foo":2}"#.to_owned()),
         )
         .await
         .unwrap();
         assert_eq!(updated.version, 2);
-        assert_eq!(updated.config, r#"{"foo":2}"#);
+        assert_eq!(updated.config.unwrap(), r#"{"foo":2}"#);
 
         let deleted = super::delete_application_config(config.id).await.unwrap();
         assert_eq!(deleted, 1);
@@ -318,8 +315,7 @@ mod tests {
             None,
             app.id,
             "quay.io/app".to_owned(),
-            "{}".to_owned(),
-            1,
+            None,
         )
         .await
         .unwrap();
@@ -329,8 +325,7 @@ mod tests {
             None,
             app.id,
             "quay.io/app".to_owned(),
-            "{}".to_owned(),
-            1,
+            None,
         )
         .await;
 
@@ -362,8 +357,7 @@ mod tests {
             Some(group.id),
             app.id,
             "quay.io/app:group".to_owned(),
-            "{}".to_owned(),
-            1,
+            None,
         )
         .await
         .unwrap();
@@ -372,8 +366,7 @@ mod tests {
             None,
             app.id,
             "quay.io/app:device".to_owned(),
-            "{}".to_owned(),
-            1,
+            None,
         )
         .await
         .unwrap();
@@ -499,8 +492,7 @@ mod tests {
             None,
             app.id,
             "quay.io/app:1.0".to_owned(),
-            "{}".to_owned(),
-            1,
+            None,
         )
         .await
         .unwrap();
@@ -525,15 +517,16 @@ mod tests {
             .await
             .unwrap();
         let config =
-            super::add_application_config(app.id, "quay.io/app:1.0".to_owned(), None, None)
+            super::add_application_config(Some(1), None, app.id, "quay.io/app:1.0".to_owned(), None)
                 .await
                 .unwrap();
         let updated = super::update_application_config(
             config.id,
+            Some(1),
+            None,
             app.id,
             "quay.io/app:2.0".to_owned(),
-            None,
-            None,
+            None
         )
         .await
         .unwrap();
@@ -644,8 +637,7 @@ mod tests {
             None,
             app.id,
             "quay.io/my-app:1.0".to_owned(),
-            r#"{"port":8080}"#.to_owned(),
-            1,
+            Some(r#"{"port":8080}"#.to_owned()),
         )
         .await
         .unwrap();
@@ -831,8 +823,7 @@ mod tests {
             None,
             app.id,
             "img".to_owned(),
-            "{}".to_owned(),
-            1,
+            Some("{}".to_owned()),
         )
         .await
         .unwrap();

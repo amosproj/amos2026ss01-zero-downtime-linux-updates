@@ -102,7 +102,6 @@ pub async fn add_application_config(
     application_id: i32,
     image: String,
     config: Option<String>,
-    version: i32,
 ) -> Result<ApplicationConfig::Model, DbErr> {
     let app_config = dtos::ApplicationConfig::ActiveModel {
         id: NotSet,
@@ -111,7 +110,7 @@ pub async fn add_application_config(
         application_id: Set(application_id),
         image: Set(image),
         config: Set(config),
-        version: Set(version),
+        version: Set(1),
         deleted_at: NotSet,
         superseded_by: NotSet,
     };
@@ -131,7 +130,6 @@ pub async fn update_application_config(
     application_id: i32,
     image: String,
     config: Option<String>,
-    version: i32,
 ) -> Result<ApplicationConfig::Model, DbErr> {
     let db = db!();
 
@@ -148,8 +146,8 @@ pub async fn update_application_config(
         device_id: Set(device_id),
         group_id: Set(group_id),
         image: Set(image),
-        version: Set(version),
         config: Set(config),
+        version: Set(current.version + 1),
         deleted_at: NotSet,
         superseded_by: NotSet,
     };
