@@ -22,8 +22,9 @@ images:
   # Local entries, populated either by `make image` (build locally) or by
   # `make pull-image` (download the prebuilt image from GHCR — see below).
   # raw works under both vz and qemu.
-  - location: "dist/image/disk.raw"
+  - location: "dist/qcow2/disk.qcow2"
     arch: "aarch64"
+
   - location: "dist/qcow2/disk.qcow2"
     arch: "x86_64"
 
@@ -89,12 +90,23 @@ provision:
       tpm2_evictcontrol -C o -c key.ctx 0x81000000
       echo "TPM initalized successfully!"
 
-  ### Random fixes
-  # Prevent lima from installing random sh*t into the VM and therefore having
-  # failed cloud-init services because our bootc system is read-only.
-  - mode: dependency
-    skipDefaultDependencyResolution: true
-    script: "true"
+  # ### Random fixes
+  # # Prevent lima from installing random sh*t into the VM and therefore having
+  # # failed cloud-init services because our bootc system is read-only.
+  # # https://github.com/lima-vm/lima/blob/2a9cb9a4636b822057bff6abc6a138a0ec640550/templates/default.yaml#L222-L237
+  # - mode: dependency
+  #   skipDefaultDependencyResolution: true
+  #   script: |
+  #     echo "Skipping default dependency resolution"
+
+  # /usr/local/bin is read-only, so let's point it to /var/usrlocal/bin instead.
+  - mode: boot
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      mkdir -p /var/usrlocal/bin
+
+  # also see `env:` below
   # Fall back to xterm-256color when the host terminal's terminfo entry
   # isn't shipped in the VM (e.g. xterm-ghostty, xterm-kitty). Without this,
   # `systemctl status` and other pager-using commands fail with

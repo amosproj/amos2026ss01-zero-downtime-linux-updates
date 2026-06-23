@@ -31,10 +31,12 @@ agent run end to end, without any physical hardware
    make image                         # OR build it locally from source
    ```
    Notice: When using *PULL_REF* to target a certain branch, replace `/` with `-`
-2. Create the VM (boots the image from ./dist)
+2. Create the VM (boots the image from ./dist).
+   You may need to delete a previous vm first: `limactl rm -f edge-ipc`.
    ```bash
-   limactl create --name edge-ipc dev-env/lima/edge-ipc.yaml
+   limactl create --name edge-ipc dev-env/lima/edge-ipc.yaml --vm-type qemu --arch x86_64 
    ```
+   For the TPM to work, QEMU *must* be used!
 3. Start the software TPM
    ```bash
    mkdir -p /tmp/emulated_tpm
@@ -43,7 +45,7 @@ agent run end to end, without any physical hardware
    (The swtpm is forked to the background and terminates, as soon the VM is shut down once it has attached to the socket)
 
    Using the command above, the TPM state is saved under */tmp/emulated_tpm*. Could be useful for testing, at important good to know.
-3. Start the VM (with the vTPM attached)
+4. Start the VM (with the vTPM attached)
    ```bash
    QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
        -chardev socket,id=chrtpm,path=/tmp/emulated_tpm/swtpm-sock \
@@ -51,7 +53,7 @@ agent run end to end, without any physical hardware
        -device tpm-tis,tpmdev=tpm0" \
        limactl start edge-ipc
    ```
-   For the TPM to work, QEMU *must* be used
+   (append `--log-level debug` for more verbose output)
 
 ## Accessing the VM
 
@@ -88,8 +90,34 @@ Stop the VM (state preserved, can be started again): `limactl stop edge-ipc`
 
 Delete the VM (state lost): `limactl delete edge-ipc`
 
-## Viewing logs
+## Observing logs and status
 
+#### vm: qemu booting
+follow logs of VM booting:
+```
+less -N +F ~/.lima/edge-ipc/serial.log
+# or in color:
+tail -f ~/.lima/edge-ipc/serial.log | bat --paging=never -l log
+```
+or just read them after the fact:
+```
+~/.lima/edge-ipc/serial.log
+```
+
+> [!TIP]
+> for syntax highlighting of .log files use e.g. `bat` https://github.com/sharkdp/bat or a nvim plugin https://github.com/fei6409/log-highlight.nvim
+
+#### vm: cloud-init
+
+[//]: #TODO
+
+#### bootc
+
+```
+sudo bootc status
+```
+
+#### orchestrator.service
 use `journalctl`:
 
 ```bash
