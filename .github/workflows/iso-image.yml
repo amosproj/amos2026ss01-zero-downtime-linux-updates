@@ -77,7 +77,6 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_ref }}" ]; then
             TAG="${{ inputs.image_ref }}"
             SAFE_REF="${{ github.ref_name }}"
-(??)
           else
             HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
             TAG="commit-${HEAD_SHA:0:7}"
@@ -95,7 +94,6 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-(??)
       - name: Pull the bootc image into root storage
         run: sudo podman pull "${IMAGE_REF}"
 
