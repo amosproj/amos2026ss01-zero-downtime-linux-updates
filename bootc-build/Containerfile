@@ -1,9 +1,39 @@
 ARG FEDORA_VERSION=latest
 ARG DEV_MODE=false
 
-ARG FEDORA_VERSION=latest
+# Compile the orchestrator binary.
+#
+# cargo-chef splits dependency compilation into its own layer keyed only on the
+# Cargo manifests (recipe.json), so editing our own sources no longer forces a
+# full recompile of every crate. That layer is exported/restored by the build
+# cache (in CI: cache-to/from type=gha,mode=max in container-orchestrator.yml;
+# locally: podman's --layers), which is otherwise wasted because `COPY . .`
+# invalidates everything after it.
+# https://images.redhat.com
+FROM registry.access.redhat.com/hi/rust:1.95-builder AS chef
+RUN dnf install -y tpm2-tss-devel pkgconf-pkg-config && dnf clean all
+
+RUN cargo install cargo-chef --locked
+WORKDIR /workspace
+
+# Distill the dependency "recipe" from the Cargo manifests only.
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /workspace/recipe.json recipe.json
+# Cook (compile) just the orchestrator's dependencies. This layer is reused
+# across source-only changes because recipe.json only changes when
+# Cargo.toml/Cargo.lock do. Scoped to amos-orchestrator so we don't compile unnecessary crates.
+# Build dependencies - this is the caching Docker layer!
+RUN cargo chef cook --release --package amos-orchestrator --recipe-path recipe.json
+# Build application
+COPY . .
+RUN cargo build --package amos-orchestrator --release
+
+
 FROM quay.io/fedora/fedora-bootc:${FEDORA_VERSION}
-ARG DEV_MODE
 
 # Install following components:
 #  - greenboot: health checks after bootc switch
@@ -16,38 +46,11 @@ RUN dnf install -y \
     openssh-server cloud-init sshfs \
     && dnf clean all
 
-# Compile the orchestrator binary.
-#
-# cargo-chef splits dependency compilation into its own layer keyed only on the
-# Cargo manifests (recipe.json), so editing our own sources no longer forces a
-# full recompile of every crate. That layer is exported/restored by the build
-# cache (in CI: cache-to/from type=gha,mode=max in container-orchestrator.yml;
-# locally: podman's --layers), which is otherwise wasted because `COPY . .`
-# invalidates everything after it.
-FROM registry.access.redhat.com/hi/rust:1.95-builder AS chef
-RUN cargo install cargo-chef --locked
-WORKDIR /workspace
-
-# Distill the dependency "recipe" from the Cargo manifests only.
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM chef AS builder
-# Cook (compile) just the orchestrator's dependencies. This layer is reused
-# across source-only changes because recipe.json only changes when
-# Cargo.toml/Cargo.lock do. Scoped to amos-orchestrator so we don't compile unnecessary crates.
-COPY --from=planner /workspace/recipe.json recipe.json
-RUN cargo chef cook --release --package amos-orchestrator --recipe-path recipe.json
-COPY . .
-RUN cargo build --package amos-orchestrator --release
-
 # Copy the compiled binary from the build stage
-COPY --from=builder /workspace/target/release/amos-orchestrator /usr/local/bin/amos-orchestrator
+COPY --from=builder /workspace/target/release/amos-orchestrator /usr/libexec/amos-orchestrator
 
 # Install the systemd unit and enable it
-COPY bootc/orchestrator.service /etc/systemd/system/orchestrator.service
-RUN systemctl daemon-reload
+COPY bootc-build/orchestrator.service /etc/systemd/system/orchestrator.service
 RUN systemctl enable orchestrator.service
 
 # RUN systemctl enable --root=/ cloud-init.service cloud-init-local.service \
@@ -72,5 +75,5 @@ RUN systemctl enable orchestrator.service
 #     cp /usr/share/containers/$src /etc/containers/policy.json; \
 #     rm /usr/share/containers/policy.prod.json /usr/share/containers/policy.dev.json
 
-# COPY bootc/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
+# COPY bootc-build/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
 # RUN chmod 755 /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
