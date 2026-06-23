@@ -28,17 +28,16 @@ echo "Awaiting Orchestrator upgrade trigger phase (allowing time for download an
 limactl shell "edge-ipc" -- sudo journalctl -u orchestrator.service -n 50 --no-pager
 sleep 15
 
-# --- VERIFY THE ACTUAL SWITCH EFFECT IN BOOTC ---
 echo "Querying live bootc deployment status for staged images..."
-BOOTC_STATUS_RAW=$(limactl shell "${VM_NAME}" -- sudo bootc status)
+BOOTC_STATUS_JSON=$(limactl shell "${VM_NAME}" -- sudo bootc status --json)
 
-if echo "${BOOTC_STATUS_RAW}" | grep -A 5 "staged" | grep -q "${TARGET_UPGRADE_REF}"; then
-    echo -e "${GREEN}Success: Verified switch deployment! Target image is staged in bootc status.${NC}"
+if echo "${BOOTC_STATUS_JSON}" | jq -e ".status.staged.image.image.image == \"${TARGET_UPGRADE_REF}\" or .status.booted.image.image.image == \"${TARGET_UPGRADE_REF}\"" > /dev/null; then
+    echo -e "${GREEN}Success: Verified switch deployment! Target image matches live bootc status.${NC}"
     echo "Current bootc status output:"
-    echo "${BOOTC_STATUS_RAW}"
+    echo "${BOOTC_STATUS_JSON}" | jq .
 else
-    echo -e "${RED}Failure: Target image '${TARGET_UPGRADE_REF}' was not found in bootc's staged status.${NC}"
+    echo -e "${RED}Failure: Target image '${TARGET_UPGRADE_REF}' was not found in staged or booted status.${NC}"
     echo "Current bootc status output:"
-    echo "${BOOTC_STATUS_RAW}"
+    echo "${BOOTC_STATUS_JSON}" | jq .
     exit 1
 fi
