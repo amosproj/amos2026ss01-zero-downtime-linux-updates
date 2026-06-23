@@ -102,8 +102,7 @@ podman run -d --name "$timescale_container" \
 
 echo "Waiting for TimescaleDB to be completely ready..."
 for i in $(seq 1 60); do
-    if podman exec "$timescale_container" pg_isready -U postgres >/dev/null 2>&1 && \
-       podman logs "$timescale_container" 2>&1 | grep -q "database system is ready to accept connections"; then
+    if podman exec "$timescale_container" pg_isready -U postgres >/dev/null 2>&1; then
         sleep 1
         echo "TimescaleDB is fully initialized and ready."
         break
