@@ -87,7 +87,7 @@ impl Model {
             application_id: self.application_id,
             image: self.image,
             config_version: self.config_version,
-            config: config,
+            config,
             version: self.version,
             deleted_at: self.deleted_at,
             superseded_by: self.superseded_by,

@@ -137,10 +137,11 @@ async fn try_update(
         for action in ReconcileIterator::new(&apps, target) {
             match action {
                 ReconcileAction::Create { image } => {
-                    let env_map: std::collections::HashMap<String, String> =
-                        image.environment.into_iter()
-                            .map(|(k, v)| (k.to_string(), v.to_string()))
-                            .collect();
+                    let env_map: std::collections::HashMap<String, String> = image
+                        .environment
+                        .into_iter()
+                        .map(|(k, v)| (k.to_string(), v.to_string()))
+                        .collect();
 
                     let app = Application::launch_from_image(
                         &image.image,
@@ -160,10 +161,11 @@ async fn try_update(
                 } => {
                     apps.swap_remove(application_index).remove(registry).await?;
 
-                    let env_map: std::collections::HashMap<String, String> =
-                        target_image.environment.into_iter()
-                            .map(|(k, v)| (k.to_string(), v.to_string()))
-                            .collect();
+                    let env_map: std::collections::HashMap<String, String> = target_image
+                        .environment
+                        .into_iter()
+                        .map(|(k, v)| (k.to_string(), v.to_string()))
+                        .collect();
 
                     let app = Application::launch_from_image(
                         &target_image.image,

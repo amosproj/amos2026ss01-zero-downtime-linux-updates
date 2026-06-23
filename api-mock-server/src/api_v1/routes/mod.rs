@@ -643,14 +643,10 @@ mod tests {
             "application_id": application["id"],
             "image": "app:1",
             "config": first_config,
-        }).to_string();
+        })
+        .to_string();
 
-        let (_, created_body) = post(
-            app.clone(),
-            "/v1/app-configs",
-            &create_payload,
-        )
-        .await;
+        let (_, created_body) = post(app.clone(), "/v1/app-configs", &create_payload).await;
         let created: serde_json::Value = serde_json::from_str(&created_body).unwrap();
 
         let update_config = serde_json::json!({
@@ -664,7 +660,8 @@ mod tests {
             "application_id": application["id"],
             "image": "app:1",
             "config": update_config,
-        }).to_string();
+        })
+        .to_string();
         let (status, body) = put(
             app,
             &format!("/v1/app-configs/{}", created["id"]),
