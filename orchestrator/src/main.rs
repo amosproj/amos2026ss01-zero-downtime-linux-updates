@@ -137,9 +137,17 @@ async fn main() {
             std::process::exit(1);
         }
     };
+    let booted = match bootc_status.booted {
+        Some(booted) => booted,
+        None => {
+            error!("bootc status reported no booted image");
+            log_flusher.flush().await;
+            std::process::exit(1);
+        }
+    };
     let os_state = OsState {
         update_pending: bootc_status.staged.is_some(),
-        booted_image: bootc_status.booted.unwrap().checksum.clone(),
+        booted_image: booted.checksum.clone(),
         update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
     };
 

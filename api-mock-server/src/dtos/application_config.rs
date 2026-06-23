@@ -44,6 +44,11 @@ impl ActiveModelBehavior for ActiveModel {
                 "Either device_id or group_id must be set".into(),
             ));
         }
+        if has_device && has_group {
+            return Err(DbErr::Custom(
+                "Only one of device_id or group_id may be set, not both".into(),
+            ));
+        }
 
         Ok(self)
     }
