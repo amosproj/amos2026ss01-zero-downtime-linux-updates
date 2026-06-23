@@ -41,6 +41,7 @@ pub async fn run_apps_main_loop(
     }
 }
 
+#[allow(dead_code)]
 pub fn resolve_application_ids<C: PodmanImageInfo>(
     containers: Vec<C>,
     target_app_configs: &[ApplicationConfig::Model],
@@ -361,6 +362,8 @@ mod tests {
             config: Some("testconfig".into()),
             image: "docker.io/alpine:1.0".into(),
             comment: Some("testcomment".into()),
+            deleted_at: None,
+            superseded_by: None,
         }];
         let containers = vec![MockApplication::new("docker.io/alpine:1.0", "digest1")];
         let (matched, unmatched) = resolve_application_ids(containers, &configs);

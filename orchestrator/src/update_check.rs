@@ -171,6 +171,8 @@ mod tests {
             commit_hash: commit.into(),
             orchestrator_version: "0.1.0".into(),
             description: None,
+            deleted_at: None,
+            superseded_by: None,
         }
     }
 
@@ -181,6 +183,8 @@ mod tests {
             image: image.into(),
             config: None,
             comment: None,
+            deleted_at: None,
+            superseded_by: None,
         }
     }
 
