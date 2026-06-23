@@ -98,9 +98,12 @@ async fn run(cli: &Cli) -> anyhow::Result<()> {
         config.log_max_buffer,
     );
 
-    let app_log_registry = spawn_app_log_registry(api_client.clone(), Duration::from_secs(config.log_flush_interval_secs),
+    let app_log_registry = spawn_app_log_registry(
+        api_client.clone(),
+        Duration::from_secs(config.log_flush_interval_secs),
         config.log_max_batch,
-        config.log_max_buffer);
+        config.log_max_buffer,
+    );
 
     let bootc = Bootc::new(Box::new(RealExecuter));
     let os_state = OsState::new(bootc.status().await?)
@@ -109,7 +112,10 @@ async fn run(cli: &Cli) -> anyhow::Result<()> {
     let (podman, containers) = PodmanWrapper::connect(Path::new(&config.podman_path))
         .await
         .context("Could not initialize connection to Podman")?;
-    let apps = containers.into_iter().map(|c| Application::wrap(c, 0, &app_log_registry)).collect();
+    let apps = containers
+        .into_iter()
+        .map(|c| Application::wrap(c, 0, &app_log_registry))
+        .collect();
 
     let poll_interval = Duration::from_secs(config.poll_interval_secs as u64);
     let apps_task = tokio::spawn(run_apps_main_loop(
@@ -117,7 +123,7 @@ async fn run(cli: &Cli) -> anyhow::Result<()> {
         podman,
         api_client.clone(),
         poll_interval,
-        app_log_registry
+        app_log_registry,
     ));
     let os_task = tokio::spawn(run_os_main_loop(
         os_state,

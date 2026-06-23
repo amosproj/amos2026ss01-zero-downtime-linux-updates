@@ -144,7 +144,6 @@ impl ApiClient {
         .await
     }
 
-    #[expect(unused)]
     /// Pushes application log entries for a given application to the API.
     /// POSTs to `/logs/applications?device_uuid=<uuid>`.
     pub async fn push_application_logs(

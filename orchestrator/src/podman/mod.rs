@@ -26,8 +26,6 @@ pub trait PodmanLogHandle: Send + 'static {
         follow: bool,
         since: Option<DateTime<Utc>>,
     ) -> BoxStream<'static, anyhow::Result<LogChunk>>;
-
-    fn name(&self) -> &str;
 }
 
 #[async_trait]
@@ -68,7 +66,7 @@ pub trait PodmanImage: PodmanImageInfo + Send {
 #[async_trait]
 pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
     type LogHandle: PodmanLogHandle;
-    
+
     async fn start(&mut self) -> anyhow::Result<()>;
     #[allow(dead_code)]
     async fn stop(&mut self) -> anyhow::Result<()>;

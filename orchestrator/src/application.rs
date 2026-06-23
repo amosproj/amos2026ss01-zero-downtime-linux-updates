@@ -254,10 +254,6 @@ mod tests {
         {
             futures_util::stream::empty().boxed()
         }
-
-        fn name(&self) -> &str {
-            "testname"
-        }
     }
 
     #[tokio::test]

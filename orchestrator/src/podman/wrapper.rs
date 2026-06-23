@@ -190,7 +190,6 @@ impl PodmanWrapper {
                     image_digest: image.digest?,
                     log_handle: Some(PodmanWrapperLogHandle {
                         container: containers.get(c.id.as_deref()?),
-                        name,
                     }),
                 })
             });
@@ -247,7 +246,6 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
             image_digest: self.digest.clone(),
             log_handle: Some(PodmanWrapperLogHandle {
                 container: pc.get(&output.id),
-                name: name.to_owned(),
             }),
         })
     }
@@ -263,7 +261,6 @@ pub struct PodmanWrapperContainer {
 
 pub struct PodmanWrapperLogHandle {
     container: podman_api::api::Container,
-    name: String,
 }
 
 impl PodmanLogHandle for PodmanWrapperLogHandle {
@@ -296,10 +293,6 @@ impl PodmanLogHandle for PodmanWrapperLogHandle {
             }
         }
         .boxed()
-    }
-
-    fn name(&self) -> &str {
-        &self.name
     }
 }
 
