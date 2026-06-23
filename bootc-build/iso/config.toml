@@ -1,0 +1,66 @@
+# bootc-image-builder config, a so-called 'Blueprint' for the AMOS edge installer ISO.
+#
+# Used by `make iso` (see mk/iso.mk) to produce an Anaconda installer ISO that
+# embeds our bootc image and installs it unattended
+# onto a real IPC's disk.
+#
+# Docs: https://osbuild.org/docs/bootc/#-build-config
+# https://osbuild.org/docs/user-guide/blueprint-reference/
+
+# ---------------------------------------------------------------------------
+# Disk layout. Keep it close to what the VM/raw image uses (ext4, no swap).
+# bootc-image-builder grows the root filesystem to fill the disk.
+# ---------------------------------------------------------------------------
+[[customizations.filesystem]]
+mountpoint = "/"
+minsize = "10 GiB"
+
+# Optional separate data partition for orchestrator state / inventory / persisting testing stuff / whatever.
+[[customizations.filesystem]]
+mountpoint = "/var/data"
+minsize = "5 GiB"
+
+# ---------------------------------------------------------------------------
+# Unattended kickstart. bootc-image-builder automatically appends the
+# `ostreecontainer ...` line that installs OUR embedded image, so we must NOT
+# add it here. We only drive partitioning, networking and first-boot config.
+# ---------------------------------------------------------------------------
+[customizations.installer.kickstart]
+contents = """
+text --non-interactive
+# Wipe and repartition the primary disk. Adjust --drives if the IPC has several.
+zerombr
+clearpart --all --initlabel --disklabel=gpt
+autopart --noswap --type=plain --fstype=ext4
+# For TPM-backed encryption later: autopart --encrypted --passphrase=... (+clevis)
+
+# DHCP on the first wired link. Set a hostname for the fleet.
+network --bootproto=dhcp --device=link --activate --onboot=on --hostname=edge-ipc-from-iso
+
+# Set root password "root"
+rootpw --iscrypted '$6$rlL4ROw6/Qg9wUxk$n8IpLmwgKFdXVNeTKcu7vMVCE5wHiiVs4ksUiOl/OsJvuvkyaPrhYORpZPc0gz5HNOogUY6zU87ssp1/EyF55.'
+
+# Login user (moved here from [[customizations.user]] — see note above).
+# FIXME: change/remove for prod / secure deployment.
+# password "amos" hashed with `openssl passwd -6` — DEV ONLY, change for prod.
+user --name=amos --groups=wheel --iscrypted --password='$6$JW.H/UVKqa6P8hSz$h2KzR3dc7k8W9YEhtLzK1pFdlHWzKCEfyBgCLmIhDvWV3lKDGXRMfmoYiFpvFKSiyE/OqFzs4jhkV5NmzdmQQ1'
+
+# Reboot into the installed system when done.
+reboot
+
+%post --erroronfail
+# Seed the orchestrator config. On hardware there is no Lima NoCloud datasource,
+# so point it at the real cloud endpoint here (or bake it into the image).
+mkdir -p /etc/amos
+cat > /etc/amos/config.toml <<'EOF'
+# AMOS orchestrator config (hardware). EDIT cloud_url for your environment.
+cloud_url = "https://CHANGE-ME.example.com/v1"
+poll_interval_secs = 30
+inventory_path = "/var/lib/amos/inventory.json"
+# TODO: device_uuid: prefer deriving from the TPM/hardware on first boot instead of
+device_uuid = "00000000-0000-0000-0000-000000000001"
+# hard-coding. Left unset here so first boot can generate/persist one.
+EOF
+chmod 0644 /etc/amos/config.toml
+%end
+"""

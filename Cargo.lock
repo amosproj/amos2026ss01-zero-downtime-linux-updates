@@ -102,6 +102,7 @@ version = "0.1.0"
 dependencies = [
  "amos-common",
  "anyhow",
+ "async-stream",
  "async-trait",
  "base64",
  "chrono",
@@ -118,6 +119,7 @@ dependencies = [
  "serde_json",
  "serial_test",
  "tokio",
+ "tokio-stream",
  "tracing",
  "tracing-journald",
  "tracing-subscriber",

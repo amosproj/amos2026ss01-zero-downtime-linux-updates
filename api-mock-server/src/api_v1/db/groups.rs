@@ -54,10 +54,12 @@ pub async fn add_group(name: String) -> Result<Group::Model, DbErr> {
 
 pub async fn update_group(id: i32, name: String) -> Result<Group::Model, DbErr> {
     let db = db!();
-    let group = dtos::Group::ActiveModel {
-        id: Set(id),
-        name: Set(name),
-    };
+    let group = dtos::Group::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .ok_or(DbErr::RecordNotFound("Group not found".into()))?;
+    let mut group: dtos::Group::ActiveModel = group.into();
+    group.name = Set(name);
     let updated_group = group.update(&db).await?;
     debug!("Updated group: {:?}", updated_group);
     Ok(updated_group.into_api())

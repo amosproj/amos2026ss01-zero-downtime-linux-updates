@@ -73,18 +73,19 @@ pub async fn update_reported_application_assignment(
     device_id: i32,
 ) -> Result<ReportedApplicationAssignment::Model, DbErr> {
     let db = db!();
-    let app_assignment = dtos::ReportedApplicationAssignment::ActiveModel {
-        id: Set(id),
-        application_config_id: Set(application_config_id),
-        device_id: Set(device_id),
-        updated_at: NotSet, // updated_at is automatically set in before_save
-    };
-    let updated_group = app_assignment.update(&db).await?;
-    debug!(
-        "Updated reported application assignment: {:?}",
-        updated_group
-    );
-    Ok(updated_group.into_api())
+    let app_assignment = dtos::ReportedApplicationAssignment::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .ok_or(DbErr::RecordNotFound(
+            "ReportedApplicationAssignment not found".into(),
+        ))?;
+    let mut app_assignment: dtos::ReportedApplicationAssignment::ActiveModel =
+        app_assignment.into();
+    app_assignment.application_config_id = Set(application_config_id);
+    app_assignment.device_id = Set(device_id);
+    let updated = app_assignment.update(&db).await?;
+    debug!("Updated reported application assignment: {:?}", updated);
+    Ok(updated.into_api())
 }
 
 pub async fn delete_reported_application_assignment(id: i32) -> Result<u64, DbErr> {

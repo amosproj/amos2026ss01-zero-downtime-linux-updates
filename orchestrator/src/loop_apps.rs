@@ -10,6 +10,7 @@ use tracing::warn;
 use crate::api_client::ApiClient;
 use crate::application::Application;
 use crate::podman::PodmanPullBehaviour::PullIfMissing;
+use crate::podman::log_registry::AppLogRegistry;
 use crate::podman::{Podman, PodmanImage, PodmanImageInfo};
 
 /// Repeatedly check for application updates and apply them
@@ -30,6 +31,33 @@ pub async fn run_apps_main_loop(
             warn!("Failed to update applications: {:?}", e);
         }
     }
+}
+
+#[allow(dead_code)]
+pub fn resolve_application_ids<C: PodmanImageInfo>(
+    containers: Vec<C>,
+    target_app_configs: &[ApplicationConfig::Model],
+) -> (Vec<(C, i32)>, Vec<C>) {
+    let mut matched = Vec::new();
+    let mut unmatched = Vec::new();
+
+    for container in containers {
+        let app_ref = container
+            .reference()
+            .split(':')
+            .next()
+            .unwrap_or(container.reference());
+        let found = target_app_configs
+            .iter()
+            .find(|cfg| cfg.image.split(':').next().unwrap_or(&cfg.image) == app_ref);
+
+        match found {
+            Some(cfg) => matched.push((container, cfg.id)),
+            None => unmatched.push(container),
+        }
+    }
+
+    (matched, unmatched)
 }
 
 async fn try_update(
@@ -297,5 +325,23 @@ mod tests {
             })
         ));
         assert!(iter.next().is_none())
+    }
+
+    #[test]
+    fn resolve_application_ids_matches_by_reference() {
+        let configs = vec![ApplicationConfig::Model {
+            id: 1,
+            application_id: 1,
+            config: Some("testconfig".into()),
+            image: "docker.io/alpine:1.0".into(),
+            comment: Some("testcomment".into()),
+            deleted_at: None,
+            superseded_by: None,
+        }];
+        let containers = vec![MockApplication::new("docker.io/alpine:1.0", "digest1")];
+        let (matched, unmatched) = resolve_application_ids(containers, &configs);
+        assert_eq!(matched.len(), 1);
+        assert_eq!(matched[0].1, 1);
+        assert!(unmatched.is_empty());
     }
 }

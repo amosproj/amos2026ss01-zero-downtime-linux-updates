@@ -19,6 +19,10 @@ pub struct Model {
     pub config: Option<String>,
 
     pub comment: Option<String>,
+
+    pub deleted_at: Option<DateTimeUtc>,
+
+    pub superseded_by: Option<i32>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -31,6 +35,8 @@ impl Model {
             image: self.image,
             config: self.config,
             comment: self.comment,
+            deleted_at: self.deleted_at,
+            superseded_by: self.superseded_by,
         }
     }
 }

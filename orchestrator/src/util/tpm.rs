@@ -4,7 +4,6 @@ use std::str::FromStr as _;
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
 use tracing::{debug, warn};
-use tss_esapi::constants::SessionType;
 use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
 use tss_esapi::interface_types::algorithm::HashingAlgorithm;
 use tss_esapi::interface_types::resource_handles::Hierarchy;
@@ -58,31 +57,21 @@ impl TpmSigner {
             self.ctx
                 .hash(input_buffer, HashingAlgorithm::Sha256, Hierarchy::Null)?;
 
-        // TODO: Possibly avoidable by creating the key without create option `withuserauth`
-        let session = self.ctx.start_auth_session(
-            None,
-            None,
-            None,
-            SessionType::Hmac,
-            tss_esapi::structures::SymmetricDefinition::AES_128_CFB,
-            HashingAlgorithm::Sha256,
-        )?;
-        self.ctx.set_sessions((session, None, None));
-
         // RSASSA-PKCS1-v1_5 with SHA256
         let scheme = SignatureScheme::RsaSsa {
             hash_scheme: HashScheme::new(HashingAlgorithm::Sha256),
         };
 
-        let signature = self.ctx.sign(self.key_handle, digest, scheme, ticket)?;
+        let signature = self
+            .ctx
+            .execute_with_nullauth_session(|ctx| -> Result<_, _> {
+                ctx.sign(self.key_handle, digest, scheme, ticket)
+            })?;
 
         let signature_bytes = match signature {
             tss_esapi::structures::Signature::RsaSsa(sig) => sig.signature().to_vec(),
             _ => anyhow::bail!("Got unexpected signature"),
         };
-
-        // TODO: Do flush here
-        // signer.ctx.flush_context(session)?;
 
         Ok(signature_bytes)
     }

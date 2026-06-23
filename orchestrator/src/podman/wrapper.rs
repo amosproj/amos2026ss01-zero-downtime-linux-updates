@@ -14,10 +14,44 @@ use podman_api::{
 };
 use tracing::debug;
 
+use chrono::{DateTime, Utc};
+use futures_util::stream::BoxStream;
+use podman_api::conn::TtyChunk;
+use podman_api::opts::ContainerLogsOpts;
+
+use super::{LogChunk, LogStreamKind, PodmanLogHandle};
+
 use super::{PodmanContainerState, PodmanPullBehaviour};
 
 pub struct PodmanWrapper {
     podman: podman_api::Podman,
+}
+
+/// Podman's `timestamps(true)` option prefixes every line with an
+/// RFC3339-nano timestamp followed by a space, e.g.
+/// `2026-06-20T10:15:03.123456789Z some log output`.
+///
+/// We split that prefix back out so `time` carries the real per-line
+/// timestamp from the container runtime rather than our local capture
+/// time, and `message` is just the original line content.
+fn parse_log_line(stream: LogStreamKind, bytes: &[u8]) -> LogChunk {
+    let raw = String::from_utf8_lossy(bytes);
+    let raw = raw.trim_end_matches(['\n', '\r']);
+
+    match raw.split_once(' ') {
+        Some((ts, rest)) if DateTime::parse_from_rfc3339(ts).is_ok() => LogChunk {
+            stream,
+            time: DateTime::parse_from_rfc3339(ts)
+                .ok()
+                .map(|t| t.with_timezone(&Utc)),
+            message: rest.to_owned(),
+        },
+        _ => LogChunk {
+            stream,
+            time: None,
+            message: raw.to_owned(),
+        },
+    }
 }
 
 #[async_trait]
@@ -216,6 +250,50 @@ pub struct PodmanWrapperContainer {
     image_digest: String,
 }
 
+pub struct PodmanWrapperLogHandle {
+    podman: podman_api::Podman,
+    id: String,
+    name: String,
+}
+
+impl PodmanLogHandle for PodmanWrapperLogHandle {
+    fn logs(
+        self,
+        follow: bool,
+        since: Option<DateTime<Utc>>,
+    ) -> BoxStream<'static, anyhow::Result<LogChunk>> {
+        let mut opts = ContainerLogsOpts::builder()
+            .stdout(true)
+            .stderr(true)
+            .follow(follow)
+            .timestamps(true);
+        if let Some(since) = since {
+            opts = opts.since(since.timestamp().to_string());
+        }
+        let opts = opts.build();
+
+        // `self` (the podman client + container id) is moved into the
+        // stream body below, so everything the stream borrows from stays
+        // alive for as long as the stream itself
+        async_stream::try_stream! {
+            let container = self.podman.containers().get(&self.id);
+            let mut raw = container.logs(&opts);
+            while let Some(chunk) = raw.next().await {
+                match chunk? {
+                    TtyChunk::StdOut(b) => yield parse_log_line(LogStreamKind::Stdout, &b),
+                    TtyChunk::StdErr(b) => yield parse_log_line(LogStreamKind::Stderr, &b),
+                    _ => continue,
+                }
+            }
+        }
+        .boxed()
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 impl super::PodmanImageInfo for PodmanWrapperContainer {
     fn reference(&self) -> &str {
         &self.image_ref
@@ -290,6 +368,16 @@ impl super::PodmanContainer for PodmanWrapperContainer {
     fn name(&self) -> &str {
         &self.name
     }
+
+    type LogHandle = PodmanWrapperLogHandle;
+
+    fn log_handle(&self) -> Self::LogHandle {
+        PodmanWrapperLogHandle {
+            podman: self.podman.clone(),
+            id: self.id.clone(),
+            name: self.name.clone(),
+        }
+    }
 }
 
 impl From<&str> for PodmanContainerState {
@@ -305,6 +393,35 @@ impl From<&str> for PodmanContainerState {
 impl From<ContainerStatus> for PodmanContainerState {
     fn from(value: ContainerStatus) -> Self {
         value.as_ref().into()
+    }
+}
+
+#[cfg(test)]
+mod log_parsing_tests {
+    use super::*;
+
+    #[test]
+    fn parses_timestamped_line() {
+        let line = b"2026-06-20T10:15:03.123456789Z hello world";
+        let chunk = parse_log_line(LogStreamKind::Stdout, line);
+        assert_eq!(chunk.message, "hello world");
+        assert!(chunk.time.is_some());
+        assert_eq!(chunk.stream, LogStreamKind::Stdout);
+    }
+
+    #[test]
+    fn falls_back_when_prefix_is_not_a_timestamp() {
+        let line = b"not a timestamp at all";
+        let chunk = parse_log_line(LogStreamKind::Stderr, line);
+        assert_eq!(chunk.message, "not a timestamp at all");
+        assert!(chunk.time.is_none());
+    }
+
+    #[test]
+    fn strips_trailing_newline() {
+        let line = b"2026-06-20T10:15:03.000000000Z line with newline\n";
+        let chunk = parse_log_line(LogStreamKind::Stdout, line);
+        assert_eq!(chunk.message, "line with newline");
     }
 }
 
@@ -468,6 +585,46 @@ mod tests {
             PodmanContainerState::Running
         );
         container.stop().await.unwrap();
+        container.destroy().await.unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "has to have access to the Podman socket"]
+    #[serial_test::serial]
+    async fn test_podman_container_logs() {
+        use crate::podman::{PodmanContainer, PodmanLogHandle};
+        use futures_util::StreamExt;
+
+        let (p, _) = super::PodmanWrapper::connect(Path::new(PODMAN_SOCK))
+            .await
+            .unwrap();
+
+        let img = p
+            .image("busybox", crate::podman::PodmanPullBehaviour::PullIfMissing)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let container = img
+            .create_container("test-logs-container", vec![])
+            .await
+            .unwrap();
+
+        // busybox's default entrypoint with no args just prints usage and
+        // exits — give it something that actually produces output before
+        // stopping. For a quick non-following smoke test we don't even
+        // need to start() it long-term; just enough output to exist.
+
+        let log_handle = container.log_handle();
+        let mut stream = log_handle.logs(false, None); // follow=false: read what's there, then end
+
+        let mut lines = Vec::new();
+        while let Some(chunk) = stream.next().await {
+            lines.push(chunk.unwrap());
+        }
+
+        println!("captured {} log chunks: {:#?}", lines.len(), lines);
+
         container.destroy().await.unwrap();
     }
 }

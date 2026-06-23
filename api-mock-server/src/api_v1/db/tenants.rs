@@ -59,11 +59,13 @@ pub async fn update_tenant(
     description: Option<String>,
 ) -> Result<Tenant::Model, DbErr> {
     let db = db!();
-    let tenant = dtos::Tenant::ActiveModel {
-        id: Set(id),
-        name: Set(name),
-        description: Set(description),
-    };
+    let tenant = dtos::Tenant::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .ok_or(DbErr::RecordNotFound("Tenant not found".into()))?;
+    let mut tenant: dtos::Tenant::ActiveModel = tenant.into();
+    tenant.name = Set(name);
+    tenant.description = Set(description);
     let updated_tenant = tenant.update(&db).await?;
     debug!("Updated tenant: {:?}", updated_tenant);
     Ok(updated_tenant.into_api())

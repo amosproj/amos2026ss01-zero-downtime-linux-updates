@@ -1,0 +1,23 @@
+# bootc install configuration, embedded in our image.
+#
+# Copied by the Containerfile to /usr/lib/bootc/install/50-amos.toml so that
+# EVERY install path inherits the same defaults: the ISO kickstart, a raw `dd`,
+# and `bootc install to-disk` will all use this.
+#
+# Files in /usr/lib/bootc/install/ merge in alphanumeric order; this 50-* file
+# overrides the Fedora base's 00-* defaults.
+#
+# Docs: man bootc-install-config (5)
+
+[install]
+# Appended to the kernel command line. Serial console could be handy on headless IPCs.
+kargs = ["console=ttyS0", "console=tty0"]
+
+# Block backends offered to `bootc install`. The FIRST entry is the default.
+# "direct" (unencrypted) for simple setup
+# TODO: maybe later "tpm2-luks" first for TPM-bound full-disk encryption by default ?
+# block = ["direct", "tpm2-luks"]
+block = ["direct"]
+
+[install.filesystem.root]
+type = "ext4"

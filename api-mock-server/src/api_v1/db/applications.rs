@@ -63,11 +63,13 @@ pub async fn update_application(
     description: String,
 ) -> Result<Application::Model, DbErr> {
     let db = db!();
-    let app = dtos::Application::ActiveModel {
-        id: Set(id),
-        name: Set(name),
-        description: Set(description),
-    };
+    let app = dtos::Application::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .ok_or(DbErr::RecordNotFound("Application not found".into()))?;
+    let mut app: dtos::Application::ActiveModel = app.into();
+    app.name = Set(name);
+    app.description = Set(description);
     let updated_app = app.update(&db).await?;
     debug!("Updated application: {:?}", updated_app);
     Ok(updated_app.into_api())

@@ -1,0 +1,2 @@
+- https://bootc.dev/bootc/intro.html
+- https://osbuild.org/
