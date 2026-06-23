@@ -63,8 +63,8 @@ pub async fn list_application_configs_for_device(
         .await?
         .and_then(|d| d.group_id);
 
-    let mut query =
-        dtos::ApplicationConfig::Entity::find().filter(dtos::ApplicationConfig::Column::DeviceId.eq(device_id));
+    let mut query = dtos::ApplicationConfig::Entity::find()
+        .filter(dtos::ApplicationConfig::Column::DeviceId.eq(device_id));
     if let Some(group_id) = group_id {
         query = dtos::ApplicationConfig::Entity::find().filter(
             dtos::ApplicationConfig::Column::DeviceId
