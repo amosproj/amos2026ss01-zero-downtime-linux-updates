@@ -183,6 +183,7 @@ mod tests {
             group_id: Some(1),
             application_id: 1,
             image: image.into(),
+            config_version: 1,
             config: None,
             version: 1,
             deleted_at: None,

@@ -2,7 +2,8 @@ use std::iter::Peekable;
 use std::sync::Arc;
 use std::time::Duration;
 
-use amos_common::entities::ApplicationConfig;
+use amos_common::entities::{ApplicationConfig, ContainerConfigV1};
+
 use tokio::sync::Mutex;
 use tracing::warn;
 
@@ -136,10 +137,17 @@ async fn try_update(
         for action in ReconcileIterator::new(&apps, target) {
             match action {
                 ReconcileAction::Create { image } => {
+                    let env_map: std::collections::HashMap<String, String> =
+                        image.environment.into_iter()
+                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .collect();
+
                     let app = Application::launch_from_image(
                         &image.image,
                         image.name,
-                        image.environment,
+                        Some(ContainerConfigV1 {
+                            environment: Some(env_map),
+                        }),
                         image.application_id,
                         registry,
                     )
@@ -151,10 +159,18 @@ async fn try_update(
                     target_image,
                 } => {
                     apps.swap_remove(application_index).remove(registry).await?;
+
+                    let env_map: std::collections::HashMap<String, String> =
+                        target_image.environment.into_iter()
+                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .collect();
+
                     let app = Application::launch_from_image(
                         &target_image.image,
                         target_image.name,
-                        target_image.environment,
+                        Some(ContainerConfigV1 {
+                            environment: Some(env_map),
+                        }),
                         target_image.application_id,
                         registry,
                     )
