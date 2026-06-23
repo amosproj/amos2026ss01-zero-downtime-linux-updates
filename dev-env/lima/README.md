@@ -1,7 +1,7 @@
 # Local test setup — edge device in a Lima VM
 
 This boots a realistic **edge device** on your machinge so you can see the update
-agent run end to end, without any physical hardware.
+agent run end to end, without any physical hardware
 
 ## What it is
 
@@ -18,11 +18,11 @@ agent run end to end, without any physical hardware.
 
 - `limactl`
 - `oras`
+- `jq`
 - `swtpm`
 - `podman`
 
 ## Run it
-
 
 0. *cd* into the project root
 1. Get a disk image into ./dist - pick ONE:
@@ -31,10 +31,12 @@ agent run end to end, without any physical hardware.
    make image                         # OR build it locally from source
    ```
    Notice: When using *PULL_REF* to target a certain branch, replace `/` with `-`
-2. Create the VM (boots the image from ./dist)
+2. Create the VM (boots the image from ./dist).
+   You may need to delete a previous vm first: `limactl rm -f edge-ipc`.
    ```bash
-   limactl create --name edge-ipc dev-env/lima/edge-ipc.yaml
+   limactl create --name edge-ipc dev-env/lima/edge-ipc.yaml --vm-type qemu --arch x86_64 
    ```
+   For the TPM to work, QEMU *must* be used!
 3. Start the software TPM
    ```bash
    mkdir -p /tmp/emulated_tpm
@@ -43,7 +45,7 @@ agent run end to end, without any physical hardware.
    (The swtpm is forked to the background and terminates, as soon the VM is shut down once it has attached to the socket)
 
    Using the command above, the TPM state is saved under */tmp/emulated_tpm*. Could be useful for testing, at important good to know.
-3. Start the VM (with the vTPM attached)
+4. Start the VM (with the vTPM attached)
    ```bash
    QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
        -chardev socket,id=chrtpm,path=/tmp/emulated_tpm/swtpm-sock \
@@ -51,23 +53,34 @@ agent run end to end, without any physical hardware.
        -device tpm-tis,tpmdev=tpm0" \
        limactl start edge-ipc
    ```
-   For the TPM to work, QEMU *must* be used
+   (append `--log-level debug` for more verbose output)
 
 ## Accessing the VM
 
-Get a (implicit ssh) shell into the VM: `limactl shell edge-ipc`
+Get a (implicit ssh) shell into the VM
+```bash
+limactl shell edge-ipc
+```
 
+Copy files to/from VM with `limactl copy` https://lima-vm.io/docs/reference/limactl_copy/
+```bash
+limactl copy target/debug/amos-orchestrator edge-ipc:/tmp/
+```
+
+Alternatively:
 Get the ssh config for the VM and use that for explicit ssh access or scp'ing sth. to the VM:
-
 ```bash
 edge_ssh_config=`limactl ls --format='{{.SSHConfigFile}}' edge-ipc`
 
-ssh -F "$edge_ssh_config" lima-edge-ipc
+ssh -F "$edge_ssh_config" edge-ipc 
 
 scp -F "$edge_ssh_config" target/debug/amos-orchestrator lima-edge-ipc:/tmp/
 ```
 
-Inside the VM, watch the orchestrator systemd service: `journalctl -fu orchestrator.service`
+Inside the VM, watch the orchestrator systemd service: 
+```bash
+journalctl -fu orchestrator.service
+```
 
 The host is rechable over the network via `host.lima.internal`. (When running the api server on the host its url would be `http://host.lima.internal:8080/` then)
 
@@ -77,23 +90,98 @@ Stop the VM (state preserved, can be started again): `limactl stop edge-ipc`
 
 Delete the VM (state lost): `limactl delete edge-ipc`
 
+## Observing logs and status
+
+#### vm: qemu booting
+follow logs of VM booting:
+```
+less -N +F ~/.lima/edge-ipc/serial.log
+# or in color:
+tail -f ~/.lima/edge-ipc/serial.log | bat --paging=never -l log
+```
+or just read them after the fact:
+```
+~/.lima/edge-ipc/serial.log
+```
+
+> [!TIP]
+> for syntax highlighting of .log files use e.g. `bat` https://github.com/sharkdp/bat or a nvim plugin https://github.com/fei6409/log-highlight.nvim
+
+#### vm: cloud-init
+
+[//]: #TODO
+
+#### bootc
+
+```
+sudo bootc status
+```
+
+#### orchestrator.service
+use `journalctl`:
+
+```bash
+limactl shell edge-ipc -- journalctl -u orchestrator.service -f   # follow
+limactl shell edge-ipc -- journalctl -u orchestrator.service -n200  # last 200 lines
+```
+
 ## Key paths inside the VM
 
-This is a bootc/ostree system, so the filesystem is split: `/usr` is a
-**read-only** part of the OS image, while `/etc` and `/var` are **writable** and
-**persist** across OS updates.
+This is a bootc/ostree system. See
+[`../../Documentation/architecture.md`](../../Documentation/architecture.md)
+for the full explanation of `/usr` (read-only, image), `/etc` (writable,
+merged) and `/var` (writable, first-boot-populated only). In the dev VM
+specifically:
 
-| Path | What | Notes |
-|------|------|-------|
-| `/usr/local/bin/amos-orchestrator` | The orchestrator binary | `/usr/local` is a symlink to writable `/var/usrlocal`; the rest of `/usr` is read-only |
-| `/etc/amos/config.toml` | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](./edge-ipc.yaml) |
-| `/var/lib/amos/inventory.json` | Device inventory the agent writes on startup | Standard place for app state; created by the service (runs as root) |
-| `/etc/systemd/system/orchestrator.service` | The systemd service that runs the agent | Enabled at image-build time; starts on boot |
+| Path                                                     | What                                                                      | Notes                                                                                       |
+| -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `/usr/libexec/amos-orchestrator`                         | The orchestrator binary shipped in the image                              | Read-only; updated atomically with the OS                                                   |
+| `/var/usrlocal/bin/amos-orchestrator`                    | The binary the dev VM's service actually runs                             | Writable; populated by `make dev-deploy`. Falls back to a symlink to `/usr/libexec` on boot |
+| `/etc/systemd/system/orchestrator.service.d/10-dev.conf` | Drop-in that redirects `ExecStart` at the writable path above             | Written by [`edge-ipc.yaml`](./edge-ipc.yaml); dev-only — not present in prod images        |
+| `/etc/amos/config.toml`                                  | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](./edge-ipc.yaml)                     |
+| `/var/lib/amos/inventory.json`                           | Device inventory the agent writes on startup                              | Standard place for app state; created by the service (runs as root)                         |
+| `/etc/systemd/system/orchestrator.service`               | The systemd service that runs the agent                                   | Enabled at image-build time; starts on boot                                                 |
 
 > **Heads-up:** run the agent via systemd (it runs as root). Running
 > `amos-orchestrator` by hand as your normal user fails to create `/var/lib/amos`
 > because only root may write under `/var/lib`. Use
 > `sudo systemctl start orchestrator.service` instead.
+
+## Iterating on the orchestrator (hot-swap)
+
+You don't need to rebuild the OS image to test orchestrator changes. The dev
+VM's systemd drop-in points the unit's `ExecStart` at
+`/var/usrlocal/bin/amos-orchestrator` (writable), and `make dev-deploy`
+cross-builds for the VM's arch, drops the binary, and restarts the service:
+
+```bash
+# from the project root, with the VM already running
+make dev-deploy            # native build (host cargo), VM name 'edge-ipc'
+make dev-deploy DEV_VM=my-vm
+make dev-deploy-container   # build in a container instead (macOS / cross-arch)
+```
+
+What `dev-deploy` does:
+
+1. Asks the running VM for its arch (`uname -m`) — this matters because your
+   **host may be macOS arm64 or amd64**, and the VM may have been started with
+   a different `--arch` than the host. The orchestrator must be built for the
+   **VM's** arch, not the host's.
+2. Builds the orchestrator. By default (`make dev-deploy`) it builds with your
+   **host's own cargo** — fast and no podman, but it only produces a binary for
+   the host's arch, so run it on a Linux host matching the VM (e.g. inside the
+   devcontainer). On macOS or to cross-build for a different arch, use
+   `make dev-deploy-container`, which builds inside a Linux `rust:1.95-slim`
+   container at the right `--platform`. Either way output goes to
+   `target/dev-vm-<arch>/release/`, separate from your host-native
+   `target/release/`.
+3. Uploads the binary into the VM with `limactl copy` (scp/sftp over the VM's
+   SSH connection), then `sudo install`s it into
+   `/var/usrlocal/bin/amos-orchestrator` and runs `systemctl restart`.
+
+If the VM isn't running yet, start it as usual — on first boot, the provision
+script symlinks `/var/usrlocal/bin/amos-orchestrator` to `/usr/libexec/...` so
+the service starts cleanly even before you've deployed a dev binary.
 
 ## Troubleshooting
 
