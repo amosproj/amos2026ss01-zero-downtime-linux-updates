@@ -1,122 +1,47 @@
+//! Logic to repeatedly check for application updates and apply them
+
 use std::iter::Peekable;
 use std::sync::Arc;
 use std::time::Duration;
 
 use amos_common::entities::ApplicationConfig;
-use tokio::sync::Mutex;
 use tracing::warn;
 
+use crate::api_client::ApiClient;
 use crate::application::Application;
-use crate::download_manager::DownloadManager;
 use crate::podman::PodmanPullBehaviour::PullIfMissing;
 use crate::podman::log_registry::AppLogRegistry;
 use crate::podman::{Podman, PodmanImage, PodmanImageInfo};
-use crate::state::AgentState;
 
+/// Repeatedly check for application updates and apply them
 pub async fn run_apps_main_loop(
-    agent_state: AgentState,
-    podman: impl Podman,
-    download_manager: Arc<DownloadManager>,
-    registry: AppLogRegistry,
-) {
-    let mut update_interval = tokio::time::interval(Duration::from_secs(
-        agent_state.config.poll_interval_secs as u64,
-    ));
+    mut apps: Vec<Application>,
+    mut podman: impl Podman,
+    api_client: Arc<ApiClient>,
+    poll_interval: Duration,
+    log_registry: AppLogRegistry,
+) -> ! {
+    let mut update_interval = tokio::time::interval(poll_interval);
     // Prevent bursting should an update cycle take longer than expected
     update_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
         update_interval.tick().await;
 
-        if let Err(e) = try_update(
-            &agent_state.apps_state,
-            &podman,
-            &download_manager,
-            &registry,
-        )
-        .await
-        {
+        if let Err(e) = try_update(&mut apps, &mut podman, &api_client, &log_registry).await {
             warn!("Failed to update applications: {:?}", e);
         }
     }
 }
 
-#[allow(dead_code)]
-pub fn resolve_application_ids<C: PodmanImageInfo>(
-    containers: Vec<C>,
-    target_app_configs: &[ApplicationConfig::Model],
-) -> (Vec<(C, i32)>, Vec<C>) {
-    let mut matched = Vec::new();
-    let mut unmatched = Vec::new();
-
-    for container in containers {
-        let app_ref = container
-            .reference()
-            .split(':')
-            .next()
-            .unwrap_or(container.reference());
-        let found = target_app_configs
-            .iter()
-            .find(|cfg| cfg.image.split(':').next().unwrap_or(&cfg.image) == app_ref);
-
-        match found {
-            Some(cfg) => matched.push((container, cfg.id)),
-            None => unmatched.push(container),
-        }
-    }
-
-    (matched, unmatched)
-}
-
 async fn try_update(
-    apps_state: &Mutex<Vec<Application>>,
-    podman: &impl Podman,
-    download_manager: &DownloadManager,
-    registry: &AppLogRegistry,
+    apps: &mut Vec<Application>,
+    podman: &mut impl Podman,
+    api_client: &ApiClient,
+    log_registry: &AppLogRegistry,
 ) -> anyhow::Result<()> {
-    struct TargetApp<'a, P: PodmanImage> {
-        image: P,
-        name: &'a str,
-        environment: Vec<(&'a str, &'a str)>,
-        application_id: i32,
-    }
-
-    impl<'a, P: PodmanImage> TargetApp<'a, P> {
-        async fn from_config(
-            cfg: &'a ApplicationConfig::Model,
-            podman: &'a impl Podman<PImage<'a> = P>,
-        ) -> anyhow::Result<Self> {
-            Ok(Self {
-                image: podman
-                    .image(&cfg.image, PullIfMissing)
-                    .await?
-                    .ok_or(anyhow::anyhow!("Could not pull image"))?,
-                name: cfg
-                    .image
-                    .split('/')
-                    .next_back()
-                    .unwrap_or(&cfg.image)
-                    .split(':')
-                    .next()
-                    .unwrap_or(&cfg.image),
-                environment: vec![],
-                application_id: cfg.id,
-            })
-        }
-    }
-
-    impl<'a, P: PodmanImage> PodmanImageInfo for TargetApp<'a, P> {
-        fn reference(&self) -> &str {
-            self.image.reference()
-        }
-
-        fn digest(&self) -> &str {
-            self.image.digest()
-        }
-    }
-
     // First, pull target config and possibly new images
-    let target_app_configs = download_manager.get_target_application_configs().await?;
+    let target_app_configs = api_client.get_target_application_configs().await?;
     let mut target = futures_util::future::join_all(
         target_app_configs
             .iter()
@@ -128,53 +53,89 @@ async fn try_update(
 
     target.sort_by(order_reference);
 
-    {
-        let mut apps = apps_state.lock().await;
+    apps.sort_by(order_reference);
 
-        apps.sort_by(order_reference);
-
-        for action in ReconcileIterator::new(&apps, target) {
-            match action {
-                ReconcileAction::Create { image } => {
-                    let app = Application::launch_from_image(
-                        &image.image,
-                        image.name,
-                        image.environment,
-                        image.application_id,
-                        registry,
-                    )
+    for action in ReconcileIterator::new(apps, target) {
+        match action {
+            ReconcileAction::Create { image } => {
+                let app = Application::launch_from_image(
+                    &image.image,
+                    image.name,
+                    image.environment,
+                    image.application_id,
+                    log_registry,
+                )
+                .await?;
+                apps.push(app);
+            }
+            ReconcileAction::Update {
+                application_index,
+                target_image,
+            } => {
+                apps.swap_remove(application_index)
+                    .remove(log_registry)
                     .await?;
-                    apps.push(app);
-                }
-                ReconcileAction::Update {
-                    application_index,
-                    target_image,
-                } => {
-                    apps.swap_remove(application_index).remove(registry).await?;
-                    let app = Application::launch_from_image(
-                        &target_image.image,
-                        target_image.name,
-                        target_image.environment,
-                        target_image.application_id,
-                        registry,
-                    )
+                let app = Application::launch_from_image(
+                    &target_image.image,
+                    target_image.name,
+                    target_image.environment,
+                    target_image.application_id,
+                    log_registry,
+                )
+                .await?;
+                apps.push(app);
+            }
+            ReconcileAction::Remove { application_index } => {
+                apps.swap_remove(application_index)
+                    .remove(log_registry)
                     .await?;
-                    apps.push(app);
-                }
-                ReconcileAction::Remove { application_index } => {
-                    apps.swap_remove(application_index).remove(registry).await?;
-                }
             }
         }
     }
 
     for app in target_app_configs {
-        download_manager
+        api_client
             .report_current_application_assignment(app.id)
             .await?;
     }
 
+    podman.prune_images().await?;
+
     Ok(())
+}
+
+struct TargetApp<'a, P: PodmanImage> {
+    image: P,
+    name: &'a str,
+    environment: Vec<(&'a str, &'a str)>,
+    application_id: i32,
+}
+
+impl<'a, P: PodmanImage> TargetApp<'a, P> {
+    async fn from_config(
+        cfg: &'a ApplicationConfig::Model,
+        podman: &'a impl Podman<PImage<'a> = P>,
+    ) -> anyhow::Result<Self> {
+        Ok(Self {
+            image: podman
+                .image(&cfg.image, PullIfMissing)
+                .await?
+                .ok_or(anyhow::anyhow!("Could not pull image"))?,
+            name: &cfg.image,
+            environment: vec![],
+            application_id: cfg.id,
+        })
+    }
+}
+
+impl<'a, P: PodmanImage> PodmanImageInfo for TargetApp<'a, P> {
+    fn reference(&self) -> &str {
+        self.image.reference()
+    }
+
+    fn digest(&self) -> &str {
+        self.image.digest()
+    }
 }
 
 /// Iterator to generate actions for merging the target application state
@@ -284,7 +245,7 @@ enum ReconcileAction<PI: PodmanImageInfo> {
     },
 }
 
-fn order_reference<A: PodmanImageInfo, B: PodmanImageInfo>(a: &A, b: &B) -> std::cmp::Ordering {
+fn order_reference(a: &impl PodmanImageInfo, b: &impl PodmanImageInfo) -> std::cmp::Ordering {
     a.reference().cmp(b.reference())
 }
 
@@ -352,6 +313,32 @@ mod tests {
             })
         ));
         assert!(iter.next().is_none())
+    }
+
+    fn resolve_application_ids<C: PodmanImageInfo>(
+        containers: Vec<C>,
+        target_app_configs: &[ApplicationConfig::Model],
+    ) -> (Vec<(C, i32)>, Vec<C>) {
+        let mut matched = Vec::new();
+        let mut unmatched = Vec::new();
+
+        for container in containers {
+            let app_ref = container
+                .reference()
+                .split(':')
+                .next()
+                .unwrap_or(container.reference());
+            let found = target_app_configs
+                .iter()
+                .find(|cfg| cfg.image.split(':').next().unwrap_or(&cfg.image) == app_ref);
+
+            match found {
+                Some(cfg) => matched.push((container, cfg.id)),
+                None => unmatched.push(container),
+            }
+        }
+
+        (matched, unmatched)
     }
 
     #[test]

@@ -1,5 +1,6 @@
+//! Helper modules to e.g. wrap hardware or other software
+
 pub mod bootc_wrapper;
 pub mod device_jwt;
 pub mod executer;
-pub mod os_tree;
 pub mod tpm;

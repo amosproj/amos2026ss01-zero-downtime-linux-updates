@@ -13,7 +13,6 @@ base64 = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }
 config = { workspace = true }
-ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
 podman-api = { version = "0.11", default-features = false }
 reqwest = { version = "0.13.3", features = ["json"] }
 rsa = { version = "0.9.10", features = ["pem"] }
@@ -32,4 +31,3 @@ jsonwebtoken = { workspace = true }
 serial_test = "3.4.0"
 mockall = "0.14"
 rand = "0.10.1"
-tempfile = "3"

@@ -1,12 +1,10 @@
-// TODO: Remove this once this is integrated
-#![allow(dead_code)]
+//! Interact with the Podman socket
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures_util::stream::BoxStream;
 
 pub mod log_registry;
-pub mod mock;
 pub mod wrapper;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -28,8 +26,6 @@ pub trait PodmanLogHandle: Send + 'static {
         follow: bool,
         since: Option<DateTime<Utc>>,
     ) -> BoxStream<'static, anyhow::Result<LogChunk>>;
-
-    fn name(&self) -> &str;
 }
 
 #[async_trait]
@@ -69,17 +65,20 @@ pub trait PodmanImage: PodmanImageInfo + Send {
 
 #[async_trait]
 pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
+    type LogHandle: PodmanLogHandle;
+
     async fn start(&mut self) -> anyhow::Result<()>;
+    #[allow(dead_code)]
     async fn stop(&mut self) -> anyhow::Result<()>;
     async fn destroy(self) -> anyhow::Result<()>;
     async fn state(&self) -> anyhow::Result<PodmanContainerState>;
     async fn wait_for_state_change(&self, current: PodmanContainerState) -> anyhow::Result<()>;
     fn name(&self) -> &str;
-    type LogHandle: PodmanLogHandle;
-    fn log_handle(&self) -> Self::LogHandle;
+    fn take_log_handle(&mut self) -> Option<Self::LogHandle>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[expect(unused)]
 pub enum PodmanPullBehaviour {
     AlwaysPull,
     PullIfMissingOrNewer,
