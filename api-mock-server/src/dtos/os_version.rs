@@ -13,6 +13,10 @@ pub struct Model {
     pub orchestrator_version: String,
 
     pub description: Option<String>,
+
+    pub deleted_at: Option<DateTimeUtc>,
+
+    pub superseded_by: Option<i32>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -24,6 +28,8 @@ impl Model {
             commit_hash: self.commit_hash,
             orchestrator_version: self.orchestrator_version,
             description: self.description,
+            deleted_at: self.deleted_at,
+            superseded_by: self.superseded_by,
         }
     }
 }

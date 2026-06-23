@@ -5,12 +5,13 @@ use tracing::{debug, error, info, warn};
 
 use crate::application::Application;
 use crate::loop_os::run_os_tree_main_loop;
+use crate::podman::PodmanContainer;
+use crate::podman::log_registry::spawn_app_log_registry;
 use crate::podman::wrapper::PodmanWrapper;
 use crate::state::OsState;
 use crate::update_check::{CheckForUpdate, UpdateChecker};
 use crate::util::bootc_wrapper::Bootc;
 use crate::util::executer::RealExecuter;
-
 use crate::{
     inventory::collect_and_save_inventory, loop_apps::run_apps_main_loop, state::AgentState,
 };
@@ -151,16 +152,47 @@ async fn main() {
         update_ostree_commit: bootc_status.staged.map(|s| s.checksum),
     };
 
+    let download_manager = Arc::new(
+        match download_manager::DownloadManager::new(Arc::clone(&config), signer) {
+            Ok(dm) => dm,
+            Err(err) => {
+                error!("Failed to initialize secure cloud HTTP client: {:?}", err);
+                std::process::exit(1);
+            }
+        },
+    );
+
+    info!("Log shipper starting");
+    logging::spawn_log_shipper(log_rx, Arc::clone(&download_manager));
+    info!("Log shipper started");
+
+    info!("Application log registry starting");
+    let app_log_registry = spawn_app_log_registry(Arc::clone(&download_manager));
+    info!("Application log registry started");
+
     info!("Reading inital application state");
-    let (podman, containers) = match PodmanWrapper::connect(Path::new(&config.podman_path)).await {
-        Ok(v) => v,
-        Err(err) => {
-            error!("Failed to connect to podman: {}", err);
-            log_flusher.flush().await;
-            std::process::exit(1);
-        }
-    };
-    let apps_state = containers.into_iter().map(Application::wrap).collect();
+    let (podman, containers) = PodmanWrapper::connect(Path::new(&config.podman_path))
+        .await
+        .unwrap();
+
+    // Idk how else to get application ids other than this
+    let target_configs = download_manager
+        .get_target_application_configs()
+        .await
+        .unwrap_or_default();
+    let (matched, unmatched) = loop_apps::resolve_application_ids(containers, &target_configs);
+
+    for c in &unmatched {
+        warn!(
+            container = c.name(),
+            "No matching application config for recovered container"
+        );
+    }
+
+    let apps_state = matched
+        .into_iter()
+        .map(|(c, id)| Application::wrap(c, id, &app_log_registry))
+        .collect();
 
     debug!("Creating AgentState");
     let agent_state = AgentState::new(VERSION, Arc::clone(&config), os_state, apps_state);
@@ -177,6 +209,7 @@ async fn main() {
         agent_state.clone(),
         podman,
         Arc::clone(&download_manager),
+        app_log_registry.clone(),
     ));
     let _os_tree_handle = tokio::spawn(run_os_tree_main_loop(
         agent_state.clone(),

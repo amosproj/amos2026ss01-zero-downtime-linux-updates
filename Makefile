@@ -7,6 +7,16 @@ IMAGE_BUILDER ?= ghcr.io/osbuild/image-builder-cli:latest
 HOST_ARCH     := $(shell uname -m | sed -e s/arm64/aarch64/ -e s/amd64/x86_64/)
 DOCKER_ARCH    = $(subst aarch64,arm64,$(subst x86_64,amd64,$(ARCH)))
 
+# dev-deploy: name of the running Lima VM and a scratch path inside the guest
+# used as the drop point for the freshly built binary, which `limactl copy`
+# (scp/sftp over the VM's SSH connection) uploads there.
+DEV_VM        ?= edge-ipc
+DEV_VM_TMP    ?= /tmp
+RUST_VERSION  ?= 1.95
+# Per-arch suffix (-amd64 / -arm64) is appended at use site to keep cross-arch
+# builds from clobbering each other in podman's local storage.
+RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
+
 # Prebuilt disk image published by .github/workflows/disk-image.yml as an OCI
 # artifact (each tag bundles both <name>.raw.xz and <name>.qcow2.xz).
 # PULL_REF is required: pass the branch/release tag (without the arch suffix),
@@ -18,7 +28,7 @@ PULL_REF      ?=
 # produced by the older `bootc-image-builder` container: its installer +
 # kickstart support (the `anaconda-iso` type, auto-reading /config.toml) is the
 # best-documented path. Both flows consume the same bootc image, so this is fine.
-ISO_CONFIG    ?= bootc/iso/config.toml
+ISO_CONFIG    ?= bootc-build/iso/config.toml
 BIB           ?= quay.io/centos-bootc/bootc-image-builder:latest
 ISO_TYPE      ?= anaconda-iso
 FS            ?= ext4
@@ -75,6 +85,9 @@ image-arm64: ARCH := aarch64
 image-arm64: _image-build ## Build arm64 disk image (cross-arch if host is amd64; needs qemu-user-static)
 
 _image-build:
+	@for t in podman; do \
+	  command -v $$t >/dev/null 2>&1 || { echo "Error: '$$t' not found. Install it with your package manager (e.g. \`brew install $$t\`)." >&2; exit 1; }; \
+	done
 	@echo ">>> Building disk image for $(ARCH)"
 	mkdir -p $(TMP_DIR) $(DIST_DIR)/qcow2 $(DIST_DIR)/image
 	podman build \
@@ -102,8 +115,15 @@ pull-image-arm64: _image-pull ## Download prebuilt arm64 disk image (raw) from G
 # Lima's `location:` can't consume an OCI/oras ref, so we pull + decompress the
 # artifact into the same dist/ paths the local `image` targets write, which the
 # edge-ipc.yaml template points at.
+#
+# Each tag bundles both <name>.raw.xz and <name>.qcow2.xz. `oras pull` would
+# fetch both layers; resolve the digest of the one we need and `oras blob
+# fetch` just that.
 _image-pull:
 	@set -eu; \
+	for t in oras jq xz; do \
+	  command -v $$t >/dev/null 2>&1 || { echo "Error: '$$t' not found. Install it with your package manager (e.g. \`brew install $$t\`)." >&2; exit 1; }; \
+	done; \
 	if [ -z "$(PULL_REF)" ]; then \
 	  echo "PULL_REF is required, e.g. make pull-image PULL_REF=feat-create-test-setup (pulls feat-create-test-setup-amd64)" >&2; \
 	  exit 1; \
@@ -115,9 +135,14 @@ _image-pull:
 	esac; \
 	ref="$(GHCR_DISK):$(PULL_REF)-$$gharch"; \
 	art="amos-edge-$(PULL_REF)-$$gharch.$$fmt.xz"; \
-	echo ">>> Pulling $$ref"; \
+	echo ">>> Pulling $$art from $$ref"; \
 	mkdir -p $(TMP_DIR) $(DIST_DIR)/qcow2 $(DIST_DIR)/image; \
-	oras pull -o $(TMP_DIR) "$$ref"; \
+	digest=$$(oras manifest fetch "$$ref" | \
+	  jq -r --arg name "$$art" '.layers[] | select(.annotations."org.opencontainers.image.title" == $$name) | .digest'); \
+	if [ -z "$$digest" ]; then \
+	  echo "could not find layer $$art in $$ref" >&2; exit 1; \
+	fi; \
+	oras blob fetch --output "$(TMP_DIR)/$$art" "$(GHCR_DISK)@$$digest"; \
 	echo ">>> Decompressing $$art -> $$dest"; \
 	xz -dc "$(TMP_DIR)/$$art" > "$$dest"; \
 	echo ">>> Ready: $$dest"
@@ -125,6 +150,65 @@ _image-pull:
 image-clean: ## Remove locally built disk images
 	rm -rf $(DIST_DIR)
 	rm -rf $(TMP_DIR)
+
+# dev-deploy: build the orchestrator, copy it into the VM with `limactl copy`,
+# and restart the service. The VM's systemd drop-in points ExecStart at
+# /var/usrlocal/bin/amos-orchestrator, so this swaps the binary without
+# rebuilding the OS image.
+#
+# Two build backends, selected by BUILD:
+#   native (default)  - `make dev-deploy`: build with the host's cargo. No
+#                       podman, but only builds for the host's own arch, so run
+#                       it on a Linux host matching the VM (e.g. the devcontainer).
+#   container         - `make dev-deploy-container`: cross-build inside a Linux
+#                       Rust container; works on macOS and across arches.
+dev-deploy: BUILD := native
+dev-deploy: _dev-deploy ## Build orchestrator with the host's cargo (no container) and hot-swap+restart
+
+dev-deploy-container: BUILD := container
+dev-deploy-container: _dev-deploy ## Cross-build orchestrator in a container for the running VM and hot-swap+restart
+
+_dev-deploy:
+	@set -eu; \
+	command -v limactl >/dev/null 2>&1 || { echo "Error: 'limactl' not found." >&2; exit 1; }; \
+	vm_arch=$$(limactl shell $(DEV_VM) -- uname -m | tr -d '\r'); \
+	case "$$vm_arch" in \
+	  aarch64) plat=linux/arm64 ;; \
+	  x86_64)  plat=linux/amd64 ;; \
+	  *) echo "unsupported VM arch: $$vm_arch" >&2; exit 1 ;; \
+	esac; \
+	target=$(CURDIR)/target/dev-vm-$$vm_arch; \
+	mkdir -p $$target; \
+	bin=$$target/debug/amos-orchestrator; \
+	if [ "$(BUILD)" = native ]; then \
+	  command -v cargo >/dev/null 2>&1 || { echo "Error: 'cargo' not found. Install Rust or use 'make dev-deploy-container'." >&2; exit 1; }; \
+	  echo ">>> Building amos-orchestrator natively -> $$target/release/"; \
+	  cargo build --package amos-orchestrator --target-dir $$target; \
+	else \
+	  command -v podman >/dev/null 2>&1 || { echo "Error: 'podman' not found." >&2; exit 1; }; \
+	  plat_arch=$$(echo $$plat | cut -d/ -f2); \
+	  builder_tag=$(RUST_BUILDER)-$$plat_arch; \
+	  echo ">>> Ensuring rust builder image $$builder_tag (rust + libtss2-dev)"; \
+	  podman build --platform $$plat \
+	    --build-arg RUST_VERSION=$(RUST_VERSION) \
+	    -f dev-env/rust-builder.Containerfile \
+	    -t $$builder_tag dev-env; \
+	  echo ">>> Building amos-orchestrator for VM ($$vm_arch, $$plat) -> $$target/release/"; \
+	  podman run --rm --platform $$plat \
+	    -v $(CURDIR):/workspace \
+	    -w /workspace \
+	    $$builder_tag \
+	    cargo build --package amos-orchestrator \
+	      --target-dir /workspace/target/dev-vm-$$vm_arch; \
+	  bin=$$target/debug/amos-orchestrator; \
+	fi; \
+	echo ">>> Uploading $$bin to $(DEV_VM):$(DEV_VM_TMP)/amos-orchestrator.new"; \
+	limactl copy $$bin $(DEV_VM):$(DEV_VM_TMP)/amos-orchestrator.new; \
+	echo ">>> Installing into $(DEV_VM):/var/usrlocal/bin/amos-orchestrator and restarting"; \
+	limactl shell $(DEV_VM) -- sudo install -m755 $(DEV_VM_TMP)/amos-orchestrator.new /var/usrlocal/bin/amos-orchestrator; \
+	limactl shell $(DEV_VM) -- sudo systemctl daemon-reload; \
+	limactl shell $(DEV_VM) -- sudo systemctl restart orchestrator.service; \
+	echo ">>> Deployed. Tail logs: limactl shell $(DEV_VM) -- journalctl -u orchestrator.service -f"
 
 # ---------------------------------------------------------------------------
 # Installer ISO for bare-metal IPCs. The ISO embeds our bootc image and

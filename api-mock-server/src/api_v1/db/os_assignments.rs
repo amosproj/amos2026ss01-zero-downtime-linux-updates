@@ -2,6 +2,7 @@ use crate::dtos;
 use amos_common::entities::OsAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
@@ -18,7 +19,10 @@ pub async fn list_os_assignments(
     page_size: u64,
 ) -> Result<(Vec<OsAssignment::Model>, u64), DbErr> {
     let db = db!();
-    let mut query = dtos::OsAssignment::Entity::find().order_by_asc(dtos::OsAssignment::Column::Id);
+    let mut query = dtos::OsAssignment::Entity::find()
+        .filter(dtos::OsAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::OsAssignment::Column::SupersededBy.is_null())
+        .order_by_asc(dtos::OsAssignment::Column::Id);
     if let Some(id) = os_version_id {
         query = query.filter(dtos::OsAssignment::Column::OsVersionId.eq(id));
     }
@@ -40,6 +44,8 @@ pub async fn list_os_assignments(
 pub async fn get_os_assignment(id: i32) -> Result<Option<OsAssignment::Model>, DbErr> {
     let db = db!();
     Ok(dtos::OsAssignment::Entity::find_by_id(id)
+        .filter(dtos::OsAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::OsAssignment::Column::SupersededBy.is_null())
         .one(&db)
         .await?
         .map(|m| m.into_api()))
@@ -55,6 +61,8 @@ pub async fn add_os_assignment(
         os_version_id: Set(os_version_id),
         device_id: Set(device_id),
         group_id: Set(group_id),
+        deleted_at: NotSet,
+        superseded_by: NotSet,
     };
 
     let db = db!();
@@ -75,21 +83,51 @@ pub async fn update_os_assignment(
     group_id: Option<i32>,
 ) -> Result<OsAssignment::Model, DbErr> {
     let db = db!();
-    let os_assignment = dtos::OsAssignment::ActiveModel {
-        id: Set(id),
+
+    let current = dtos::OsAssignment::Entity::find_by_id(id)
+        .filter(dtos::OsAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::OsAssignment::Column::SupersededBy.is_null())
+        .one(&db)
+        .await?
+        .ok_or(DbErr::RecordNotFound("OsAssignment not found".into()))?;
+
+    let new_assignment = dtos::OsAssignment::ActiveModel {
+        id: NotSet,
         os_version_id: Set(os_version_id),
         device_id: Set(device_id),
         group_id: Set(group_id),
+        deleted_at: NotSet,
+        superseded_by: NotSet,
     };
-    let updated_os_assignment = os_assignment.update(&db).await?;
-    debug!("Updated OS version assignment: {:?}", updated_os_assignment);
-    Ok(updated_os_assignment.into_api())
+    let new_assignment = new_assignment.insert(&db).await?;
+
+    let mut old_active: dtos::OsAssignment::ActiveModel = current.into();
+    old_active.superseded_by = Set(Some(new_assignment.id));
+    old_active.update(&db).await?;
+
+    debug!(
+        "Updated OS assignment via append-only: {:?}",
+        new_assignment
+    );
+    Ok(new_assignment.into_api())
 }
 
 pub async fn delete_os_assignment(id: i32) -> Result<u64, DbErr> {
     let db = db!();
-    let del = dtos::OsAssignment::Entity::delete_by_id(id)
-        .exec(&db)
+
+    let current = dtos::OsAssignment::Entity::find_by_id(id)
+        .filter(dtos::OsAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::OsAssignment::Column::SupersededBy.is_null())
+        .one(&db)
         .await?;
-    Ok(del.rows_affected)
+
+    match current {
+        Some(assignment) => {
+            let mut active: dtos::OsAssignment::ActiveModel = assignment.into();
+            active.deleted_at = Set(Some(chrono::Utc::now()));
+            active.update(&db).await?;
+            Ok(1)
+        }
+        None => Ok(0),
+    }
 }

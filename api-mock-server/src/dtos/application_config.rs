@@ -25,9 +25,13 @@ pub struct Model {
 
     pub image: String,
 
-    pub config: String,
+    pub config: Option<String>,
 
     pub version: i32,
+
+    pub deleted_at: Option<DateTimeUtc>,
+
+    pub superseded_by: Option<i32>,
 }
 
 #[async_trait::async_trait]
@@ -64,6 +68,8 @@ impl Model {
             image: self.image,
             config: self.config,
             version: self.version,
+            deleted_at: self.deleted_at,
+            superseded_by: self.superseded_by,
         }
     }
 }

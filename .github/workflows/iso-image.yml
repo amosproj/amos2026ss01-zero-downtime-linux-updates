@@ -77,7 +77,6 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_ref }}" ]; then
             TAG="${{ inputs.image_ref }}"
             SAFE_REF="${{ github.ref_name }}"
-(??)
           else
             HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
             TAG="commit-${HEAD_SHA:0:7}"
@@ -95,7 +94,6 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-(??)
       - name: Pull the bootc image into root storage
         run: sudo podman pull "${IMAGE_REF}"
 
@@ -106,7 +104,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: rpmmd-cache
-          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc/iso/config.toml') }}
+          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc-build/iso/config.toml') }}
           restore-keys: |
             ${{ runner.os }}-iso-rpmmd-
 
@@ -117,7 +115,7 @@ jobs:
           mkdir -p "$PWD/dist" "$PWD/rpmmd-cache"
           sudo podman run --rm --privileged --pull=newer \
             --security-opt label=type:unconfined_t \
-            -v "$PWD/bootc/iso/config.toml":/config.toml:ro \
+            -v "$PWD/bootc-build/iso/config.toml":/config.toml:ro \
             -v "$PWD/dist":/output \
             -v "$PWD/rpmmd-cache":/rpmmd:Z \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
@@ -139,7 +137,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: rpmmd-cache
-          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc/iso/config.toml') }}
+          key: ${{ runner.os }}-iso-rpmmd-${{ hashFiles('bootc-build/iso/config.toml') }}
 
       - name: Rename ISO for download
         id: rename

@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 fn default_version() -> i32 {
@@ -11,8 +12,10 @@ pub struct Model {
     pub group_id: Option<i32>,
     pub application_id: i32,
     pub image: String,
-    pub config: String,
     pub version: i32,
+    pub config: Option<String>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub superseded_by: Option<i32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

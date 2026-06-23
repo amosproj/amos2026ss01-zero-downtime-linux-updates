@@ -1,4 +1,8 @@
 // Mock Podman for testing purposes
+use chrono::{DateTime, Utc};
+use futures_util::stream::{self, BoxStream, StreamExt as _};
+
+use super::{LogChunk, LogStreamKind, PodmanLogHandle};
 
 use std::time::Duration;
 
@@ -12,6 +16,41 @@ pub struct PodmanMockContainer {
     name: String,
     reference: String,
     state: super::PodmanContainerState,
+}
+
+pub struct PodmanMockLogHandle {
+    name: String,
+}
+
+impl PodmanLogHandle for PodmanMockLogHandle {
+    fn logs(
+        self,
+        follow: bool,
+        _since: Option<DateTime<Utc>>,
+    ) -> BoxStream<'static, anyhow::Result<LogChunk>> {
+        let canned = vec![
+            Ok(LogChunk {
+                stream: LogStreamKind::Stdout,
+                time: Some(Utc::now()),
+                message: format!("[mock] {} starting up", self.name),
+            }),
+            Ok(LogChunk {
+                stream: LogStreamKind::Stdout,
+                time: Some(Utc::now()),
+                message: format!("[mock] {} ready", self.name),
+            }),
+        ];
+
+        if follow {
+            stream::iter(canned).chain(stream::pending()).boxed()
+        } else {
+            stream::iter(canned).boxed()
+        }
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[async_trait]
@@ -123,5 +162,11 @@ impl super::PodmanContainer for PodmanMockContainer {
 
     fn name(&self) -> &str {
         &self.name
+    }
+    type LogHandle = PodmanMockLogHandle;
+    fn log_handle(&self) -> Self::LogHandle {
+        PodmanMockLogHandle {
+            name: self.name.clone(),
+        }
     }
 }

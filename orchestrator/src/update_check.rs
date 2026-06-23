@@ -171,6 +171,8 @@ mod tests {
             commit_hash: commit.into(),
             orchestrator_version: "0.1.0".into(),
             description: None,
+            deleted_at: None,
+            superseded_by: None,
         }
     }
 
@@ -181,8 +183,10 @@ mod tests {
             group_id: Some(1),
             application_id: 1,
             image: image.into(),
-            config: "{}".into(),
+            config: Some("{}".into()),
             version: 1,
+            deleted_at: None,
+            superseded_by: None,
         }
     }
 
