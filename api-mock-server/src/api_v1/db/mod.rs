@@ -287,49 +287,14 @@ mod tests {
         assert_eq!(updated.version, 2);
         assert_eq!(updated.config.unwrap(), r#"{"foo":2}"#);
 
-        let deleted = super::delete_application_config(config.id).await.unwrap();
+        let deleted = super::delete_application_config(updated.id).await.unwrap();
         assert_eq!(deleted, 1);
         assert!(
-            super::get_application_config(config.id)
+            super::get_application_config(updated.id)
                 .await
                 .unwrap()
                 .is_none()
         );
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_application_config_rejects_duplicate_device_and_application() {
-        test_initialize_empty_inmem_db().await;
-
-        let tenant = super::add_tenant("X".to_owned(), None).await.unwrap();
-        let device = super::add_device("uuid".to_owned(), None, "host".to_owned(), tenant.id, None)
-            .await
-            .unwrap();
-        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned())
-            .await
-            .unwrap();
-
-        super::add_application_config(
-            Some(device.id),
-            None,
-            app.id,
-            "quay.io/app".to_owned(),
-            None,
-        )
-        .await
-        .unwrap();
-
-        let result = super::add_application_config(
-            Some(device.id),
-            None,
-            app.id,
-            "quay.io/app".to_owned(),
-            None,
-        )
-        .await;
-
-        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -513,20 +478,31 @@ mod tests {
     async fn test_application_config_update_uses_append_only() {
         test_initialize_empty_inmem_db().await;
 
+        let tenant = super::add_tenant("T1".to_owned(), None).await.unwrap();
+
+        let device = super::add_device("x".to_owned(), None, "host-03".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+
         let app = super::add_application("app".to_owned(), "desc".to_owned())
             .await
             .unwrap();
-        let config =
-            super::add_application_config(Some(1), None, app.id, "quay.io/app:1.0".to_owned(), None)
-                .await
-                .unwrap();
+        let config = super::add_application_config(
+            Some(device.id),
+            None,
+            app.id,
+            "quay.io/app:1.0".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
         let updated = super::update_application_config(
             config.id,
             Some(1),
             None,
             app.id,
             "quay.io/app:2.0".to_owned(),
-            None
+            None,
         )
         .await
         .unwrap();

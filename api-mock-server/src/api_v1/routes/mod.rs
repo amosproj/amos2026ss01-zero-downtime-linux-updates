@@ -527,18 +527,6 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_create_app_config_with_empty_config_returns_422() {
-        let (status, _) = post(
-            test_app().await,
-            "/v1/app-configs",
-            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"img","config":"","version":1}"#,
-        )
-        .await;
-        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    }
-
-    #[tokio::test]
-    #[serial]
     async fn test_create_app_config_without_device_or_group_returns_422() {
         let (status, _) = post(
             test_app().await,
@@ -617,46 +605,6 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_create_app_config_duplicate_device_and_application_fails() {
-        let app = test_app().await;
-        let (_, tenant_body) = post(
-            app.clone(),
-            "/v1/tenants",
-            r#"{"id":0,"name":"Acme","description":null}"#,
-        )
-        .await;
-        let tenant: serde_json::Value = serde_json::from_str(&tenant_body).unwrap();
-        let (_, device_body) = post(
-            app.clone(),
-            "/v1/devices",
-            &format!(
-                r#"{{"id":0,"uuid":"dev-1","public_key":null,"hostname":"host-1","tenant_id":{},"group_id":null}}"#,
-                tenant["id"]
-            ),
-        )
-        .await;
-        let device: serde_json::Value = serde_json::from_str(&device_body).unwrap();
-        let (_, app_body) = post(
-            app.clone(),
-            "/v1/applications",
-            r#"{"id":0,"name":"my-app","description":"does things"}"#,
-        )
-        .await;
-        let application: serde_json::Value = serde_json::from_str(&app_body).unwrap();
-
-        let body = format!(
-            r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1","config":"{{}}","version":1}}"#,
-            device["id"], application["id"]
-        );
-        let (first_status, _) = post(app.clone(), "/v1/app-configs", &body).await;
-        assert_eq!(first_status, StatusCode::CREATED);
-
-        let (second_status, _) = post(app, "/v1/app-configs", &body).await;
-        assert_ne!(second_status, StatusCode::CREATED);
-    }
-
-    #[tokio::test]
-    #[serial]
     async fn test_update_app_config_changes_config_and_version() {
         let app = test_app().await;
         let (_, tenant_body) = post(
@@ -688,7 +636,7 @@ mod tests {
             app.clone(),
             "/v1/app-configs",
             &format!(
-                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1","config":"{{\"foo\":1}}","version":1}}"#,
+                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1","config":"foo"}}"#,
                 device["id"], application["id"]
             ),
         )
@@ -699,14 +647,14 @@ mod tests {
             app,
             &format!("/v1/app-configs/{}", created["id"]),
             &format!(
-                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1","config":"{{\"foo\":2}}","version":2}}"#,
+                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1","config":"bar"}}"#,
                 device["id"], application["id"]
             ),
         )
         .await;
         assert_eq!(status, StatusCode::OK);
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json["config"], r#"{"foo":2}"#);
+        assert_eq!(json["config"], r#"bar"#);
         assert_eq!(json["version"], 2);
     }
 

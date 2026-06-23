@@ -40,6 +40,12 @@ impl ActiveModelBehavior for ActiveModel {
     where
         C: ConnectionTrait,
     {
+        if matches!(self.device_id, ActiveValue::Unchanged(_))
+            && matches!(self.group_id, ActiveValue::Unchanged(_))
+        {
+            return Ok(self);
+        }
+
         let has_device = matches!(self.device_id.clone(), ActiveValue::Set(Some(_)));
         let has_group = matches!(self.group_id.clone(), ActiveValue::Set(Some(_)));
 
