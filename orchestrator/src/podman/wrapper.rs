@@ -183,13 +183,17 @@ impl PodmanWrapper {
             .into_iter()
             .map(async |c: podman_api::models::ListContainer| {
                 let image = self.podman.images().get(c.image_id?).inspect().await.ok()?;
+                let containers = self.podman.containers();
+                let name = c.names?.pop()?;
                 Some(PodmanWrapperContainer {
-                    container: self.podman.containers().get(c.id.as_deref()?),
-                    podman: self.podman.clone(),
-                    id: c.id?,
-                    name: c.names?.pop()?,
+                    container: containers.get(c.id.as_deref()?),
+                    name: name.clone(),
                     image_ref: image.names_history?.pop()?,
                     image_digest: image.digest?,
+                    log_handle: Some(PodmanWrapperLogHandle {
+                        container: containers.get(c.id.as_deref()?),
+                        name,
+                    }),
                 })
             });
 
@@ -247,27 +251,27 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
 
         Ok(PodmanWrapperContainer {
             container: pc.get(&output.id),
-            podman: self.podman.podman.clone(),
-            id: output.id,
             name: name.to_owned(),
             image_ref: self.reference.clone(),
             image_digest: self.digest.clone(),
+            log_handle: Some(PodmanWrapperLogHandle {
+                container: pc.get(&output.id),
+                name: name.to_owned(),
+            }),
         })
     }
 }
 
 pub struct PodmanWrapperContainer {
     container: podman_api::api::Container,
-    podman: podman_api::Podman,
-    id: String,
     name: String,
     image_ref: String,
     image_digest: String,
+    log_handle: Option<PodmanWrapperLogHandle>,
 }
 
 pub struct PodmanWrapperLogHandle {
-    podman: podman_api::Podman,
-    id: String,
+    container: podman_api::api::Container,
     name: String,
 }
 
@@ -291,8 +295,7 @@ impl PodmanLogHandle for PodmanWrapperLogHandle {
         // stream body below, so everything the stream borrows from stays
         // alive for as long as the stream itself
         async_stream::try_stream! {
-            let container = self.podman.containers().get(&self.id);
-            let mut raw = container.logs(&opts);
+            let mut raw = self.container.logs(&opts);
             while let Some(chunk) = raw.next().await {
                 match chunk? {
                     TtyChunk::StdOut(b) => yield parse_log_line(LogStreamKind::Stdout, &b),
@@ -321,6 +324,8 @@ impl super::PodmanImageInfo for PodmanWrapperContainer {
 
 #[async_trait]
 impl super::PodmanContainer for PodmanWrapperContainer {
+    type LogHandle = PodmanWrapperLogHandle;
+
     async fn start(&mut self) -> anyhow::Result<()> {
         if self.state().await? == PodmanContainerState::Stopped {
             self.container.start(None).await?;
@@ -384,14 +389,8 @@ impl super::PodmanContainer for PodmanWrapperContainer {
         &self.name
     }
 
-    type LogHandle = PodmanWrapperLogHandle;
-
-    fn log_handle(&self) -> Self::LogHandle {
-        PodmanWrapperLogHandle {
-            podman: self.podman.clone(),
-            id: self.id.clone(),
-            name: self.name.clone(),
-        }
+    fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
+        self.log_handle.take()
     }
 }
 
@@ -617,7 +616,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let container = img
+        let mut container = img
             .create_container("test-logs-container", None)
             .await
             .unwrap();
@@ -627,7 +626,7 @@ mod tests {
         // stopping. For a quick non-following smoke test we don't even
         // need to start() it long-term; just enough output to exist.
 
-        let log_handle = container.log_handle();
+        let log_handle = container.take_log_handle().unwrap();
         let mut stream = log_handle.logs(false, None); // follow=false: read what's there, then end
 
         let mut lines = Vec::new();

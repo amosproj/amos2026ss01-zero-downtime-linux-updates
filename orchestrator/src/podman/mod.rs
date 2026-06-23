@@ -67,6 +67,8 @@ pub trait PodmanImage: PodmanImageInfo + Send {
 
 #[async_trait]
 pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
+    type LogHandle: PodmanLogHandle;
+    
     async fn start(&mut self) -> anyhow::Result<()>;
     #[allow(dead_code)]
     async fn stop(&mut self) -> anyhow::Result<()>;
@@ -74,8 +76,7 @@ pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
     async fn state(&self) -> anyhow::Result<PodmanContainerState>;
     async fn wait_for_state_change(&self, current: PodmanContainerState) -> anyhow::Result<()>;
     fn name(&self) -> &str;
-    type LogHandle: PodmanLogHandle;
-    fn log_handle(&self) -> Self::LogHandle;
+    fn take_log_handle(&mut self) -> Option<Self::LogHandle>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

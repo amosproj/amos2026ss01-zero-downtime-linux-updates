@@ -1,6 +1,5 @@
-use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 use amos_common::entities::{ApplicationLog, LogLevel};
 use chrono::Utc;

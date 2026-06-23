@@ -25,7 +25,7 @@ pub struct Application {
 
 impl Application {
     pub fn wrap(
-        container: impl PodmanContainer,
+        mut container: impl PodmanContainer,
         application_id: i32,
         registry: &AppLogRegistry,
     ) -> Self {
@@ -34,11 +34,13 @@ impl Application {
             app_name: container.name().to_owned(),
         };
 
-        registry.add(
-            application_id,
-            container.name().to_owned(),
-            container.log_handle().logs(true, None),
-        );
+        if let Some(log_handle) = container.take_log_handle() {
+            registry.add(
+                application_id,
+                container.name().to_owned(),
+                log_handle.logs(true, None),
+            );
+        }
 
         Application {
             image_reference: container.reference().to_owned(),
@@ -291,8 +293,8 @@ mod tests {
             }
 
             type LogHandle = NoopLogHandle;
-            fn log_handle(&self) -> Self::LogHandle {
-                NoopLogHandle
+            fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
+                Some(NoopLogHandle)
             }
             fn name(&self) -> &str {
                 "testname"
@@ -355,8 +357,8 @@ mod tests {
                 Ok(())
             }
             type LogHandle = NoopLogHandle;
-            fn log_handle(&self) -> Self::LogHandle {
-                NoopLogHandle
+            fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
+                Some(NoopLogHandle)
             }
             fn name(&self) -> &str {
                 "testname"
@@ -430,8 +432,8 @@ mod tests {
                 Ok(())
             }
             type LogHandle = NoopLogHandle;
-            fn log_handle(&self) -> Self::LogHandle {
-                NoopLogHandle
+            fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
+                Some(NoopLogHandle)
             }
             fn name(&self) -> &str {
                 "testname"
@@ -506,8 +508,8 @@ mod tests {
                 Ok(())
             }
             type LogHandle = NoopLogHandle;
-            fn log_handle(&self) -> Self::LogHandle {
-                NoopLogHandle
+            fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
+                Some(NoopLogHandle)
             }
             fn name(&self) -> &str {
                 "testname"
