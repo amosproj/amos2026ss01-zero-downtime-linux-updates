@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::sync::Arc;
+use std::{collections::HashMap, time::Duration};
 
 use amos_common::entities::{ApplicationLog, LogLevel};
 use chrono::Utc;
@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 use tokio_stream::{StreamExt as _, StreamMap};
 use tracing::{debug, warn};
 
-use crate::download_manager::DownloadManager;
+use crate::api_client::ApiClient;
 
 use super::{LogChunk, LogStreamKind};
 
@@ -56,17 +56,19 @@ impl AppLogRegistry {
     }
 }
 
-pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogRegistry {
-    let config = Arc::clone(&download_manager.config);
+pub fn spawn_app_log_registry(
+    api_client: Arc<ApiClient>,
+    log_flush_interval: Duration,
+    log_max_batch: usize,
+    log_max_buffer: usize,
+) -> AppLogRegistry {
     let (tx, mut rx) = mpsc::unbounded_channel::<RegistryCommand>();
 
     tokio::spawn(async move {
         let mut streams: StreamMap<i32, AppLogStream> = StreamMap::new();
         let mut buffers: HashMap<i32, Vec<ApplicationLog::CreateEntry>> = HashMap::new();
         let mut names: HashMap<i32, String> = HashMap::new();
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(
-            config.log_flush_interval_secs,
-        ));
+        let mut interval = tokio::time::interval(log_flush_interval);
         interval.tick().await;
 
         loop {
@@ -83,13 +85,13 @@ pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogR
                             streams.remove(&application_id);
                             names.remove(&application_id);
                             if let Some(mut buffer) = buffers.remove(&application_id) {
-                                flush_application_logs(&mut buffer, application_id, &download_manager, config.log_max_buffer).await;
+                                flush_application_logs(&mut buffer, application_id, &api_client, log_max_buffer).await;
                             }
                         }
                         None => {
                             // All AppLogRegistry handles dropped
                             for (application_id, mut buffer) in buffers.drain() {
-                                flush_application_logs(&mut buffer, application_id, &download_manager, config.log_max_buffer).await;
+                                flush_application_logs(&mut buffer, application_id, &api_client, log_max_buffer).await;
                             }
                             return;
                         }
@@ -106,9 +108,9 @@ pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogR
                             };
                             let buffer = buffers.entry(application_id).or_default();
                             buffer.push(entry);
-                            if buffer.len() >= config.log_max_batch {
+                            if buffer.len() >= log_max_batch {
                                 let mut to_flush = std::mem::take(buffer);
-                                flush_application_logs(&mut to_flush, application_id, &download_manager, config.log_max_buffer).await;
+                                flush_application_logs(&mut to_flush, application_id, &api_client, log_max_buffer).await;
                                 *buffers.entry(application_id).or_default() = to_flush;
                             }
                         }
@@ -120,7 +122,7 @@ pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogR
                 _ = interval.tick() => {
                     for (application_id, buffer) in buffers.iter_mut() {
                         if !buffer.is_empty() {
-                            flush_application_logs(buffer, *application_id, &download_manager, config.log_max_buffer).await;
+                            flush_application_logs(buffer, *application_id, &api_client, log_max_buffer).await;
                         }
                     }
                 }
@@ -134,13 +136,13 @@ pub fn spawn_app_log_registry(download_manager: Arc<DownloadManager>) -> AppLogR
 async fn flush_application_logs(
     buffer: &mut Vec<ApplicationLog::CreateEntry>,
     application_id: i32,
-    download_manager: &DownloadManager,
+    api_client: &ApiClient,
     max_buffer: usize,
 ) {
     if buffer.is_empty() {
         return;
     }
-    match download_manager
+    match api_client
         .push_application_logs(application_id, buffer.clone())
         .await
     {
