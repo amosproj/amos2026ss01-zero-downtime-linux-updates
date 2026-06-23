@@ -24,6 +24,14 @@ impl MigrationTrait for Migration {
         create_table(manager, &schema, dtos::OsVersion::Entity).await?;
         create_table(manager, &schema, dtos::OsAssignment::Entity).await?;
 
+        manager
+            .get_connection()
+            .execute_unprepared(
+                "CREATE UNIQUE INDEX idx_application_configs_device_app \
+                 ON application_configs (device_id, application_id)",
+            )
+            .await?;
+
         Ok(())
     }
 

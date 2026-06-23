@@ -10,9 +10,6 @@ pub use self::application_config as ApplicationConfig;
 pub mod device;
 pub use self::device as Device;
 
-pub mod device_application_config;
-pub use self::device_application_config as DeviceApplicationConfig;
-
 pub mod group;
 pub use self::group as Group;
 

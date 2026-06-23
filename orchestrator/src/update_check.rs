@@ -177,10 +177,12 @@ mod tests {
     fn app_cfg(id: i32, image: &str) -> ApplicationConfig::Model {
         ApplicationConfig::Model {
             id,
+            device_id: None,
+            group_id: Some(1),
             application_id: 1,
             image: image.into(),
-            config: None,
-            comment: None,
+            config: "{}".into(),
+            version: 1,
         }
     }
 
