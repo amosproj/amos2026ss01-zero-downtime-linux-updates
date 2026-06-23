@@ -150,8 +150,6 @@ impl Bootc {
 
         let args = vec![
             "switch".to_string(),
-            "--transport".to_string(),
-            "containers-storage".to_string(),
             "--retain".to_string(),
             target,
         ];
@@ -329,8 +327,6 @@ mod tests {
                 eq(vec![
                     "bootc".to_string(),
                     "switch".to_string(),
-                    "--transport".to_string(),
-                    "containers-storage".to_string(),
                     "--retain".to_string(),
                     target_image.to_string(),
                 ]),
