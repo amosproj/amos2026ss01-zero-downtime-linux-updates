@@ -1,3 +1,5 @@
+use amos_common::entities::ContainerConfigV1;
+
 use sea_orm::ActiveValue;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -25,6 +27,7 @@ pub struct Model {
 
     pub image: String,
 
+    pub config_version: i32,
     pub config: Option<String>,
 
     pub version: i32,
@@ -66,13 +69,25 @@ impl ActiveModelBehavior for ActiveModel {
 
 impl Model {
     pub fn into_api(self) -> amos_common::entities::ApplicationConfig::Model {
+        let config: Option<ContainerConfigV1> =
+            self.config
+                .as_ref()
+                .and_then(|json| match serde_json::from_str(json) {
+                    Ok(c) => Some(c),
+                    Err(e) => {
+                        log::warn!("Invalid config JSON for app {}: {}", self.id, e);
+                        None
+                    }
+                });
+
         amos_common::entities::ApplicationConfig::Model {
             id: self.id,
             device_id: self.device_id,
             group_id: self.group_id,
             application_id: self.application_id,
             image: self.image,
-            config: self.config,
+            config_version: self.config_version,
+            config: config,
             version: self.version,
             deleted_at: self.deleted_at,
             superseded_by: self.superseded_by,

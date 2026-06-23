@@ -63,7 +63,7 @@ pub trait PodmanImage: PodmanImageInfo + Send {
     async fn create_container(
         &self,
         name: &str,
-        environment: impl IntoIterator<Item = (&str, &str)> + Send,
+        config: Option<amos_common::entities::ContainerConfigV1>,
     ) -> anyhow::Result<Self::PContainer>;
 }
 

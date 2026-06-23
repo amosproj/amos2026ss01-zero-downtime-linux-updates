@@ -591,14 +591,14 @@ mod tests {
             app,
             "/v1/app-configs",
             &format!(
-                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1","config":"{{\"foo\":1}}"}}"#,
+                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1"}}"#,
                 device["id"], application["id"]
             ),
         )
         .await;
         assert_eq!(status, StatusCode::CREATED);
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json["config"], r#"{"foo":1}"#);
+        assert_eq!(json["config"], serde_json::Value::Null);
         // version omitted in the request body — server applies the default
         assert_eq!(json["version"], 1);
     }
@@ -632,29 +632,48 @@ mod tests {
         .await;
         let application: serde_json::Value = serde_json::from_str(&app_body).unwrap();
 
+        let first_config = serde_json::json!({
+            "environment": {
+                "foo": "bar"
+            }
+        });
+        let create_payload = serde_json::json!({
+            "device_id": device["id"],
+            "group_id": null,
+            "application_id": application["id"],
+            "image": "app:1",
+            "config": first_config,
+        }).to_string();
+
         let (_, created_body) = post(
             app.clone(),
             "/v1/app-configs",
-            &format!(
-                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1","config":"foo"}}"#,
-                device["id"], application["id"]
-            ),
+            &create_payload,
         )
         .await;
         let created: serde_json::Value = serde_json::from_str(&created_body).unwrap();
 
+        let update_config = serde_json::json!({
+            "environment": {
+                "bar": "baz"
+            }
+        });
+        let update_payload = serde_json::json!({
+            "device_id": device["id"],
+            "group_id": null,
+            "application_id": application["id"],
+            "image": "app:1",
+            "config": update_config,
+        }).to_string();
         let (status, body) = put(
             app,
             &format!("/v1/app-configs/{}", created["id"]),
-            &format!(
-                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1","config":"bar"}}"#,
-                device["id"], application["id"]
-            ),
+            &update_payload,
         )
         .await;
         assert_eq!(status, StatusCode::OK);
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json["config"], r#"bar"#);
+        assert_eq!(json["config"], update_config);
         assert_eq!(json["version"], 2);
     }
 
@@ -684,13 +703,13 @@ mod tests {
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"device_id":null,"group_id":1,"application_id":1,"image":"app:group","config":"{}","version":1}"#,
+            r#"{"device_id":null,"group_id":1,"application_id":1,"image":"app:group","version":1}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"app:device","config":"{}","version":1}"#,
+            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"app:device","version":1}"#,
         )
         .await;
 
@@ -832,19 +851,19 @@ mod tests {
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"app:1","config":"{}"}"#,
+            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"app:1"}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"device_id":null,"group_id":1,"application_id":1,"image":"app:2","config":"{}"}"#,
+            r#"{"device_id":null,"group_id":1,"application_id":1,"image":"app:2"}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"device_id":2,"group_id":null,"application_id":1,"image":"app:3","config":"{}"}"#,
+            r#"{"device_id":2,"group_id":null,"application_id":1,"image":"app:3"}"#,
         )
         .await;
         // config 1 -> device 1 (direct), config 2 -> group 1, config 3 -> device 2 (other).
@@ -929,7 +948,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"ghcr.io/example/app:1","config":"{}"}"#,
+            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"ghcr.io/example/app:1"}"#,
         )
         .await;
 

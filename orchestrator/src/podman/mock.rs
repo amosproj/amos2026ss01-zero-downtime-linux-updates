@@ -1,3 +1,4 @@
+use amos_common::entities::ContainerConfigV1;
 // Mock Podman for testing purposes
 use chrono::{DateTime, Utc};
 use futures_util::stream::{self, BoxStream, StreamExt as _};
@@ -101,7 +102,7 @@ impl super::PodmanImage for PodmanMockImage {
     async fn create_container(
         &self,
         name: &str,
-        _: impl IntoIterator<Item = (&str, &str)> + Send,
+        _: Option<ContainerConfigV1>,
     ) -> anyhow::Result<Self::PContainer> {
         tokio::time::sleep(Duration::from_millis(100)).await;
         Ok(PodmanMockContainer {

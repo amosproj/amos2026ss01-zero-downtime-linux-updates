@@ -134,7 +134,9 @@ async fn reconcile_audit_triggers(
 
 #[cfg(test)]
 mod tests {
-    use amos_common::entities::Application;
+    use std::collections::HashMap;
+
+    use amos_common::entities::{Application, ContainerConfigV1};
     use sea_orm::sea_query::prelude::serde_json;
     use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
     use serial_test::serial;
@@ -257,12 +259,14 @@ mod tests {
             .await
             .unwrap();
 
+        let default_config = ContainerConfigV1::default();
+
         let config = super::add_application_config(
             Some(device.id),
             None,
             app.id,
             "quay.io/app".to_owned(),
-            Some(r#"{"foo":1}"#.into()),
+            Some(default_config.clone()),
         )
         .await
         .unwrap();
@@ -272,7 +276,11 @@ mod tests {
             .await
             .unwrap()
             .expect("config should exist");
-        assert_eq!(fetched.config.unwrap(), r#"{"foo":1}"#);
+        assert_eq!(fetched.config.unwrap(), default_config);
+
+        let custom_config = ContainerConfigV1 {
+            environment: Some(HashMap::from([("SOME_ENV".to_string(), "XXX".to_string())])),
+        };
 
         let updated = super::update_application_config(
             config.id,
@@ -280,12 +288,12 @@ mod tests {
             None,
             app.id,
             "quay.io/app".to_owned(),
-            Some(r#"{"foo":2}"#.to_owned()),
+            Some(custom_config.clone()),
         )
         .await
         .unwrap();
         assert_eq!(updated.version, 2);
-        assert_eq!(updated.config.unwrap(), r#"{"foo":2}"#);
+        assert_eq!(updated.config.unwrap(), custom_config);
 
         let deleted = super::delete_application_config(updated.id).await.unwrap();
         assert_eq!(deleted, 1);
@@ -608,12 +616,17 @@ mod tests {
         let app = super::add_application("my-app".to_owned(), "does things".to_owned())
             .await
             .unwrap();
+
+        let custom_config = ContainerConfigV1 {
+            environment: Some(HashMap::from([("PORT".to_string(), "8080".to_string())])),
+        };
+
         let config = super::add_application_config(
             Some(device.id),
             None,
             app.id,
             "quay.io/my-app:1.0".to_owned(),
-            Some(r#"{"port":8080}"#.to_owned()),
+            Some(custom_config),
         )
         .await
         .unwrap();
@@ -660,7 +673,7 @@ mod tests {
         assert_eq!(app_entry["application_name"], "my-app");
         assert_eq!(app_entry["application_description"], "does things");
         assert_eq!(app_entry["image"], "quay.io/my-app:1.0");
-        assert_eq!(app_entry["config"], r#"{"port":8080}"#);
+        assert_eq!(app_entry["config"], r#"{"environment":{"PORT":"8080"}}"#);
         assert_eq!(app_entry["version"], 1);
         assert!(app_entry.get("reported_assignment_id").is_some());
         assert!(app_entry.get("updated_at").is_some());
@@ -794,15 +807,10 @@ mod tests {
         let app = super::add_application("app".to_owned(), "desc".to_owned())
             .await
             .unwrap();
-        let config = super::add_application_config(
-            Some(device.id),
-            None,
-            app.id,
-            "img".to_owned(),
-            Some("{}".to_owned()),
-        )
-        .await
-        .unwrap();
+        let config =
+            super::add_application_config(Some(device.id), None, app.id, "img".to_owned(), None)
+                .await
+                .unwrap();
         super::add_application_assignment_to_device(config.id, device.id)
             .await
             .unwrap();

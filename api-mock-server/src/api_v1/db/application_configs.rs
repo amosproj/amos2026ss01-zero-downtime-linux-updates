@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::dtos;
-use amos_common::entities::ApplicationConfig;
+use amos_common::entities::{ApplicationConfig, ContainerConfigV1};
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::prelude::chrono;
@@ -101,15 +101,21 @@ pub async fn add_application_config(
     group_id: Option<i32>,
     application_id: i32,
     image: String,
-    config: Option<String>,
+    config: Option<ContainerConfigV1>,
 ) -> Result<ApplicationConfig::Model, DbErr> {
+    let config_json = config
+        .map(|c| serde_json::to_string(&c))
+        .transpose()
+        .map_err(|e| DbErr::Custom(format!("Failed to serialize config: {e}")))?;
+
     let app_config = dtos::ApplicationConfig::ActiveModel {
         id: NotSet,
         device_id: Set(device_id),
         group_id: Set(group_id),
         application_id: Set(application_id),
         image: Set(image),
-        config: Set(config),
+        config_version: Set(1),
+        config: Set(config_json),
         version: Set(1),
         deleted_at: NotSet,
         superseded_by: NotSet,
@@ -129,7 +135,7 @@ pub async fn update_application_config(
     group_id: Option<i32>,
     application_id: i32,
     image: String,
-    config: Option<String>,
+    config: Option<ContainerConfigV1>,
 ) -> Result<ApplicationConfig::Model, DbErr> {
     let db = db!();
 
@@ -140,13 +146,19 @@ pub async fn update_application_config(
         .await?
         .ok_or(DbErr::RecordNotFound("ApplicationConfig not found".into()))?;
 
+    let config_json = config
+        .map(|c| serde_json::to_string(&c))
+        .transpose()
+        .map_err(|e| DbErr::Custom(format!("Failed to serialize config: {e}")))?;
+
     let new_config = dtos::ApplicationConfig::ActiveModel {
         id: NotSet,
         application_id: Set(application_id),
         device_id: Set(device_id),
         group_id: Set(group_id),
         image: Set(image),
-        config: Set(config),
+        config_version: Set(current.config_version),
+        config: Set(config_json),
         version: Set(current.version + 1),
         deleted_at: NotSet,
         superseded_by: NotSet,
