@@ -58,8 +58,9 @@ pub async fn assemble_device_summary(
         query = query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
     }
     if let Some(serial_number) = serial_number_filter {
-        query =
-            query.filter(Expr::col(dtos::Device::Column::SerialNumber).like(format!("%{}%", serial_number)));
+        query = query.filter(
+            Expr::col(dtos::Device::Column::SerialNumber).like(format!("%{}%", serial_number)),
+        );
     }
 
     let paginator = query.paginate(&db, page_size);
