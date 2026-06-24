@@ -14,7 +14,7 @@ pub struct Model {
 
     pub public_key: Option<String>,
 
-    pub hostname: String,
+    pub serial_number: String,
 
     pub tenant_id: i32,
     #[sea_orm(belongs_to, from = "tenant_id", to = "id")]
@@ -33,7 +33,7 @@ impl Model {
             id: self.id,
             uuid: self.uuid,
             public_key: self.public_key,
-            hostname: self.hostname,
+            serial_number: self.serial_number,
             tenant_id: self.tenant_id,
             group_id: self.group_id,
         }

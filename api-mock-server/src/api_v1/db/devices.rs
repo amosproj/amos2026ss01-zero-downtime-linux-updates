@@ -16,7 +16,7 @@ pub async fn list_devices(
     group_id: Option<i32>,
     tenant_id: Option<i32>,
     uuid_filter: Option<String>,
-    hostname_filter: Option<String>,
+    serial_number_filter: Option<String>,
     page: u64,
     page_size: u64,
 ) -> Result<(Vec<Device::Model>, u64), DbErr> {
@@ -31,9 +31,9 @@ pub async fn list_devices(
     if let Some(uuid) = uuid_filter {
         query = query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
     }
-    if let Some(hostname) = hostname_filter {
+    if let Some(serial_number) = serial_number_filter {
         query =
-            query.filter(Expr::col(dtos::Device::Column::Hostname).like(format!("%{}%", hostname)));
+            query.filter(Expr::col(dtos::Device::Column::SerialNumber).like(format!("%{}%", serial_number)));
     }
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
@@ -65,7 +65,7 @@ pub async fn get_device_by_uuid(uuid: String) -> Result<Option<Device::Model>, D
 pub async fn add_device(
     uuid: String,
     public_key: Option<String>,
-    hostname: String,
+    serial_number: String,
     tenant_id: i32,
     group_id: Option<i32>,
 ) -> Result<Device::Model, DbErr> {
@@ -73,7 +73,7 @@ pub async fn add_device(
         id: NotSet,
         uuid: Set(uuid),
         public_key: Set(public_key),
-        hostname: Set(hostname),
+        serial_number: Set(serial_number),
         tenant_id: Set(tenant_id),
         group_id: Set(group_id),
     };
@@ -90,7 +90,7 @@ pub async fn update_device(
     id: i32,
     uuid: String,
     public_key: Option<String>,
-    hostname: String,
+    serial_number: String,
     tenant_id: i32,
     group_id: Option<i32>,
 ) -> Result<Device::Model, DbErr> {
@@ -102,7 +102,7 @@ pub async fn update_device(
     let mut device: dtos::Device::ActiveModel = device.into();
     device.uuid = Set(uuid);
     device.public_key = Set(public_key);
-    device.hostname = Set(hostname);
+    device.serial_number = Set(serial_number);
     device.tenant_id = Set(tenant_id);
     device.group_id = Set(group_id);
     let updated_device = device.update(&db).await?;

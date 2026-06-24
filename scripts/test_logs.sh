@@ -127,7 +127,7 @@ done
 api "/tenants" POST '{ "name": "Weber-Lager", "description": "Meta-Ort für initialisierte unverschickte Geräte" }' 201
 
 readonly device_uuid="8b722f94-6852-42cf-9722-98446499a457"
-api "/devices" POST "{ \"uuid\": \"${device_uuid}\", \"hostname\": \"x38974\", \"tenant_id\": 1 }" 201
+api "/devices" POST "{ \"uuid\": \"${device_uuid}\", \"serial_number\": \"x38974\", \"tenant_id\": 1 }" 201
 
 api "/applications" POST '{ "name": "amos-orchestrator", "description": "Orchestrator agent" }' 201
 

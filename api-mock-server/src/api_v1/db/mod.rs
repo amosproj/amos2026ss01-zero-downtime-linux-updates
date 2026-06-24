@@ -539,14 +539,14 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_device_update_changes_hostname() {
+    async fn test_device_update_changes_serial_number() {
         test_initialize_empty_inmem_db().await;
 
         let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
         let device = super::add_device(
             "uuid".to_owned(),
             None,
-            "old-host".to_owned(),
+            "QW12ERTY".to_owned(),
             tenant.id,
             None,
         )
@@ -556,14 +556,14 @@ mod tests {
             device.id,
             device.uuid,
             None,
-            "new-hostname".to_owned(),
+            "UI89OPLK".to_owned(),
             tenant.id,
             None,
         )
         .await
         .unwrap();
 
-        assert_eq!(updated.hostname, "new-hostname");
+        assert_eq!(updated.serial_number, "UI89OPLK");
     }
 
     #[tokio::test]
@@ -648,7 +648,7 @@ mod tests {
 
         // -- Assert: device fields --
         assert_eq!(summary["device"]["uuid"], "uuid-abc");
-        assert_eq!(summary["device"]["hostname"], "host-01");
+        assert_eq!(summary["device"]["serial_number"], "host-01");
         assert_eq!(summary["device"]["tenant_id"], tenant.id);
         assert_eq!(summary["device"]["group_id"], serde_json::Value::Null);
 

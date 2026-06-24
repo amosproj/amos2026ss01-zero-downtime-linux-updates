@@ -99,7 +99,7 @@ api "/tenants" POST '{ "name": "Weber-Lager", "description": "Meta-Ort für init
 api "/tenants" POST '{ "name": "Kaufland-Fabrik-Erlangen", "description": "Stammkunde in Deutschland" }' 201
 api "/tenants" POST '{ "name": "7-Eleven-Fabrik-Tokyo", "description": "Zentrale Stelle in Chiyoda für Tokyo" }' 201
 api "/tenants" POST '{ "name": "Foodland-Fabrik-Bangkok", "description": "Hauptlagerort in Bangkok" }' 201
-api "/devices" POST '{ "uuid": "8b722f94-6852-42cf-9722-98446499a457", "hostname": "x38974", "tenant_id": 1 }' 201
+api "/devices" POST '{ "uuid": "8b722f94-6852-42cf-9722-98446499a457", "serial_number": "x38974", "tenant_id": 1 }' 201
 
 api "/os-versions" POST '{ "commit_hash": "092599a804d5169ae2a0a306bcb4b213b7646d28", "orchestrator_version": "0.1.0", "description": "First stable release, tested intensively" }' 201
 

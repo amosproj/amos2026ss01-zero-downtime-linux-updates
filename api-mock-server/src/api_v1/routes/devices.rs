@@ -30,11 +30,11 @@ struct DeviceQuery {
     group_id: Option<i32>,
     tenant_id: Option<i32>,
     uuid: Option<String>,
-    hostname: Option<String>,
+    serial_number: Option<String>,
 }
 
 /// GET /devices/summary — List device summaries (reported state).
-/// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
+/// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&serial_number=<string>&page=1&page_size=20`
 async fn list_device_summaries(
     Query(page): Query<PageParams>,
     Query(params): Query<DeviceQuery>,
@@ -46,7 +46,7 @@ async fn list_device_summaries(
         params.group_id,
         params.tenant_id,
         params.uuid,
-        params.hostname,
+        params.serial_number,
         page.to_db_page(),
         page.page_size,
     )
@@ -69,7 +69,7 @@ async fn get_device_summary(Path(id): Path<i32>) -> Response {
 }
 
 /// GET /devices — List devices.
-/// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&hostname=<string>&page=1&page_size=20`
+/// Optional query: `?group_id=<i32>&tenant_id=<i32>&uuid=<string>&serial_number=<string>&page=1&page_size=20`
 async fn list_devices(
     Query(page): Query<PageParams>,
     Query(params): Query<DeviceQuery>,
@@ -81,7 +81,7 @@ async fn list_devices(
         params.group_id,
         params.tenant_id,
         params.uuid,
-        params.hostname,
+        params.serial_number,
         page.to_db_page(),
         page.page_size,
     )
@@ -104,7 +104,7 @@ async fn get_device(Path(id): Path<i32>) -> Response {
 }
 
 /// POST /devices — Create a device.
-/// Body: `{ uuid: string (required), hostname: string (required), tenant_id: i32, group_id: i32|null }`
+/// Body: `{ uuid: string (required), serial_number: string (required), tenant_id: i32, group_id: i32|null }`
 async fn create_device(Json(body): Json<DeviceCreate>) -> Response {
     if body.uuid.trim().is_empty() {
         return err(
@@ -112,16 +112,16 @@ async fn create_device(Json(body): Json<DeviceCreate>) -> Response {
             "Device UUID cannot be empty",
         );
     }
-    if body.hostname.trim().is_empty() {
+    if body.serial_number.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "Device hostname cannot be empty",
+            "Device serial number cannot be empty",
         );
     }
     match db::add_device(
         body.uuid,
         body.public_key,
-        body.hostname,
+        body.serial_number,
         body.tenant_id,
         body.group_id,
     )
@@ -133,7 +133,7 @@ async fn create_device(Json(body): Json<DeviceCreate>) -> Response {
 }
 
 /// PUT /devices/{id} — Replace a device by ID.
-/// Body: `{ uuid: string (required), hostname: string (required), tenant_id: i32, group_id: i32|null }`
+/// Body: `{ uuid: string (required), serial_number: string (required), tenant_id: i32, group_id: i32|null }`
 async fn update_device(Path(id): Path<i32>, Json(body): Json<DeviceCreate>) -> Response {
     if body.uuid.trim().is_empty() {
         return err(
@@ -141,17 +141,17 @@ async fn update_device(Path(id): Path<i32>, Json(body): Json<DeviceCreate>) -> R
             "Device UUID cannot be empty",
         );
     }
-    if body.hostname.trim().is_empty() {
+    if body.serial_number.trim().is_empty() {
         return err(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "Device hostname cannot be empty",
+            "Device serial number cannot be empty",
         );
     }
     match db::update_device(
         id,
         body.uuid,
         body.public_key,
-        body.hostname,
+        body.serial_number,
         body.tenant_id,
         body.group_id,
     )

@@ -331,7 +331,7 @@ mod tests {
     }
 
     // --- Devices ---
-    // Device::Model: { id: i32, uuid: String, hostname: String, tenant_id: i32, group_id: Option<i32> }
+    // Device::Model: { id: i32, uuid: String, serial_number: String, tenant_id: i32, group_id: Option<i32> }
     // tenant_id is required (non-optional) — must always be present in POST body.
     // A non-existent tenant_id will produce a 500 (FK violation), not 422.
 
@@ -357,13 +357,13 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"u1","serial_number":"h1","tenant_id":1,"group_id":null}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"u2","hostname":"h2","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"u2","serial_number":"h2","tenant_id":1,"group_id":null}"#,
         )
         .await;
         let (_, body) = get(app, "/v1/devices?page_size=1").await;
@@ -377,7 +377,7 @@ mod tests {
         let (status, _) = post(
             test_app().await,
             "/v1/devices",
-            r#"{"id":0,"uuid":"","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"","serial_number":"host-1","tenant_id":1,"group_id":null}"#,
         )
         .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
@@ -385,11 +385,11 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_create_device_with_empty_hostname_returns_422() {
+    async fn test_create_device_with_empty_serial_number_returns_422() {
         let (status, _) = post(
             test_app().await,
             "/v1/devices",
-            r#"{"id":0,"uuid":"some-uuid","hostname":"","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"some-uuid","serial_number":"","tenant_id":1,"group_id":null}"#,
         )
         .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
@@ -419,13 +419,13 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"u1","serial_number":"h1","tenant_id":1,"group_id":null}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"u2","hostname":"h2","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"u2","serial_number":"h2","tenant_id":1,"group_id":null}"#,
         )
         .await;
         let (_, body) = get(app, "/v1/devices/summary").await;
@@ -573,7 +573,7 @@ mod tests {
             app.clone(),
             "/v1/devices",
             &format!(
-                r#"{{"id":0,"uuid":"dev-1","public_key":null,"hostname":"host-1","tenant_id":{},"group_id":null}}"#,
+                r#"{{"id":0,"uuid":"dev-1","public_key":null,"serial_number":"host-1","tenant_id":{},"group_id":null}}"#,
                 tenant["id"]
             ),
         )
@@ -618,7 +618,7 @@ mod tests {
             app.clone(),
             "/v1/devices",
             &format!(
-                r#"{{"id":0,"uuid":"dev-1","public_key":null,"hostname":"host-1","tenant_id":{},"group_id":null}}"#,
+                r#"{{"id":0,"uuid":"dev-1","public_key":null,"serial_number":"host-1","tenant_id":{},"group_id":null}}"#,
                 tenant["id"]
             ),
         )
@@ -688,7 +688,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"dev-1","hostname":"host-1","tenant_id":1,"group_id":1}"#,
+            r#"{"id":0,"uuid":"dev-1","serial_number":"host-1","tenant_id":1,"group_id":1}"#,
         )
         .await;
         post(
@@ -830,13 +830,13 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"dev-grp-1","hostname":"h1","tenant_id":1,"group_id":1}"#,
+            r#"{"id":0,"uuid":"dev-grp-1","serial_number":"h1","tenant_id":1,"group_id":1}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"dev-other","hostname":"h2","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"dev-other","serial_number":"h2","tenant_id":1,"group_id":null}"#,
         )
         .await;
         post(
@@ -933,7 +933,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"app-uuid-7","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"app-uuid-7","serial_number":"host-1","tenant_id":1,"group_id":null}"#,
         )
         .await;
         post(
@@ -993,7 +993,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"dev-uuid-1","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"dev-uuid-1","serial_number":"host-1","tenant_id":1,"group_id":null}"#,
         )
         .await;
         post(
@@ -1029,7 +1029,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"test-uuid-42","hostname":"host-1","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"test-uuid-42","serial_number":"host-1","tenant_id":1,"group_id":null}"#,
         )
         .await;
         post(
@@ -1162,7 +1162,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"u1","hostname":"h1","tenant_id":1,"group_id":null}"#,
+            r#"{"id":0,"uuid":"u1","serial_number":"h1","tenant_id":1,"group_id":null}"#,
         )
         .await;
 

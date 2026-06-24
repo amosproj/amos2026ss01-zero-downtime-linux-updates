@@ -190,14 +190,14 @@ readonly device_uuid="00000000-0000-0000-0000-000000000001"
 curl -sS -X POST "${api_base_path}/devices" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${jwt}" \
-    -d "{ \"uuid\": \"${device_uuid}\", \"hostname\": \"bla\", \"tenant_id\": 1 }"
+    -d "{ \"uuid\": \"${device_uuid}\", \"serial_number\": \"bla\", \"tenant_id\": 1 }"
 echo
 
 tpm_pubkey_json="$(sed -z 's/\n/\\n/g' /tmp/my_tpm_pubkey.pem)"
 curl -i -X PUT "${api_base_path}/devices/1" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${jwt}" \
-    -d "{ \"uuid\": \"${device_uuid}\", \"hostname\": \"bla\", \"tenant_id\": 1, \"public_key\": \"${tpm_pubkey_json}\" }"
+    -d "{ \"uuid\": \"${device_uuid}\", \"serial_number\": \"bla\", \"tenant_id\": 1, \"public_key\": \"${tpm_pubkey_json}\" }"
 echo
 
 # Build the orchestrator binary on the host and copy it into the VM so the

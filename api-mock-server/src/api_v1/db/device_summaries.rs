@@ -17,7 +17,7 @@ pub async fn list_device_summaries(
     group_id: Option<i32>,
     tenant_id: Option<i32>,
     uuid_filter: Option<String>,
-    hostname_filter: Option<String>,
+    serial_number_filter: Option<String>,
     page: u64,
     page_size: u64,
 ) -> Result<(Vec<serde_json::Value>, u64), DbErr> {
@@ -26,7 +26,7 @@ pub async fn list_device_summaries(
         group_id,
         tenant_id,
         uuid_filter,
-        hostname_filter,
+        serial_number_filter,
         page,
         page_size,
     )
@@ -38,7 +38,7 @@ pub async fn assemble_device_summary(
     group_id: Option<i32>,
     tenant_id: Option<i32>,
     uuid_filter: Option<String>,
-    hostname_filter: Option<String>,
+    serial_number_filter: Option<String>,
     page: u64,
     page_size: u64,
 ) -> Result<(Vec<serde_json::Value>, u64), DbErr> {
@@ -57,9 +57,9 @@ pub async fn assemble_device_summary(
     if let Some(uuid) = uuid_filter {
         query = query.filter(Expr::col(dtos::Device::Column::Uuid).like(format!("%{}%", uuid)));
     }
-    if let Some(hostname) = hostname_filter {
+    if let Some(serial_number) = serial_number_filter {
         query =
-            query.filter(Expr::col(dtos::Device::Column::Hostname).like(format!("%{}%", hostname)));
+            query.filter(Expr::col(dtos::Device::Column::SerialNumber).like(format!("%{}%", serial_number)));
     }
 
     let paginator = query.paginate(&db, page_size);
