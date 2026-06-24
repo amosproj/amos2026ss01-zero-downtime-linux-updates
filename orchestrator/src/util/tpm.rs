@@ -73,9 +73,6 @@ impl TpmSigner {
             _ => anyhow::bail!("Got unexpected signature"),
         };
 
-        // TODO: Do flush here
-        // signer.ctx.flush_context(session)?;
-
         Ok(signature_bytes)
     }
 }
