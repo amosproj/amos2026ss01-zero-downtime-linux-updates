@@ -23,6 +23,8 @@ pub struct Model {
     #[sea_orm(belongs_to, from = "group_id", to = "id")]
     pub group: HasOne<Group::Entity>,
 
+    pub immediate: bool,
+
     pub deleted_at: Option<DateTimeUtc>,
 
     pub superseded_by: Option<i32>,
@@ -65,6 +67,7 @@ impl Model {
             os_version_id: self.os_version_id,
             device_id: self.device_id,
             group_id: self.group_id,
+            immediate: self.immediate,
             deleted_at: self.deleted_at,
             superseded_by: self.superseded_by,
         }

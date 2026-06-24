@@ -55,12 +55,14 @@ pub async fn add_os_assignment(
     os_version_id: i32,
     device_id: Option<i32>,
     group_id: Option<i32>,
+    immediate: Option<bool>,
 ) -> Result<OsAssignment::Model, DbErr> {
     let os_assignment = dtos::OsAssignment::ActiveModel {
         id: NotSet,
         os_version_id: Set(os_version_id),
         device_id: Set(device_id),
         group_id: Set(group_id),
+        immediate: Set(immediate.unwrap_or(false)),
         deleted_at: NotSet,
         superseded_by: NotSet,
     };
@@ -81,6 +83,7 @@ pub async fn update_os_assignment(
     os_version_id: i32,
     device_id: Option<i32>,
     group_id: Option<i32>,
+    immediate: Option<bool>,
 ) -> Result<OsAssignment::Model, DbErr> {
     let db = db!();
 
@@ -91,11 +94,17 @@ pub async fn update_os_assignment(
         .await?
         .ok_or(DbErr::RecordNotFound("OsAssignment not found".into()))?;
 
+    let immediate_value = match immediate {
+        Some(v) => Set(v),
+        None => NotSet,
+    };
+
     let new_assignment = dtos::OsAssignment::ActiveModel {
         id: NotSet,
         os_version_id: Set(os_version_id),
         device_id: Set(device_id),
         group_id: Set(group_id),
+        immediate: immediate_value,
         deleted_at: NotSet,
         superseded_by: NotSet,
     };

@@ -102,7 +102,14 @@ async fn create_os_assignment(Json(body): Json<OsAssignmentCreate>) -> Response 
             "Only one of device_id or group_id may be set, not both",
         );
     }
-    match db::add_os_assignment(body.os_version_id, body.device_id, body.group_id).await {
+    match db::add_os_assignment(
+        body.os_version_id,
+        body.device_id,
+        body.group_id,
+        body.immediate,
+    )
+    .await
+    {
         Ok(a) => (StatusCode::CREATED, Json(a)).into_response(),
         Err(e) => db_err(e),
     }
@@ -127,7 +134,15 @@ async fn update_os_assignment(
             "Only one of device_id or group_id may be set, not both",
         );
     }
-    match db::update_os_assignment(id, body.os_version_id, body.device_id, body.group_id).await {
+    match db::update_os_assignment(
+        id,
+        body.os_version_id,
+        body.device_id,
+        body.group_id,
+        body.immediate,
+    )
+    .await
+    {
         Ok(a) => Json(a).into_response(),
         Err(e) => db_err(e),
     }
