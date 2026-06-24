@@ -121,7 +121,14 @@ impl<'a, P: PodmanImage> TargetApp<'a, P> {
                 .image(&cfg.image, PullIfMissing)
                 .await?
                 .ok_or(anyhow::anyhow!("Could not pull image"))?,
-            name: cfg.image.split('/').next_back().unwrap_or(&cfg.image).split(':').next().unwrap_or(&cfg.image),
+            name: cfg
+                .image
+                .split('/')
+                .next_back()
+                .unwrap_or(&cfg.image)
+                .split(':')
+                .next()
+                .unwrap_or(&cfg.image),
             config: cfg.config.clone(),
             application_id: cfg.id,
         })

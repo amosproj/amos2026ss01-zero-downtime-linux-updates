@@ -124,7 +124,10 @@ impl ApiClient {
         &self,
     ) -> Result<Vec<ApplicationAssignment::Model>> {
         let page: Page<ApplicationAssignment::Model> = self
-            .get(&format!("/app-assignments?device_uuid={}", self.device_uuid))
+            .get(&format!(
+                "/app-assignments?device_uuid={}",
+                self.device_uuid
+            ))
             .await?;
         Ok(page.data)
     }
