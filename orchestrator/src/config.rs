@@ -23,7 +23,7 @@ impl Default for OrchestratorConfig {
         Self {
             device_uuid: String::new(),
 
-            cloud_url: "https://cloud.weber.de/api/v1".to_owned(),
+            cloud_url: "https://cloud.weber.de/v1".to_owned(),
             poll_interval_secs: 5,
             podman_path: "/run/podman/podman.sock".to_owned(),
             https_proxy: None,

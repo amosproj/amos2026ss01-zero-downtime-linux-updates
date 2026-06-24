@@ -8,8 +8,8 @@
 # Base URL of the Cloud API.
 # Accepts http:// or https:// schema.
 # Env: APP_CLOUD_URL
-# Default: https://cloud.weber.de/api/v1
-cloud_url = "https://your-cloud-api.example.com/api/v1"
+# Default: https://cloud.weber.de/v1
+cloud_url = "https://your-cloud-api.example.com/v1"
 
 # How often the Orchestrator polls the Cloud API, in seconds.
 # Must be >= 1.

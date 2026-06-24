@@ -226,7 +226,7 @@ During development or testing, a local mock server (`amos-api-mock-server`) can 
 sudo ./amos-api-mock-server
 ```
 
-> **Tip:** To avoid `sudo`, edit `api-mock-server/src/main.rs` to bind to a high port (e.g. `8080`) and rebuild. Then set `cloud_url = "http://localhost:8080/api/v1"` in your config.
+> **Tip:** To avoid `sudo`, edit `api-mock-server/src/main.rs` to bind to a high port (e.g. `8080`) and rebuild. Then set `cloud_url = "http://localhost:8080/v1"` in your config.
 
 The catalog response from the mock server looks like:
 

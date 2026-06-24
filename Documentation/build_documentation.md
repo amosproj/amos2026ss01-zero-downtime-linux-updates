@@ -192,7 +192,7 @@ cp orchestrator/config.example.toml config.toml
 Edit `config.toml` to point at the mock server:
 
 ```toml
-cloud_url = "http://localhost/api/v1"
+cloud_url = "http://localhost/v1"
 poll_interval_secs = 10
 inventory_path = "./inventory/inventory.json"
 ```
