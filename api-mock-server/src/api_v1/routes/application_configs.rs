@@ -31,10 +31,15 @@ pub fn routes() -> Router {
 #[derive(Deserialize)]
 struct AppConfigQuery {
     application_id: Option<i32>,
+    device_id: Option<i32>,
+    device_uuid: Option<String>,
+    group_id: Option<i32>,
 }
 
 /// GET /app-configs — List app configs.
-/// Optional query: `?application_id=<i32>&page=1&page_size=20`
+/// Optional query: `?application_id=<i32>&device_id=<i32>&group_id=<i32>&page=1&page_size=20`
+/// `?device_uuid=<str>` resolves the effective configs for that device: a
+/// device-specific config supersedes a config assigned to the device's group.
 async fn list_application_configs(
     Query(page): Query<PageParams>,
     Query(params): Query<AppConfigQuery>,
@@ -42,8 +47,35 @@ async fn list_application_configs(
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
-    match db::list_application_configs(params.application_id, page.to_db_page(), page.page_size)
-        .await
+
+    if let Some(device_uuid) = params.device_uuid {
+        let device = match db::get_device_by_uuid(device_uuid.clone()).await {
+            Ok(Some(device)) => device,
+            Ok(None) => {
+                return err(
+                    StatusCode::NOT_FOUND,
+                    format!("No device with uuid {} found", device_uuid),
+                );
+            }
+            Err(e) => return db_err(e),
+        };
+        return match db::list_application_configs_for_device(device.id).await {
+            Ok(data) => {
+                let total = data.len() as u64;
+                Json(Page::new(data, 1, total.max(1), total)).into_response()
+            }
+            Err(e) => db_err(e),
+        };
+    }
+
+    match db::list_application_configs(
+        params.application_id,
+        params.device_id,
+        params.group_id,
+        page.to_db_page(),
+        page.page_size,
+    )
+    .await
     {
         Ok((data, total)) => {
             Json(Page::new(data, page.page, page.page_size, total)).into_response()
@@ -62,16 +94,20 @@ async fn get_application_config(Path(id): Path<i32>) -> Response {
 }
 
 /// POST /app-configs — Create an app config.
-/// Body: `{ application_id: i32, image: string (required), config: string|null, comment: string|null }`
+/// Body: `{ device_id: i32|null, group_id: i32|null, application_id: i32, image: string (required), config: string (required), version: i32 (default 1) }`
+/// Exactly one of device_id or group_id must be set.
 async fn create_application_config(Json(body): Json<ApplicationConfigCreate>) -> Response {
-    if body.image.trim().is_empty() {
-        return err(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "ApplicationConfig image cannot be empty",
-        );
+    if let Some(e) = validate_app_config_body(&body) {
+        return e;
     }
-    match db::add_application_config(body.application_id, body.image, body.config, body.comment)
-        .await
+    match db::add_application_config(
+        body.device_id,
+        body.group_id,
+        body.application_id,
+        body.image,
+        body.config,
+    )
+    .await
     {
         Ok(config) => (StatusCode::CREATED, Json(config)).into_response(),
         Err(e) => db_err(e),
@@ -79,23 +115,22 @@ async fn create_application_config(Json(body): Json<ApplicationConfigCreate>) ->
 }
 
 /// PUT /app-configs/{id} — Replace an app config by ID.
-/// Body: `{ application_id: i32, image: string (required), config: string|null, comment: string|null }`
+/// Body: `{ device_id: i32|null, group_id: i32|null, application_id: i32, image: string (required), config: string (required), version: i32 (default 1) }`
+/// Exactly one of device_id or group_id must be set.
 async fn update_application_config(
     Path(id): Path<i32>,
     Json(body): Json<ApplicationConfigCreate>,
 ) -> Response {
-    if body.image.trim().is_empty() {
-        return err(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "ApplicationConfig image cannot be empty",
-        );
+    if let Some(e) = validate_app_config_body(&body) {
+        return e;
     }
     match db::update_application_config(
         id,
+        body.device_id,
+        body.group_id,
         body.application_id,
         body.image,
         body.config,
-        body.comment,
     )
     .await
     {
@@ -111,4 +146,26 @@ async fn delete_application_config(Path(id): Path<i32>) -> Response {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => db_err(e),
     }
+}
+
+fn validate_app_config_body(body: &ApplicationConfigCreate) -> Option<Response> {
+    if body.image.trim().is_empty() {
+        return Some(err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ApplicationConfig image cannot be empty",
+        ));
+    }
+    if body.device_id.is_none() && body.group_id.is_none() {
+        return Some(err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Either device_id or group_id must be set",
+        ));
+    }
+    if body.device_id.is_some() && body.group_id.is_some() {
+        return Some(err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Only one of device_id or group_id may be set, not both",
+        ));
+    }
+    None
 }

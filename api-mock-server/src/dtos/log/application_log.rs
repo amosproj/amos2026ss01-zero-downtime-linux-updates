@@ -18,7 +18,9 @@ pub struct Model {
     pub device_id: i32,
     pub application_id: i32,
     pub level: LogLevel,
+    #[sea_orm(column_type = "Text")]
     pub message: String,
+    #[sea_orm(column_type = "Text")]
     pub source: Option<String>,
 }
 

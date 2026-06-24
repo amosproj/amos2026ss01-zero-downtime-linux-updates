@@ -4,7 +4,7 @@ use std::iter::Peekable;
 use std::sync::Arc;
 use std::time::Duration;
 
-use amos_common::entities::ApplicationConfig;
+use amos_common::entities::{ApplicationConfig, ContainerConfigV1};
 use tracing::warn;
 
 use crate::api_client::ApiClient;
@@ -61,7 +61,7 @@ async fn try_update(
                 let app = Application::launch_from_image(
                     &image.image,
                     image.name,
-                    image.environment,
+                    image.config,
                     image.application_id,
                     log_registry,
                 )
@@ -78,7 +78,7 @@ async fn try_update(
                 let app = Application::launch_from_image(
                     &target_image.image,
                     target_image.name,
-                    target_image.environment,
+                    target_image.config,
                     target_image.application_id,
                     log_registry,
                 )
@@ -107,7 +107,7 @@ async fn try_update(
 struct TargetApp<'a, P: PodmanImage> {
     image: P,
     name: &'a str,
-    environment: Vec<(&'a str, &'a str)>,
+    config: Option<ContainerConfigV1>,
     application_id: i32,
 }
 
@@ -122,7 +122,7 @@ impl<'a, P: PodmanImage> TargetApp<'a, P> {
                 .await?
                 .ok_or(anyhow::anyhow!("Could not pull image"))?,
             name: &cfg.image,
-            environment: vec![],
+            config: cfg.config.clone(),
             application_id: cfg.id,
         })
     }
@@ -346,9 +346,12 @@ mod tests {
         let configs = vec![ApplicationConfig::Model {
             id: 1,
             application_id: 1,
-            config: Some("testconfig".into()),
+            device_id: Some(1),
+            group_id: None,
+            version: 1,
+            config_version: 1,
+            config: None,
             image: "docker.io/alpine:1.0".into(),
-            comment: Some("testcomment".into()),
             deleted_at: None,
             superseded_by: None,
         }];

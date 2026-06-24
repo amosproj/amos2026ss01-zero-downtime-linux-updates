@@ -3,6 +3,8 @@
 use std::{sync::Arc, time::Duration};
 use tracing::{debug, error, info, warn};
 
+use amos_common::entities::ContainerConfigV1;
+
 use crate::podman::log_registry::AppLogRegistry;
 use crate::podman::{
     PodmanContainer, PodmanContainerState, PodmanImage, PodmanImageInfo, PodmanLogHandle,
@@ -56,11 +58,11 @@ impl Application {
     pub async fn launch_from_image(
         image: &impl PodmanImage,
         name: &str,
-        environment: impl IntoIterator<Item = (&str, &str)> + Send,
+        config: Option<ContainerConfigV1>,
         application_id: i32,
         registry: &AppLogRegistry,
     ) -> anyhow::Result<Self> {
-        let container = image.create_container(name, environment).await?;
+        let container = image.create_container(name, config).await?;
         Ok(Self::wrap(container, application_id, registry))
     }
 

@@ -3,6 +3,8 @@
 
 use std::path::Path;
 
+use amos_common::entities::ContainerConfigV1;
+
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use podman_api::{
@@ -226,15 +228,22 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
     async fn create_container(
         &self,
         name: &str,
-        environment: impl IntoIterator<Item = (&str, &str)> + Send,
+        config: Option<ContainerConfigV1>,
     ) -> anyhow::Result<Self::PContainer> {
         let pc = self.podman.podman.containers();
+        let env_pairs = match config {
+            Some(ref cfg) => match cfg.environment {
+                Some(ref env) => env.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                None => Vec::new(),
+            },
+            None => Vec::new(),
+        };
         let output = pc
             .create(
                 &ContainerCreateOpts::builder()
                     .name(name)
                     .image(&self.id)
-                    .env(environment)
+                    .env(env_pairs)
                     .build(),
             )
             .await?;
@@ -503,10 +512,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let container = img
-            .create_container("test-container", vec![])
-            .await
-            .unwrap();
+        let container = img.create_container("test-container", None).await.unwrap();
 
         assert_eq!(container.name(), "test-container");
         assert_eq!(container.reference(), "docker.io/library/alpine:latest");
@@ -559,7 +565,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-        let mut container = image.create_container("test", vec![]).await.unwrap();
+        let mut container = image.create_container("test", None).await.unwrap();
 
         assert_eq!(
             container.state().await.unwrap(),
@@ -604,7 +610,7 @@ mod tests {
             .unwrap();
 
         let mut container = img
-            .create_container("test-logs-container", vec![])
+            .create_container("test-logs-container", None)
             .await
             .unwrap();
 

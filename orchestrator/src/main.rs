@@ -56,6 +56,7 @@ struct Cli {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
+    let (logger, log_flusher) = OrchestratorLogger::init(cli.debug);
 
     if cli.self_check {
         if let Err(e) = self_check(&cli).await {
@@ -63,16 +64,17 @@ async fn main() {
             std::process::exit(1);
         }
     } else {
-        if let Err(e) = run(&cli).await {
+        if let Err(e) = run(&cli, logger).await {
             error!("{:?}", e);
+            // Give the error we just logged (and anything buffered before
+            // it) a chance to reach the cloud before the process exits.
+            log_flusher.flush().await;
             std::process::exit(1);
         }
     }
 }
 
-async fn run(cli: &Cli) -> anyhow::Result<()> {
-    let logger = OrchestratorLogger::init(cli.debug);
-
+async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
     info!("Orchestrator starting ...");
 
     let config =
@@ -151,7 +153,6 @@ async fn run(cli: &Cli) -> anyhow::Result<()> {
 }
 
 async fn self_check(cli: &Cli) -> anyhow::Result<()> {
-    OrchestratorLogger::init(cli.debug);
     let config = OrchestratorConfig::load(cli.config.as_deref())?;
 
     let bootc = Bootc::new(Box::new(RealExecuter));

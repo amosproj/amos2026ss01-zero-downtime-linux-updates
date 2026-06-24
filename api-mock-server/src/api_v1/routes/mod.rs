@@ -137,6 +137,25 @@ mod tests {
         (status, String::from_utf8(body.to_vec()).unwrap())
     }
 
+    async fn put(app: Router, uri: &str, json: &str) -> (StatusCode, String) {
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .body(Body::from(json.to_owned()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = response.status();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        (status, String::from_utf8(body.to_vec()).unwrap())
+    }
+
     async fn delete(app: Router, uri: &str) -> StatusCode {
         app.oneshot(
             Request::builder()
@@ -490,7 +509,9 @@ mod tests {
     }
 
     // --- Application Configs ---
-    // ApplicationConfig::Model: { id: i32, application_id: i32, image: String, config: Option<String>, comment: Option<String> }
+    // ApplicationConfig::Model: { id: i32, device_id: Option<i32>, group_id: Option<i32>,
+    //                             application_id: i32, image: String, config: String, version: i32 }
+    // unique on (device_id, application_id); exactly one of device_id/group_id must be set.
 
     #[tokio::test]
     #[serial]
@@ -498,7 +519,31 @@ mod tests {
         let (status, _) = post(
             test_app().await,
             "/v1/app-configs",
-            r#"{"id":0,"application_id":1,"image":"","config":null,"comment":null}"#,
+            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"","config":"x","version":1}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_app_config_without_device_or_group_returns_422() {
+        let (status, _) = post(
+            test_app().await,
+            "/v1/app-configs",
+            r#"{"device_id":null,"group_id":null,"application_id":1,"image":"img","config":"x","version":1}"#,
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_app_config_with_both_device_and_group_returns_422() {
+        let (status, _) = post(
+            test_app().await,
+            "/v1/app-configs",
+            r#"{"device_id":1,"group_id":1,"application_id":1,"image":"img","config":"x","version":1}"#,
         )
         .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
@@ -511,6 +556,167 @@ mod tests {
         assert_eq!(status, StatusCode::OK);
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_app_config_returns_201_with_default_version() {
+        let app = test_app().await;
+        let (_, tenant_body) = post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Acme","description":null}"#,
+        )
+        .await;
+        let tenant: serde_json::Value = serde_json::from_str(&tenant_body).unwrap();
+        let (_, device_body) = post(
+            app.clone(),
+            "/v1/devices",
+            &format!(
+                r#"{{"id":0,"uuid":"dev-1","public_key":null,"hostname":"host-1","tenant_id":{},"group_id":null}}"#,
+                tenant["id"]
+            ),
+        )
+        .await;
+        let device: serde_json::Value = serde_json::from_str(&device_body).unwrap();
+        let (_, app_body) = post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"my-app","description":"does things"}"#,
+        )
+        .await;
+        let application: serde_json::Value = serde_json::from_str(&app_body).unwrap();
+
+        let (status, body) = post(
+            app,
+            "/v1/app-configs",
+            &format!(
+                r#"{{"device_id":{},"group_id":null,"application_id":{},"image":"app:1"}}"#,
+                device["id"], application["id"]
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["config"], serde_json::Value::Null);
+        // version omitted in the request body — server applies the default
+        assert_eq!(json["version"], 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_app_config_changes_config_and_version() {
+        let app = test_app().await;
+        let (_, tenant_body) = post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Acme","description":null}"#,
+        )
+        .await;
+        let tenant: serde_json::Value = serde_json::from_str(&tenant_body).unwrap();
+        let (_, device_body) = post(
+            app.clone(),
+            "/v1/devices",
+            &format!(
+                r#"{{"id":0,"uuid":"dev-1","public_key":null,"hostname":"host-1","tenant_id":{},"group_id":null}}"#,
+                tenant["id"]
+            ),
+        )
+        .await;
+        let device: serde_json::Value = serde_json::from_str(&device_body).unwrap();
+        let (_, app_body) = post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"my-app","description":"does things"}"#,
+        )
+        .await;
+        let application: serde_json::Value = serde_json::from_str(&app_body).unwrap();
+
+        let first_config = serde_json::json!({
+            "environment": {
+                "foo": "bar"
+            }
+        });
+        let create_payload = serde_json::json!({
+            "device_id": device["id"],
+            "group_id": null,
+            "application_id": application["id"],
+            "image": "app:1",
+            "config": first_config,
+        })
+        .to_string();
+
+        let (_, created_body) = post(app.clone(), "/v1/app-configs", &create_payload).await;
+        let created: serde_json::Value = serde_json::from_str(&created_body).unwrap();
+
+        let update_config = serde_json::json!({
+            "environment": {
+                "bar": "baz"
+            }
+        });
+        let update_payload = serde_json::json!({
+            "device_id": device["id"],
+            "group_id": null,
+            "application_id": application["id"],
+            "image": "app:1",
+            "config": update_config,
+        })
+        .to_string();
+        let (status, body) = put(
+            app,
+            &format!("/v1/app-configs/{}", created["id"]),
+            &update_payload,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["config"], update_config);
+        assert_eq!(json["version"], 2);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_app_configs_by_device_uuid_device_supersedes_group() {
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"Acme","description":null}"#,
+        )
+        .await;
+        post(app.clone(), "/v1/groups", r#"{"id":0,"name":"G1"}"#).await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"dev-1","hostname":"host-1","tenant_id":1,"group_id":1}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/applications",
+            r#"{"id":0,"name":"my-app","description":"does things"}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/app-configs",
+            r#"{"device_id":null,"group_id":1,"application_id":1,"image":"app:group","version":1}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/app-configs",
+            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"app:device","version":1}"#,
+        )
+        .await;
+
+        let (status, body) = get(app, "/v1/app-configs?device_uuid=dev-1").await;
+
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let data = json["data"].as_array().unwrap();
+        assert_eq!(data.len(), 1, "device config should supersede group config");
+        assert_eq!(data[0]["image"], "app:device");
     }
 
     // --- OS Versions ---
@@ -642,19 +848,19 @@ mod tests {
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"id":0,"application_id":1,"image":"app:1","config":null,"comment":null}"#,
+            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"app:1"}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"id":0,"application_id":1,"image":"app:2","config":null,"comment":null}"#,
+            r#"{"device_id":null,"group_id":1,"application_id":1,"image":"app:2"}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"id":0,"application_id":1,"image":"app:3","config":null,"comment":null}"#,
+            r#"{"device_id":2,"group_id":null,"application_id":1,"image":"app:3"}"#,
         )
         .await;
         // config 1 -> device 1 (direct), config 2 -> group 1, config 3 -> device 2 (other).
@@ -739,7 +945,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"id":0,"application_id":1,"image":"ghcr.io/example/app:1","config":null,"comment":null}"#,
+            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"ghcr.io/example/app:1"}"#,
         )
         .await;
 

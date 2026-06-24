@@ -7,6 +7,12 @@ pub use crate::entities::application_assignment as ApplicationAssignment;
 pub mod application_config;
 pub use crate::entities::application_config as ApplicationConfig;
 
+pub mod audit_log;
+pub use crate::entities::audit_log as AuditLog;
+
+pub mod container_config;
+pub use crate::entities::container_config::ContainerConfigV1;
+
 pub mod device;
 pub use crate::entities::device as Device;
 
@@ -35,6 +41,3 @@ pub use crate::entities::reported_os_assignment as ReportedOsAssignment;
 
 pub mod tenant;
 pub use crate::entities::tenant as Tenant;
-
-pub mod audit_log;
-pub use crate::entities::audit_log as AuditLog;

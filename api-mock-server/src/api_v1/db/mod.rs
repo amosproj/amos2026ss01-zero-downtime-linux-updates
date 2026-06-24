@@ -134,7 +134,9 @@ async fn reconcile_audit_triggers(
 
 #[cfg(test)]
 mod tests {
-    use amos_common::entities::Application;
+    use std::collections::HashMap;
+
+    use amos_common::entities::{Application, ContainerConfigV1};
     use sea_orm::sea_query::prelude::serde_json;
     use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
     use serial_test::serial;
@@ -227,16 +229,128 @@ mod tests {
             .unwrap();
         println!("Created app: {:?}", app);
 
-        let app_config =
-            super::add_application_config(app.id, "quay.io/bla".to_owned(), None, None)
-                .await
-                .unwrap();
+        let app_config = super::add_application_config(
+            Some(device.id),
+            None,
+            app.id,
+            "quay.io/bla".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
         println!("Created app config: {:?}", app_config);
 
         let result = super::add_application_assignment_to_device(app_config.id, device.id).await;
         println!("Created application assignment: {:?}", result);
 
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_application_config_crud_round_trip() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("X".to_owned(), None).await.unwrap();
+        let device = super::add_device("uuid".to_owned(), None, "host".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned())
+            .await
+            .unwrap();
+
+        let default_config = ContainerConfigV1::default();
+
+        let config = super::add_application_config(
+            Some(device.id),
+            None,
+            app.id,
+            "quay.io/app".to_owned(),
+            Some(default_config.clone()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(config.version, 1);
+
+        let fetched = super::get_application_config(config.id)
+            .await
+            .unwrap()
+            .expect("config should exist");
+        assert_eq!(fetched.config.unwrap(), default_config);
+
+        let custom_config = ContainerConfigV1 {
+            environment: Some(HashMap::from([("SOME_ENV".to_string(), "XXX".to_string())])),
+        };
+
+        let updated = super::update_application_config(
+            config.id,
+            Some(device.id),
+            None,
+            app.id,
+            "quay.io/app".to_owned(),
+            Some(custom_config.clone()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(updated.version, 2);
+        assert_eq!(updated.config.unwrap(), custom_config);
+
+        let deleted = super::delete_application_config(updated.id).await.unwrap();
+        assert_eq!(deleted, 1);
+        assert!(
+            super::get_application_config(updated.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_application_configs_for_device_device_supersedes_group() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("X".to_owned(), None).await.unwrap();
+        let group = super::add_group("G".to_owned()).await.unwrap();
+        let device = super::add_device(
+            "uuid".to_owned(),
+            None,
+            "host".to_owned(),
+            tenant.id,
+            Some(group.id),
+        )
+        .await
+        .unwrap();
+        let app = super::add_application("App 1".to_owned(), "Sample app".to_owned())
+            .await
+            .unwrap();
+
+        super::add_application_config(
+            None,
+            Some(group.id),
+            app.id,
+            "quay.io/app:group".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
+        let device_config = super::add_application_config(
+            Some(device.id),
+            None,
+            app.id,
+            "quay.io/app:device".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
+
+        let resolved = super::list_application_configs_for_device(device.id)
+            .await
+            .unwrap();
+
+        assert_eq!(resolved.len(), 1);
+        assert_eq!(resolved[0].id, device_config.id);
+        assert_eq!(resolved[0].image, "quay.io/app:device");
     }
 
     #[tokio::test]
@@ -346,10 +460,15 @@ mod tests {
         let app = super::add_application("app".to_owned(), "desc".to_owned())
             .await
             .unwrap();
-        let config =
-            super::add_application_config(app.id, "quay.io/app:1.0".to_owned(), None, None)
-                .await
-                .unwrap();
+        let config = super::add_application_config(
+            Some(d1.id),
+            None,
+            app.id,
+            "quay.io/app:1.0".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
         let assignment = super::add_application_assignment_to_device(config.id, d1.id)
             .await
             .unwrap();
@@ -367,18 +486,30 @@ mod tests {
     async fn test_application_config_update_uses_append_only() {
         test_initialize_empty_inmem_db().await;
 
+        let tenant = super::add_tenant("T1".to_owned(), None).await.unwrap();
+
+        let device = super::add_device("x".to_owned(), None, "host-03".to_owned(), tenant.id, None)
+            .await
+            .unwrap();
+
         let app = super::add_application("app".to_owned(), "desc".to_owned())
             .await
             .unwrap();
-        let config =
-            super::add_application_config(app.id, "quay.io/app:1.0".to_owned(), None, None)
-                .await
-                .unwrap();
+        let config = super::add_application_config(
+            Some(device.id),
+            None,
+            app.id,
+            "quay.io/app:1.0".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
         let updated = super::update_application_config(
             config.id,
+            Some(1),
+            None,
             app.id,
             "quay.io/app:2.0".to_owned(),
-            None,
             None,
         )
         .await
@@ -485,11 +616,17 @@ mod tests {
         let app = super::add_application("my-app".to_owned(), "does things".to_owned())
             .await
             .unwrap();
+
+        let custom_config = ContainerConfigV1 {
+            environment: Some(HashMap::from([("PORT".to_string(), "8080".to_string())])),
+        };
+
         let config = super::add_application_config(
+            Some(device.id),
+            None,
             app.id,
             "quay.io/my-app:1.0".to_owned(),
-            Some(r#"{"port":8080}"#.to_owned()),
-            Some("primary instance".to_owned()),
+            Some(custom_config),
         )
         .await
         .unwrap();
@@ -536,8 +673,8 @@ mod tests {
         assert_eq!(app_entry["application_name"], "my-app");
         assert_eq!(app_entry["application_description"], "does things");
         assert_eq!(app_entry["image"], "quay.io/my-app:1.0");
-        assert_eq!(app_entry["config"], r#"{"port":8080}"#);
-        assert_eq!(app_entry["comment"], "primary instance");
+        assert_eq!(app_entry["config"], r#"{"environment":{"PORT":"8080"}}"#);
+        assert_eq!(app_entry["version"], 1);
         assert!(app_entry.get("reported_assignment_id").is_some());
         assert!(app_entry.get("updated_at").is_some());
     }
@@ -670,9 +807,10 @@ mod tests {
         let app = super::add_application("app".to_owned(), "desc".to_owned())
             .await
             .unwrap();
-        let config = super::add_application_config(app.id, "img".to_owned(), None, None)
-            .await
-            .unwrap();
+        let config =
+            super::add_application_config(Some(device.id), None, app.id, "img".to_owned(), None)
+                .await
+                .unwrap();
         super::add_application_assignment_to_device(config.id, device.id)
             .await
             .unwrap();

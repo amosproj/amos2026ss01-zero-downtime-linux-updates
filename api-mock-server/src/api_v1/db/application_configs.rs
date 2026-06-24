@@ -1,10 +1,13 @@
+use std::collections::HashMap;
+
 use crate::dtos;
-use amos_common::entities::ApplicationConfig;
+use amos_common::entities::{ApplicationConfig, ContainerConfigV1};
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter,
+    QueryOrder,
 };
 
 use super::db;
@@ -13,6 +16,8 @@ use super::db;
 
 pub async fn list_application_configs(
     application_id: Option<i32>,
+    device_id: Option<i32>,
+    group_id: Option<i32>,
     page: u64,
     page_size: u64,
 ) -> Result<(Vec<ApplicationConfig::Model>, u64), DbErr> {
@@ -23,6 +28,12 @@ pub async fn list_application_configs(
         .order_by_asc(dtos::ApplicationConfig::Column::Id);
     if let Some(id) = application_id {
         query = query.filter(dtos::ApplicationConfig::Column::ApplicationId.eq(id));
+    }
+    if let Some(id) = device_id {
+        query = query.filter(dtos::ApplicationConfig::Column::DeviceId.eq(id));
+    }
+    if let Some(id) = group_id {
+        query = query.filter(dtos::ApplicationConfig::Column::GroupId.eq(id));
     }
     let paginator = query.paginate(&db, page_size);
     let total_items = paginator.num_items().await?;
@@ -43,18 +54,69 @@ pub async fn get_application_config(id: i32) -> Result<Option<ApplicationConfig:
         .map(|m| m.into_api()))
 }
 
+/// Resolves the effective application configs for a device: configs
+/// assigned directly to the device, plus configs assigned to the device's
+/// group. When both exist for the same application, the device-specific
+/// config supersedes the group config.
+pub async fn list_application_configs_for_device(
+    device_id: i32,
+) -> Result<Vec<ApplicationConfig::Model>, DbErr> {
+    let db = db!();
+
+    let group_id = dtos::Device::Entity::find_by_id(device_id)
+        .one(&db)
+        .await?
+        .and_then(|d| d.group_id);
+
+    let mut query = dtos::ApplicationConfig::Entity::find()
+        .filter(dtos::ApplicationConfig::Column::DeviceId.eq(device_id));
+    if let Some(group_id) = group_id {
+        query = dtos::ApplicationConfig::Entity::find().filter(
+            dtos::ApplicationConfig::Column::DeviceId
+                .eq(device_id)
+                .or(dtos::ApplicationConfig::Column::GroupId.eq(group_id)),
+        );
+    }
+
+    let configs = query
+        .order_by_asc(dtos::ApplicationConfig::Column::Id)
+        .all(&db)
+        .await?;
+
+    let mut by_application: HashMap<i32, dtos::application_config::Model> = HashMap::new();
+    for config in configs.iter().filter(|c| c.group_id.is_some()) {
+        by_application.insert(config.application_id, config.clone());
+    }
+    for config in configs.iter().filter(|c| c.device_id == Some(device_id)) {
+        by_application.insert(config.application_id, config.clone());
+    }
+
+    let mut result: Vec<_> = by_application.into_values().map(|m| m.into_api()).collect();
+    result.sort_by_key(|c| c.id);
+    Ok(result)
+}
+
 pub async fn add_application_config(
-    app_id: i32,
+    device_id: Option<i32>,
+    group_id: Option<i32>,
+    application_id: i32,
     image: String,
-    config: Option<String>,
-    comment: Option<String>,
+    config: Option<ContainerConfigV1>,
 ) -> Result<ApplicationConfig::Model, DbErr> {
+    let config_json = config
+        .map(|c| serde_json::to_string(&c))
+        .transpose()
+        .map_err(|e| DbErr::Custom(format!("Failed to serialize config: {e}")))?;
+
     let app_config = dtos::ApplicationConfig::ActiveModel {
         id: NotSet,
-        application_id: Set(app_id),
+        device_id: Set(device_id),
+        group_id: Set(group_id),
+        application_id: Set(application_id),
         image: Set(image),
-        config: Set(config),
-        comment: Set(comment),
+        config_version: Set(1),
+        config: Set(config_json),
+        version: Set(1),
         deleted_at: NotSet,
         superseded_by: NotSet,
     };
@@ -69,10 +131,11 @@ pub async fn add_application_config(
 
 pub async fn update_application_config(
     id: i32,
-    app_id: i32,
+    device_id: Option<i32>,
+    group_id: Option<i32>,
+    application_id: i32,
     image: String,
-    config: Option<String>,
-    comment: Option<String>,
+    config: Option<ContainerConfigV1>,
 ) -> Result<ApplicationConfig::Model, DbErr> {
     let db = db!();
 
@@ -83,12 +146,20 @@ pub async fn update_application_config(
         .await?
         .ok_or(DbErr::RecordNotFound("ApplicationConfig not found".into()))?;
 
+    let config_json = config
+        .map(|c| serde_json::to_string(&c))
+        .transpose()
+        .map_err(|e| DbErr::Custom(format!("Failed to serialize config: {e}")))?;
+
     let new_config = dtos::ApplicationConfig::ActiveModel {
         id: NotSet,
-        application_id: Set(app_id),
+        application_id: Set(application_id),
+        device_id: Set(device_id),
+        group_id: Set(group_id),
         image: Set(image),
-        config: Set(config),
-        comment: Set(comment),
+        config_version: Set(current.config_version),
+        config: Set(config_json),
+        version: Set(current.version + 1),
         deleted_at: NotSet,
         superseded_by: NotSet,
     };
