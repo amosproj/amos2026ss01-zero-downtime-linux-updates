@@ -679,6 +679,207 @@ mod tests {
         assert!(app_entry.get("updated_at").is_some());
     }
 
+    // Application_assignments for device tests
+    #[tokio::test]
+    #[serial]
+    async fn test_app_assignments_for_device_device_wins_over_group_for_same_application() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        let group = super::add_group("G".to_owned()).await.unwrap();
+        let device = super::add_device(
+            "uuid-1".to_owned(),
+            None,
+            "host-1".to_owned(),
+            tenant.id,
+            Some(group.id),
+        )
+        .await
+        .unwrap();
+        let app = super::add_application("App".to_owned(), "desc".to_owned())
+            .await
+            .unwrap();
+
+        // Group-level config and assignment for the same application
+        let group_config = super::add_application_config(
+            None,
+            Some(group.id),
+            app.id,
+            "quay.io/app:group".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
+        super::add_application_assignment_to_group(group_config.id, group.id)
+            .await
+            .unwrap();
+
+        // Device-level config and assignment for the same application
+        let device_config = super::add_application_config(
+            Some(device.id),
+            None,
+            app.id,
+            "quay.io/app:device".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
+        super::add_application_assignment_to_device(device_config.id, device.id)
+            .await
+            .unwrap();
+
+        let (assignments, total) =
+            super::list_application_assignments_for_device(device.id, Some(group.id), None, 0, 20)
+                .await
+                .unwrap();
+
+        // Only one assignment must come back — the device-level one
+        assert_eq!(total, 1);
+        assert_eq!(assignments[0].application_config_id, device_config.id);
+        assert_eq!(assignments[0].device_id, Some(device.id));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_app_assignments_for_device_includes_both_when_different_applications() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        let group = super::add_group("G".to_owned()).await.unwrap();
+        let device = super::add_device(
+            "uuid-1".to_owned(),
+            None,
+            "host-1".to_owned(),
+            tenant.id,
+            Some(group.id),
+        )
+        .await
+        .unwrap();
+        let app1 = super::add_application("App1".to_owned(), "first".to_owned())
+            .await
+            .unwrap();
+        let app2 = super::add_application("App2".to_owned(), "second".to_owned())
+            .await
+            .unwrap();
+
+        // Group assignment for app1
+        let group_config = super::add_application_config(
+            None,
+            Some(group.id),
+            app1.id,
+            "quay.io/app1:group".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
+        super::add_application_assignment_to_group(group_config.id, group.id)
+            .await
+            .unwrap();
+
+        // Device assignment for app2 (different application — no conflict)
+        let device_config = super::add_application_config(
+            Some(device.id),
+            None,
+            app2.id,
+            "quay.io/app2:device".to_owned(),
+            None,
+        )
+        .await
+        .unwrap();
+        super::add_application_assignment_to_device(device_config.id, device.id)
+            .await
+            .unwrap();
+
+        let (assignments, total) =
+            super::list_application_assignments_for_device(device.id, Some(group.id), None, 0, 20)
+                .await
+                .unwrap();
+
+        // Both must be returned since they cover different applications
+        assert_eq!(total, 2);
+        let config_ids: Vec<i32> = assignments
+            .iter()
+            .map(|a| a.application_config_id)
+            .collect();
+        assert!(config_ids.contains(&device_config.id));
+        assert!(config_ids.contains(&group_config.id));
+    }
+
+    // OsApplication Assignment for device tests
+    #[tokio::test]
+    #[serial]
+    async fn test_os_assignments_for_device_returns_group_assignment_when_no_device_assignment() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        let group = super::add_group("G".to_owned()).await.unwrap();
+        let device = super::add_device(
+            "uuid-1".to_owned(),
+            None,
+            "host-1".to_owned(),
+            tenant.id,
+            Some(group.id),
+        )
+        .await
+        .unwrap();
+        let os = super::add_os_version("deadbeef".to_owned(), "1.0.0".to_owned(), None)
+            .await
+            .unwrap();
+        super::add_os_assignment(os.id, None, Some(group.id))
+            .await
+            .unwrap();
+
+        let (assignments, total) =
+            super::list_os_assignments_for_device(device.id, Some(group.id), None, 0, 20)
+                .await
+                .unwrap();
+
+        assert_eq!(total, 1);
+        assert_eq!(assignments[0].os_version_id, os.id);
+        assert_eq!(assignments[0].group_id, Some(group.id));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_os_assignments_for_device_device_wins_over_group() {
+        test_initialize_empty_inmem_db().await;
+
+        let tenant = super::add_tenant("T".to_owned(), None).await.unwrap();
+        let group = super::add_group("G".to_owned()).await.unwrap();
+        let device = super::add_device(
+            "uuid-1".to_owned(),
+            None,
+            "host-1".to_owned(),
+            tenant.id,
+            Some(group.id),
+        )
+        .await
+        .unwrap();
+        let group_os = super::add_os_version("aabbccdd".to_owned(), "1.0.0".to_owned(), None)
+            .await
+            .unwrap();
+        let device_os = super::add_os_version("deadbeef".to_owned(), "2.0.0".to_owned(), None)
+            .await
+            .unwrap();
+
+        super::add_os_assignment(group_os.id, None, Some(group.id))
+            .await
+            .unwrap();
+        super::add_os_assignment(device_os.id, Some(device.id), None)
+            .await
+            .unwrap();
+
+        let (assignments, total) =
+            super::list_os_assignments_for_device(device.id, Some(group.id), None, 0, 20)
+                .await
+                .unwrap();
+
+        // Only the device-level assignment must be returned
+        assert_eq!(total, 1);
+        assert_eq!(assignments[0].os_version_id, device_os.id);
+        assert_eq!(assignments[0].device_id, Some(device.id));
+    }
+
     // Integration tests for audit log functionality.
     // These require PostgreSQL (triggers do not fire on SQLite).
     // Run with: cargo test -- --ignored (against a PostgreSQL instance)

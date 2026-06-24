@@ -45,12 +45,11 @@ async fn list_os_assignments(
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
-    let mut device_id = params.device_id;
 
     // Resolve device_uuid
     if let Some(device_uuid) = params.device_uuid {
-        match db::get_device_by_uuid(device_uuid.clone()).await {
-            Ok(Some(device)) => device_id = Some(device.id),
+        let device = match db::get_device_by_uuid(device_uuid.clone()).await {
+            Ok(Some(device)) => device,
             Ok(None) => {
                 return err(
                     StatusCode::NOT_FOUND,
@@ -58,12 +57,27 @@ async fn list_os_assignments(
                 );
             }
             Err(e) => return db_err(e),
-        }
+        };
+
+        return match db::list_os_assignments_for_device(
+            device.id,
+            device.group_id,
+            params.os_version_id,
+            page.to_db_page(),
+            page.page_size,
+        )
+        .await
+        {
+            Ok((assignment, total)) => {
+                Json(Page::new(assignment, page.page, page.page_size, total)).into_response()
+            }
+            Err(e) => db_err(e),
+        };
     }
 
     match db::list_os_assignments(
         params.os_version_id,
-        device_id,
+        params.device_id,
         params.group_id,
         page.to_db_page(),
         page.page_size,

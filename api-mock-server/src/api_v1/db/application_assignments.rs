@@ -66,19 +66,52 @@ pub async fn list_application_assignments_for_device(
     let mut query = dtos::ApplicationAssignment::Entity::find()
         .filter(dtos::ApplicationAssignment::Column::DeletedAt.is_null())
         .filter(dtos::ApplicationAssignment::Column::SupersededBy.is_null())
+        // Sort by rows with device_id to give them priority over ones with group_id
+        .order_by_desc(dtos::ApplicationAssignment::Column::DeviceId)
         .order_by_asc(dtos::ApplicationAssignment::Column::Id)
         .filter(applies_to_device);
     if let Some(id) = application_config_id {
         query = query.filter(dtos::ApplicationAssignment::Column::ApplicationConfigId.eq(id));
     }
 
-    let paginator = query.paginate(&db, page_size);
-    let total_items = paginator.num_items().await?;
-    let data = paginator.fetch_page(page).await?;
-    Ok((
-        data.into_iter().map(|m| m.into_api()).collect(),
-        total_items,
-    ))
+    let all = query.all(&db).await?;
+
+    // Resolve application_config_ids to application_ids to remove duplicates that were assigned from a group
+    let app_config_ids: Vec<i32> = all.iter().map(|m| m.application_config_id).collect();
+    let app_configs = dtos::ApplicationConfig::Entity::find()
+        .filter(dtos::ApplicationConfig::Column::Id.is_in(app_config_ids))
+        .filter(dtos::ApplicationConfig::Column::DeletedAt.is_null())
+        .filter(dtos::ApplicationConfig::Column::SupersededBy.is_null())
+        .all(&db)
+        .await?;
+    let config_id_to_app_id: std::collections::HashMap<i32, i32> = app_configs
+        .into_iter()
+        .map(|c| (c.id, c.application_id))
+        .collect();
+
+    // Deduplicate by application_id. As rows are ordered by device_id, a assignment with device_id will always win against a assignment with group_id
+    let mut seen_application_ids: std::collections::HashSet<i32> = std::collections::HashSet::new();
+    let deduplicated: Vec<_> = all
+        .into_iter()
+        .filter(
+            |m| match config_id_to_app_id.get(&m.application_config_id) {
+                None => false,
+                Some(&app_id) => seen_application_ids.insert(app_id),
+            },
+        )
+        .collect();
+
+    // Manual pagination
+    let total_items = deduplicated.len() as u64;
+    let start = (page * page_size) as usize;
+    let paged = deduplicated
+        .into_iter()
+        .skip(start)
+        .take(page_size as usize)
+        .map(|m| m.into_api())
+        .collect();
+
+    Ok((paged, total_items))
 }
 
 pub async fn get_application_assignment(

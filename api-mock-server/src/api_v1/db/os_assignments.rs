@@ -4,7 +4,8 @@ use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
+    QueryOrder,
 };
 
 use super::db;
@@ -39,6 +40,43 @@ pub async fn list_os_assignments(
         data.into_iter().map(|m| m.into_api()).collect(),
         total_items,
     ))
+}
+
+// This should turn into device only route
+pub async fn list_os_assignments_for_device(
+    device_id: i32,
+    group_id: Option<i32>,
+    os_version_id: Option<i32>,
+    _page: u64,
+    _page_size: u64,
+) -> Result<(Vec<OsAssignment::Model>, u64), DbErr> {
+    let db = db!();
+
+    let mut applies_to_device =
+        Condition::any().add(dtos::OsAssignment::Column::DeviceId.eq(device_id));
+    if let Some(gid) = group_id {
+        applies_to_device = applies_to_device.add(dtos::OsAssignment::Column::GroupId.eq(gid));
+    }
+
+    let mut query = dtos::OsAssignment::Entity::find()
+        .filter(dtos::OsAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::OsAssignment::Column::SupersededBy.is_null())
+        // Sort by rows with device_id to give them priority over ones with group_id
+        .order_by_desc(dtos::OsAssignment::Column::DeviceId)
+        .order_by_asc(dtos::OsAssignment::Column::Id)
+        .filter(applies_to_device);
+
+    if let Some(id) = os_version_id {
+        query = query.filter(dtos::OsAssignment::Column::OsVersionId.eq(id));
+    }
+
+    let all = query.all(&db).await?;
+    let winner = all.into_iter().next();
+    let (paged, total_items) = match winner {
+        Some(m) => (vec![m.into_api()], 1),
+        None => (vec![], 0),
+    };
+    Ok((paged, total_items))
 }
 
 pub async fn get_os_assignment(id: i32) -> Result<Option<OsAssignment::Model>, DbErr> {

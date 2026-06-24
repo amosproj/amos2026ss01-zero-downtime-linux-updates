@@ -817,7 +817,19 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_list_app_assignments_by_device_uuid_includes_group_assignments() {
+    async fn test_list_os_assignments_returns_200_with_page_envelope() {
+        let (status, body) = get(test_app().await, "/v1/os-assignments").await;
+        assert_eq!(status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json["data"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_list_app_assignments_by_device_uuid_device_direct_supersedes_group_duplicate() {
+        // Scenario: a device belongs to a group. The same application_config_id is assigned
+        // both to the device directly and to the group. The device-direct assignment must win
+        // and only one entry should be returned (no duplicate).
         let app = test_app().await;
         post(
             app.clone(),
@@ -826,7 +838,6 @@ mod tests {
         )
         .await;
         post(app.clone(), "/v1/groups", r#"{"id":0,"name":"G1"}"#).await;
-        // device 1 belongs to group 1; device 2 has no group.
         post(
             app.clone(),
             "/v1/devices",
@@ -835,83 +846,129 @@ mod tests {
         .await;
         post(
             app.clone(),
-            "/v1/devices",
-            r#"{"id":0,"uuid":"dev-other","serial_number":"h2","tenant_id":1,"group_id":null}"#,
-        )
-        .await;
-        post(
-            app.clone(),
             "/v1/applications",
-            r#"{"id":0,"name":"a","description":"d"}"#,
+            r#"{"id":0,"name":"my-app","description":"desc"}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"app:1"}"#,
+            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"app:device"}"#,
         )
         .await;
         post(
             app.clone(),
             "/v1/app-configs",
-            r#"{"device_id":null,"group_id":1,"application_id":1,"image":"app:2"}"#,
+            r#"{"device_id":null,"group_id":1,"application_id":1,"image":"app:group"}"#,
         )
         .await;
-        post(
-            app.clone(),
-            "/v1/app-configs",
-            r#"{"device_id":2,"group_id":null,"application_id":1,"image":"app:3"}"#,
-        )
-        .await;
-        // config 1 -> device 1 (direct), config 2 -> group 1, config 3 -> device 2 (other).
+        // app-config 1 assigned directly to device 1
         post(
             app.clone(),
             "/v1/app-assignments",
-            r#"{"id":0,"application_config_id":1,"device_id":1,"group_id":null}"#,
+            r#"{"application_config_id":1,"device_id":1,"group_id":null}"#,
         )
         .await;
+        // app-config 1 also assigned to group 1 (same application_config_id — the duplicate)
         post(
             app.clone(),
             "/v1/app-assignments",
-            r#"{"id":0,"application_config_id":2,"device_id":null,"group_id":1}"#,
-        )
-        .await;
-        post(
-            app.clone(),
-            "/v1/app-assignments",
-            r#"{"id":0,"application_config_id":3,"device_id":2,"group_id":null}"#,
+            r#"{"application_config_id":1,"device_id":null,"group_id":1}"#,
         )
         .await;
 
-        let (status, body) = get(app, "/v1/app-assignments?device_uuid=dev-grp-1").await;
+        let (status, body) = get(app, "/v1/app-assignments?device_uuid=dev-dup-1").await;
 
         assert_eq!(status, StatusCode::OK);
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
         let data = json["data"].as_array().unwrap();
-        let config_ids: Vec<i64> = data
-            .iter()
-            .map(|a| a["application_config_id"].as_i64().unwrap())
-            .collect();
         assert_eq!(
             data.len(),
-            2,
-            "device_uuid should resolve direct + group assignments"
+            1,
+            "duplicate app_config_id via group should be suppressed"
         );
-        assert!(config_ids.contains(&1), "device-direct assignment missing");
-        assert!(config_ids.contains(&2), "group assignment missing");
-        assert!(
-            !config_ids.contains(&3),
-            "another device's assignment must be excluded"
+        // The surviving assignment must be the device-direct one (device_id set, group_id null)
+        assert_eq!(
+            data[0]["device_id"], 1,
+            "device-direct assignment should win over group assignment"
+        );
+        assert_eq!(
+            data[0]["group_id"],
+            serde_json::Value::Null,
+            "group assignment should have been deduplicated away"
         );
     }
 
     #[tokio::test]
     #[serial]
-    async fn test_list_os_assignments_returns_200_with_page_envelope() {
-        let (status, body) = get(test_app().await, "/v1/os-assignments").await;
+    async fn test_list_os_assignments_by_device_uuid_device_direct_supersedes_group() {
+        // Scenario: a device belongs to a group. Both have an OS assignment (possibly
+        // different OS versions). The device-direct assignment must be the only result.
+        let app = test_app().await;
+        post(
+            app.clone(),
+            "/v1/tenants",
+            r#"{"id":0,"name":"T","description":null}"#,
+        )
+        .await;
+        post(app.clone(), "/v1/groups", r#"{"id":0,"name":"G1"}"#).await;
+        post(
+            app.clone(),
+            "/v1/devices",
+            r#"{"id":0,"uuid":"dev-os-1","hostname":"h1","tenant_id":1,"group_id":1}"#,
+        )
+        .await;
+        // Two distinct OS versions so we can tell which assignment won
+        post(
+            app.clone(),
+            "/v1/os-versions",
+            r#"{"id":0,"commit_hash":"device-hash","orchestrator_version":"1.0","description":null}"#,
+        )
+        .await;
+        post(
+            app.clone(),
+            "/v1/os-versions",
+            r#"{"id":0,"commit_hash":"group-hash","orchestrator_version":"1.0","description":null}"#,
+        )
+        .await;
+        // Group assignment: os-version 2
+        post(
+            app.clone(),
+            "/v1/os-assignments",
+            r#"{"os_version_id":2,"device_id":null,"group_id":1}"#,
+        )
+        .await;
+        // Device-direct assignment: os-version 1
+        post(
+            app.clone(),
+            "/v1/os-assignments",
+            r#"{"os_version_id":1,"device_id":1,"group_id":null}"#,
+        )
+        .await;
+
+        let (status, body) = get(app, "/v1/os-assignments?device_uuid=dev-os-1").await;
+
         assert_eq!(status, StatusCode::OK);
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json["data"], serde_json::json!([]));
+        let data = json["data"].as_array().unwrap();
+        assert_eq!(
+            data.len(),
+            1,
+            "only the winning OS assignment should be returned"
+        );
+        assert_eq!(
+            data[0]["os_version_id"], 1,
+            "device-direct OS assignment (os_version_id=1) must win over group assignment (os_version_id=2)"
+        );
+        assert_eq!(
+            data[0]["device_id"], 1,
+            "winning assignment should have device_id set"
+        );
+        assert_eq!(
+            data[0]["group_id"],
+            serde_json::Value::Null,
+            "winning assignment should not be the group assignment"
+        );
     }
 
     // --- Reported assignments ---
