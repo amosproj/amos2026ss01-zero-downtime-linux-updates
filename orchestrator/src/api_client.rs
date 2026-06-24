@@ -123,11 +123,10 @@ impl ApiClient {
     async fn get_target_application_assignments(
         &self,
     ) -> Result<Vec<ApplicationAssignment::Model>> {
-        self.get(&format!(
-            "/app-assignments?device_uuid={}",
-            self.device_uuid
-        ))
-        .await
+        let page: Page<ApplicationAssignment::Model> = self
+            .get(&format!("/app-assignments?device_uuid={}", self.device_uuid))
+            .await?;
+        Ok(page.data)
     }
 
     async fn get_application_config_by_id(&self, id: i32) -> Result<ApplicationConfig::Model> {
