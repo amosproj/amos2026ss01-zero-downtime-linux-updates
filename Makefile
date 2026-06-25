@@ -93,7 +93,7 @@ _image-build:
 	podman build \
 		--platform linux/$(DOCKER_ARCH) \
 		--build-arg DEV_MODE=$(DEV_MODE) \
-		-f bootc/Containerfile -t $(IMAGE) .
+		-f bootc-build/Containerfile -t $(IMAGE) .
 	podman save --format oci-archive -o $(TMP_DIR)/amos-edge.tar $(IMAGE)
 	sudo podman load -i $(TMP_DIR)/amos-edge.tar
 	$(IB_RUN) qcow2
@@ -233,7 +233,7 @@ _iso-build:
 	podman build \
 		--platform linux/$(DOCKER_ARCH) \
 		--build-arg DEV_MODE=$(DEV_MODE) \
-		-f bootc/Containerfile -t $(IMAGE) .
+		-f bootc-build/Containerfile -t $(IMAGE) .
 	podman save --format oci-archive -o $(TMP_DIR)/amos-edge.tar $(IMAGE)
 	sudo podman load -i $(TMP_DIR)/amos-edge.tar
 	sudo podman run --rm --privileged --pull=newer \
