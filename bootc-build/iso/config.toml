@@ -57,9 +57,6 @@ cat > /etc/amos/config.toml <<'EOF'
 cloud_url = "https://CHANGE-ME.example.com/v1"
 poll_interval_secs = 30
 inventory_path = "/var/lib/amos/inventory.json"
-# TODO: device_uuid: prefer deriving from the TPM/hardware on first boot instead of
-device_uuid = "00000000-0000-0000-0000-000000000001"
-# hard-coding. Left unset here so first boot can generate/persist one.
 EOF
 chmod 0644 /etc/amos/config.toml
 %end

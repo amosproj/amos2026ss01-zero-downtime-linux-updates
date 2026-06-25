@@ -1,4 +1,3 @@
 cloud_url = "http://host.lima.internal:8080/v1"
 poll_interval_secs = 5
 inventory_path = "/var/lib/amos/inventory.json"
-device_uuid = "00000000-0000-0000-0000-000000000001"
