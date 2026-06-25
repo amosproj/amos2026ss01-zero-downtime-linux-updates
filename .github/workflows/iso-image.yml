@@ -148,7 +148,7 @@ jobs:
           ls -lh "dist/${ISO_NAME}.iso"
           echo "iso_name=${ISO_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload ISO as workflow artifact
+      - name: Upload .iso as workflow artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.rename.outputs.iso_name }}
@@ -157,3 +157,13 @@ jobs:
           retention-days: 30
           # skip zipping
           archive: false
+
+      - name: Upload .iso.zip as workflow artifact (for `gh run download` to work)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.rename.outputs.iso_name }}
+          path: dist/*.iso
+          if-no-files-found: error
+          retention-days: 30
+          archive: true
+          compression-level: 0
