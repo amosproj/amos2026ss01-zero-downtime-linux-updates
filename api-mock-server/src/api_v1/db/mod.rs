@@ -825,7 +825,7 @@ mod tests {
         let os = super::add_os_version("deadbeef".to_owned(), "1.0.0".to_owned(), None)
             .await
             .unwrap();
-        super::add_os_assignment(os.id, None, Some(group.id))
+        super::add_os_assignment(os.id, None, Some(group.id), None)
             .await
             .unwrap();
 
@@ -862,10 +862,10 @@ mod tests {
             .await
             .unwrap();
 
-        super::add_os_assignment(group_os.id, None, Some(group.id))
+        super::add_os_assignment(group_os.id, None, Some(group.id), None)
             .await
             .unwrap();
-        super::add_os_assignment(device_os.id, Some(device.id), None)
+        super::add_os_assignment(device_os.id, Some(device.id), None, None)
             .await
             .unwrap();
 

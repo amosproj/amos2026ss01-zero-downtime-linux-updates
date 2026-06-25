@@ -841,7 +841,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"dev-grp-1","serial_number":"h1","tenant_id":1,"group_id":1}"#,
+            r#"{"id":0,"uuid":"dev-dup-1","serial_number":"h1","tenant_id":1,"group_id":1}"#,
         )
         .await;
         post(
@@ -915,7 +915,7 @@ mod tests {
         post(
             app.clone(),
             "/v1/devices",
-            r#"{"id":0,"uuid":"dev-os-1","hostname":"h1","tenant_id":1,"group_id":1}"#,
+            r#"{"id":0,"uuid":"dev-os-1","serial_number":"h1","tenant_id":1,"group_id":1}"#,
         )
         .await;
         // Two distinct OS versions so we can tell which assignment won
