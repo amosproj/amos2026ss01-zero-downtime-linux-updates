@@ -20,6 +20,12 @@ readonly jwt='eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwib
 readonly swtpm_dir=/tmp/emulated_tpm
 readonly swtpm_pidfile="$swtpm_dir/swtpm.pid"
 
+# DMI/SMBIOS values injected into the VM via QEMU's -smbios flag.
+# The orchestrator reads these from /sys/class/dmi/id/product_uuid
+# and /sys/class/dmi/id/product_serial.
+readonly smbios_uuid="${SMBIOS_UUID:-00000000-0000-0000-0000-000000000001}"
+readonly smbios_serial="${SMBIOS_SERIAL:-AMOS-TEST-001}"
+
 server_pid=
 
 cleanup() {
@@ -82,11 +88,12 @@ podman run -d --name "$timescale_container" \
 # Create new Lima VM
 limactl create -y --name edge-ipc dev-env/lima/edge-ipc.yaml
 
-# Start VM with TPM support
+# Start VM with TPM support and custom SMBIOS UUID + serial
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
                     -chardev socket,id=chrtpm,path=/tmp/emulated_tpm/swtpm-sock \
                     -tpmdev emulator,id=tpm0,chardev=chrtpm \
-                    -device tpm-tis,tpmdev=tpm0" \
+                    -device tpm-tis,tpmdev=tpm0 \
+                    -smbios type=1,uuid=${smbios_uuid},serial=${smbios_serial}" \
     limactl start edge-ipc
 
 # Wait for the vTPM device to show up inside the VM
