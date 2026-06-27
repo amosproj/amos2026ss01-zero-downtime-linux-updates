@@ -11,7 +11,11 @@ const DMI_SERIAL_PATH: &str = "/sys/class/dmi/id/product_serial";
 pub fn read_device_uuid() -> anyhow::Result<String> {
     let value = read_dmi_field(DMI_UUID_PATH, "device UUID")?;
     Uuid::parse_str(&value).map_err(|e| {
-        anyhow::anyhow!("DMI device UUID is not a valid UUID format: '{}': {}", value, e)
+        anyhow::anyhow!(
+            "DMI device UUID is not a valid UUID format: '{}': {}",
+            value,
+            e
+        )
     })?;
     Ok(value)
 }
