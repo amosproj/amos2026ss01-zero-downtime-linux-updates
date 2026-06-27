@@ -19,6 +19,7 @@ use crate::util::device_jwt::DeviceJwtProvider;
 use crate::util::executer::RealExecuter;
 
 use crate::loop_apps::run_apps_main_loop;
+use crate::util::hardware;
 use crate::util::tpm::TpmSigner;
 mod api_client;
 mod application;
@@ -81,13 +82,19 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         OrchestratorConfig::load(cli.config.as_deref()).context("Could not load configuration")?;
     debug!("Loaded config: {:?}", config);
 
+    let device_uuid = hardware::read_device_uuid()
+        .context("Could not read device UUID from DMI (/sys/class/dmi/id/product_uuid)")?;
+    let serial_number = hardware::read_serial_number()
+        .context("Could not read serial number from DMI (/sys/class/dmi/id/product_serial)")?;
+
     let signer = TpmSigner::new().context("Could not initialize the TPM")?;
     let jwt_provider = DeviceJwtProvider::new(signer);
     let api_client = Arc::new(
         ApiClient::new(
             config.https_proxy,
             config.cloud_url,
-            config.device_uuid.clone(),
+            device_uuid.clone(),
+            serial_number.clone(),
             jwt_provider,
         )
         .context("Could not initialize the api client")?,
@@ -137,7 +144,8 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
 
     info!(
         version = VERSION,
-        device_uuid = %config.device_uuid,
+        device_uuid = %device_uuid,
+        serial_number = %serial_number,
         "Orchestrator started",
     );
 

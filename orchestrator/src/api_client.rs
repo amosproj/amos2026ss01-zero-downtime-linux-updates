@@ -20,6 +20,7 @@ pub struct ApiClient {
     client: reqwest::Client,
     base_url: String,
     device_uuid: String,
+    _serial_number: String,
     jwt_provider: tokio::sync::Mutex<DeviceJwtProvider>,
 }
 
@@ -28,6 +29,7 @@ impl ApiClient {
         proxy: Option<String>,
         base_url: String,
         device_uuid: String,
+        serial_number: String,
         jwt_provider: DeviceJwtProvider,
     ) -> anyhow::Result<Self> {
         let mut cb = reqwest::ClientBuilder::new();
@@ -55,6 +57,7 @@ impl ApiClient {
             client: cb.build()?,
             base_url,
             device_uuid,
+            _serial_number: serial_number,
             jwt_provider: tokio::sync::Mutex::const_new(jwt_provider),
         })
     }

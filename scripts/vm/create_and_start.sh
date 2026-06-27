@@ -20,6 +20,12 @@ readonly jwt='eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwib
 readonly swtpm_dir=/tmp/emulated_tpm
 readonly swtpm_pidfile="$swtpm_dir/swtpm.pid"
 
+# DMI/SMBIOS values injected into the VM via QEMU's -smbios flag.
+# The orchestrator reads these from /sys/class/dmi/id/product_uuid
+# and /sys/class/dmi/id/product_serial.
+readonly smbios_uuid="${SMBIOS_UUID:-00000000-0000-0000-0000-000000000001}"
+readonly smbios_serial="${SMBIOS_SERIAL:-AMOS-TEST-001}"
+
 server_pid=
 
 cleanup() {
@@ -82,11 +88,12 @@ podman run -d --name "$timescale_container" \
 # Create new Lima VM
 limactl create -y --name edge-ipc dev-env/lima/edge-ipc.yaml
 
-# Start VM with TPM support
+# Start VM with TPM support and custom SMBIOS UUID + serial
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
                     -chardev socket,id=chrtpm,path=/tmp/emulated_tpm/swtpm-sock \
                     -tpmdev emulator,id=tpm0,chardev=chrtpm \
-                    -device tpm-tis,tpmdev=tpm0" \
+                    -device tpm-tis,tpmdev=tpm0 \
+                    -smbios type=1,uuid=${smbios_uuid},serial=${smbios_serial}" \
     limactl start edge-ipc
 
 # Wait for the vTPM device to show up inside the VM
@@ -186,18 +193,19 @@ curl -sS -X POST "${api_base_path}/tenants" \
     -d '{ "name": "edge-ipc", "description": "Lima VM used for local end-to-end testing" }'
 echo
 
-readonly device_uuid="00000000-0000-0000-0000-000000000001"
+readonly device_uuid=$(limactl shell edge-ipc -- sudo cat /sys/class/dmi/id/product_uuid | tr -d '[:space:]')
+readonly serial_number=$(limactl shell edge-ipc -- sudo cat /sys/class/dmi/id/product_serial | tr -d '[:space:]')
 curl -sS -X POST "${api_base_path}/devices" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${jwt}" \
-    -d "{ \"uuid\": \"${device_uuid}\", \"serial_number\": \"bla\", \"tenant_id\": 1 }"
+    -d "{ \"uuid\": \"${device_uuid}\", \"serial_number\": \"${serial_number}\", \"tenant_id\": 1 }"
 echo
 
 tpm_pubkey_json="$(sed -z 's/\n/\\n/g' /tmp/my_tpm_pubkey.pem)"
 curl -i -X PUT "${api_base_path}/devices/1" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${jwt}" \
-    -d "{ \"uuid\": \"${device_uuid}\", \"serial_number\": \"bla\", \"tenant_id\": 1, \"public_key\": \"${tpm_pubkey_json}\" }"
+    -d "{ \"uuid\": \"${device_uuid}\", \"serial_number\": \"${serial_number}\", \"tenant_id\": 1, \"public_key\": \"${tpm_pubkey_json}\" }"
 echo
 
 # Build the orchestrator binary on the host and copy it into the VM so the

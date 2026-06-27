@@ -6,8 +6,6 @@ use std::path::Path;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct OrchestratorConfig {
-    pub device_uuid: String,
-
     pub cloud_url: String,
     pub poll_interval_secs: u32,
     pub podman_path: String,
@@ -21,8 +19,6 @@ pub struct OrchestratorConfig {
 impl Default for OrchestratorConfig {
     fn default() -> Self {
         Self {
-            device_uuid: String::new(),
-
             cloud_url: "https://cloud.weber.de/v1".to_owned(),
             poll_interval_secs: 5,
             podman_path: "/run/podman/podman.sock".to_owned(),
@@ -67,10 +63,6 @@ impl OrchestratorConfig {
     }
 
     fn validate(&self) -> anyhow::Result<()> {
-        if self.device_uuid.is_empty() {
-            anyhow::bail!("Please specify a device UUID");
-        }
-
         if !self.cloud_url.starts_with("https://") && !self.cloud_url.starts_with("http://") {
             anyhow::bail!("Cloud URL must begin with `https://` or `http://`");
         }
@@ -88,17 +80,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty_uuid_fails() {
-        let mut config = OrchestratorConfig::default();
-        config.device_uuid = String::new();
-
-        assert!(config.validate().is_err());
-    }
-
-    #[test]
     fn url_with_http_succeeds() {
         let mut config = OrchestratorConfig::default();
-        config.device_uuid = "test".to_owned();
         config.cloud_url = "http://weber.cloud/foo".to_owned();
 
         assert!(config.validate().is_ok());
@@ -107,7 +90,6 @@ mod tests {
     #[test]
     fn url_with_https_succeeds() {
         let mut config = OrchestratorConfig::default();
-        config.device_uuid = "test".to_owned();
         config.cloud_url = "https://weber.cloud/foo".to_owned();
 
         assert!(config.validate().is_ok());
@@ -116,7 +98,6 @@ mod tests {
     #[test]
     fn url_without_http_or_https_fails() {
         let mut config = OrchestratorConfig::default();
-        config.device_uuid = "test".to_owned();
         config.cloud_url = "ftp://weber.cloud/foo".into();
 
         assert!(config.validate().is_err());
@@ -125,7 +106,6 @@ mod tests {
     #[test]
     fn poll_interval_zero_fails() {
         let mut config = OrchestratorConfig::default();
-        config.device_uuid = "test".to_owned();
         config.poll_interval_secs = 0;
 
         assert!(config.validate().is_err());
