@@ -2,7 +2,7 @@ use jsonwebtoken::{DecodingKey, TokenData, Validation, decode};
 use log::{trace, warn};
 use serde_json::Value;
 
-use crate::{api_v1::db, auth_user::get_str};
+use crate::api_v1::db;
 use amos_common::device_jwt::{Claims, MAX_TOKEN_LIFETIME};
 
 /// Custom Error enum for distinguishing errors during JWT validation.
@@ -23,11 +23,11 @@ impl From<jsonwebtoken::errors::Error> for DeviceTokenError {
 
 /// Validate a JWT string.
 /// Returns the decoded Claims on success, or an error if the token is invalid/expired.
-pub async fn validate_device_token(
+pub async fn validate_token(
     token: String,
     token_data: TokenData<Value>,
 ) -> Result<Claims, DeviceTokenError> {
-    let device_uuid = get_str(&token_data.claims, "sub")?;
+    let device_uuid = super::extract_claim(&token_data.claims, "sub")?;
 
     let device = db::get_device_by_uuid(device_uuid.clone())
         .await

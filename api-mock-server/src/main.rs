@@ -1,17 +1,14 @@
 use clap::Parser;
 mod api_v1;
-mod auth_device;
-mod auth_user;
+mod auth;
 mod config;
 pub(crate) mod db_migration;
 pub(crate) mod dtos;
 pub(crate) mod ts_migration;
 use axum::{Router, extract::Request, middleware as axum_middleware, routing::post};
 mod audit_context;
-mod middleware;
 use config::get_config;
 use log::{debug, error, info};
-use middleware::jwt_auth;
 use std::path::PathBuf;
 use tokio::net::TcpListener;
 
@@ -67,7 +64,7 @@ async fn main() {
         });
 
     let api_v1 = Router::new().merge(api_v1::routes::routes()).route_layer(
-        axum::middleware::from_fn_with_state(config.jwt.clone(), jwt_auth),
+        axum::middleware::from_fn_with_state(config.jwt.clone(), auth::jwt_middleware),
     );
 
     // Device registration needs to be public as the device needs to register
