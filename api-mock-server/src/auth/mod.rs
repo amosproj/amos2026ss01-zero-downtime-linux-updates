@@ -1,7 +1,9 @@
+mod device;
+pub mod extractors;
+pub mod user;
+
 use crate::api_v1::db;
 use crate::audit_context::CURRENT_USER;
-use crate::auth_device::validate_device_token;
-use crate::auth_user::validate_user_token;
 use crate::config::JwtConfig;
 use axum::{
     extract::{Request, State},
@@ -9,23 +11,13 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use jsonwebtoken::{TokenData, dangerous::insecure_decode};
+use jsonwebtoken::{TokenData, dangerous::insecure_decode, errors::ErrorKind};
 use log::{debug, error, trace};
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend};
 use serde_json::Value;
 use std::cell::RefCell;
 
-async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
-    if db.get_database_backend() != DbBackend::Postgres {
-        debug!("Skipping PG session variable on non-Postgres backend");
-        return Ok(());
-    }
-    let sql = format!("SET app.audit_user = '{}'", user_id);
-    db.execute_unprepared(&sql).await?;
-    Ok(())
-}
-
-pub async fn jwt_auth(
+pub async fn jwt_middleware(
     State(jwt_config): State<JwtConfig>,
     mut req: Request,
     next: Next,
@@ -58,7 +50,7 @@ pub async fn jwt_auth(
     if is_device {
         // 4. Validate the token for a device
         trace!("Received device JWT: {}", token);
-        match validate_device_token(token.to_owned(), token_data).await {
+        match device::validate_token(token.to_owned(), token_data).await {
             Ok(claims) => {
                 // 5. Attach the claims to the request so handlers can use them
                 req.extensions_mut().insert(claims);
@@ -74,7 +66,7 @@ pub async fn jwt_auth(
     } else {
         // 4. Validate the token for a user
         trace!("Received user JWT: {}", token);
-        match validate_user_token(token, &jwt_config) {
+        match user::validate_token(token, &jwt_config) {
             Ok(claims) => {
                 // 5. Upsert user into the database
                 let user = match db::upsert_user(claims.clone()).await {
@@ -115,6 +107,16 @@ pub async fn jwt_auth(
     }
 }
 
+async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
+    if db.get_database_backend() != DbBackend::Postgres {
+        debug!("Skipping PG session variable on non-Postgres backend");
+        return Ok(());
+    }
+    let sql = format!("SET app.audit_user = '{}'", user_id);
+    db.execute_unprepared(&sql).await?;
+    Ok(())
+}
+
 fn is_device_token(token: &TokenData<Value>) -> bool {
     token
         .claims
@@ -122,4 +124,13 @@ fn is_device_token(token: &TokenData<Value>) -> bool {
         .and_then(|v| v.as_str())
         .map(|s| s == "device")
         .unwrap_or(false)
+}
+
+/// helpers that map missing/invalid -> ErrorKind::InvalidToken
+fn extract_claim(claim: &Value, key: &str) -> Result<String, jsonwebtoken::errors::Error> {
+    claim
+        .get(key)
+        .and_then(Value::as_str)
+        .map(|s| s.to_owned())
+        .ok_or_else(|| jsonwebtoken::errors::Error::from(ErrorKind::InvalidToken))
 }

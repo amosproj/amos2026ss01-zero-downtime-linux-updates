@@ -1,7 +1,6 @@
 use clap::Parser;
 mod api_v1;
-mod auth_device;
-mod auth_user;
+mod auth;
 mod config;
 pub(crate) mod db_migration;
 pub(crate) mod dtos;
@@ -9,10 +8,8 @@ pub(crate) mod ts_migration;
 use amos_common::{api, util};
 use axum::{Json, Router, extract::Request, middleware as axum_middleware, routing::get};
 mod audit_context;
-mod middleware;
 use config::get_config;
 use log::{debug, error, info};
-use middleware::jwt_auth;
 use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
@@ -91,7 +88,7 @@ async fn main() {
         .merge(api_v1::routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             config.jwt.clone(),
-            jwt_auth,
+            auth::jwt_middleware,
         ));
 
     let app = Router::new()

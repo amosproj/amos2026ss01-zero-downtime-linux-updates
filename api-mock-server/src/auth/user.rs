@@ -12,18 +12,9 @@ pub struct Claims {
     pub expiry: usize,   // expiry timestamp (Unix time)
 }
 
-// helpers that map missing/invalid -> ErrorKind::InvalidToken
-pub fn get_str(claim: &Value, key: &str) -> Result<String, jsonwebtoken::errors::Error> {
-    claim
-        .get(key)
-        .and_then(Value::as_str)
-        .map(|s| s.to_owned())
-        .ok_or_else(|| jsonwebtoken::errors::Error::from(ErrorKind::InvalidToken))
-}
-
 /// Validate a JWT string.
 /// Returns the decoded Claims on success, or an error if the token is invalid/expired.
-pub fn validate_user_token(
+pub fn validate_token(
     token: &str,
     config: &JwtConfig,
 ) -> Result<Claims, jsonwebtoken::errors::Error> {
@@ -36,8 +27,8 @@ pub fn validate_user_token(
 
     let payload = token_data.claims;
 
-    let subject = get_str(&payload, &config.subject_claim)?;
-    let name = get_str(&payload, &config.name_claim)?;
+    let subject = super::extract_claim(&payload, &config.subject_claim)?;
+    let name = super::extract_claim(&payload, &config.name_claim)?;
 
     let expiry = payload
         .get("exp")
@@ -64,7 +55,7 @@ mod tests {
         let expired_jwt = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwibmFtZSI6IkpvZSBTd2Fuc29uIiwiZXhwIjoxMDAwMjEyOTYwfQ.XUI1mfbqNkBLiVvvxV9tPgbsJOkxa6xMRacnwcv8D2r855oAGBOGpLERvSelc7fdIOf822APqkgN8hIyFce1kJatLjHdiDp27XPv02dYxidE5PI5_j9oLngCTYrowlffzfbhAes6PmZHiku0PRYXcPkV3dnIhlYA89cOgDIshFNHtDCdyfL_3WQo-iaApTXvA0ZLkGPXhVAyY3IvTOHRoChrNLd6OhaWdHYukyaFZdIzvFPVmo1HGxEtCDqZ0REn66uQypz1T6iiW8ldKm5FK-rjrJMEDOJ5KjqUh84E4KK6aA4kaFwNkWM0PHGkytLDuppuB8TEoRzwPleF5h8MrLqVCPeRRigiIfxchTH38hw4DvvVTIojIuvzsApzxos6EkZ9ZGqAOMQhKTzgj4H-oZ62nTheFzjfzn6CptXXIsqAI9OS_vGcxnfvXUaI2aNLYZYvMoVfkCvc-nLLq693uqXoaV_SIQp9vTXAGXeQffBai3-FQc1_hWnUy3ezCr2H_SQnkSHmd3TonFaQADQneZf6Q5kkLQjk0Yklsv6ofFxncCabqmwnnvh6k1g0brt38SD62aTIVcnjO3-IIxa93ODRxxR8BjU9kTxhBp8hogpq10hOMp9wyfpQrJJjm_chg577P67_OpssEnvKf2KOLW2TG-f_8lkkk2Wf4fRrih4";
 
         let config = JwtConfig::default();
-        let result = validate_user_token(expired_jwt, &config);
+        let result = validate_token(expired_jwt, &config);
         assert!(result.is_err());
 
         match result.err().unwrap().kind() {
@@ -83,7 +74,7 @@ mod tests {
         config.subject_claim = "sid".into();
         config.name_claim = "distinguishedName".into();
 
-        let claims = validate_user_token(jwt_with_custom_name, &config).expect("should validate");
+        let claims = validate_token(jwt_with_custom_name, &config).expect("should validate");
         assert_eq!(claims.subject, "S-1-8469-2270");
         assert_eq!(claims.name, "Glenn Quagmire");
     }
@@ -95,7 +86,7 @@ mod tests {
         let jwt_rs256 = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTc4MTA1MDE1MX0.dfXY8JUxnzpuCve91m6bxF0L_id5F4WfLPZXF-Vkk3CkP-A1BjmeY6kQ_ptyyUzRTbPOXgVwWVnqPkMdl0Lyr1o6Q3lmIp7cXZX77RRuLP9_m-PiZgvJdAE3jLqVhy4VYpx80o-z3RZMixAXKZfLz2bibeNaeKz0eJfbjQW1tlQgiqXFkF65qezItU2bsC0L7wztG2uWRnjv6iAR3vyGCsORutBPhjQiU1ruFlRF_kXOp8VXi7ihpOeFIgNy4wxU8vAP7SLdQMpZvC3bNMIaHGjvdyR8MMdO8idp6bpOwbf3iklWyfJGvnX1YYhvdYuijh1aHsZwcstVXDAhEzFeDw";
 
         let config = JwtConfig::default();
-        let res = validate_user_token(jwt_rs256, &config);
+        let res = validate_token(jwt_rs256, &config);
         assert!(res.is_err());
 
         match res.err().unwrap().kind() {
