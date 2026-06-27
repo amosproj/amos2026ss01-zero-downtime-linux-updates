@@ -25,6 +25,7 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-journald = "0.3"
 futures-util = "0.3.32"
+uuid = { workspace = true }
 jsonwebtoken = { workspace = true }
 
 [dev-dependencies]
