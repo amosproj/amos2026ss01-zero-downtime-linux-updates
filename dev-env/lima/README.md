@@ -44,13 +44,15 @@ agent run end to end, without any physical hardware
    ```
    (The swtpm is forked to the background and terminates, as soon the VM is shut down once it has attached to the socket)
 
-   Using the command above, the TPM state is saved under */tmp/emulated_tpm*. Could be useful for testing, at important good to know.
-4. Start the VM (with the vTPM attached)
+   Using the command above, the TPM state is saved under */tmp/emulated_tpm*. Could be useful for testing, at least good to know.
+4. Source the device parameter variables and start the VM (with the vTPM attached)
    ```bash
+   . scripts/tests/common_env.sh
    QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
        -chardev socket,id=chrtpm,path=/tmp/emulated_tpm/swtpm-sock \
        -tpmdev emulator,id=tpm0,chardev=chrtpm \
-       -device tpm-tis,tpmdev=tpm0" \
+       -device tpm-tis,tpmdev=tpm0 \
+       -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL}" \
        limactl start edge-ipc
    ```
    (append `--log-level debug` for more verbose output)
