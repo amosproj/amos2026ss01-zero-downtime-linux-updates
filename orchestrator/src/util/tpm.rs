@@ -1,6 +1,7 @@
 use std::fs;
 use std::str::FromStr as _;
 
+use anyhow::Result;
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
 use tracing::{debug, warn};
@@ -10,7 +11,10 @@ use tss_esapi::interface_types::resource_handles::Hierarchy;
 use tss_esapi::structures::{HashScheme, MaxBuffer, Public, SignatureScheme};
 use tss_esapi::{Context, TctiNameConf, WrapperErrorKind};
 
-const PERSISTENT_HANDLE: u32 = 0x8100_0000;
+// Persistent handle where the RSA endorsement key is mapped to
+const RSA_EK_PERSISTENT_HANDLE: u32 = 0x8101_0001;
+
+const PERSISTENT_SIGNING_HANDLE: u32 = 0x8100_0000;
 
 pub struct TpmSigner {
     ctx: Context,
@@ -27,7 +31,7 @@ impl TpmSigner {
         let mut ctx = Context::new(tcti_config)?;
 
         // Load your persistent key (example handle)
-        let persistent_handle = PersistentTpmHandle::new(PERSISTENT_HANDLE)?;
+        let persistent_handle = PersistentTpmHandle::new(PERSISTENT_SIGNING_HANDLE)?;
         let object_handle = ctx.tr_from_tpm_public(persistent_handle.into())?;
         let key_handle = KeyHandle::from(object_handle);
 
@@ -38,13 +42,31 @@ impl TpmSigner {
             warn!("Could not write own public key to /tpm: {}", e);
         }
 
-        let mut signer = TpmSigner { ctx, key_handle };
-
-        let data = "hello world";
-        let sig_bytes = signer.sign_data(data)?;
-        println!("Signature ({} bytes): {:02x?}", sig_bytes.len(), sig_bytes);
-
+        let signer = TpmSigner { ctx, key_handle };
         Ok(signer)
+    }
+
+    /// NOTE: Accessing the Endorsement key via the persistent handle as seen below is non-standardized...
+    // 
+    // To be safe, the NV index of the RSA EK (handle 0x1c00002) should be read which then allows reading
+    // the RSA EK's certificate. This would then need to be parsed and have its public key constructed
+    // from the extracted parameters.
+    //
+    // Instead for now, we rely on the hardware to have a persistent handle mapped at the specified address
+    // by convention (ensured via the reference device). From there, the public EK can be read directly.
+    pub fn read_endorsement_key(&mut self) -> anyhow::Result<String> {
+        let ek_handle = PersistentTpmHandle::new(RSA_EK_PERSISTENT_HANDLE)?;
+
+        // Convert persistent -> transient ESYS handle
+        let transient = self.ctx.tr_from_tpm_public(ek_handle.into())?;
+        let key_handle = KeyHandle::from(transient);
+
+        // Read public key from transient handle
+        let (public, _, _) = self.ctx.read_public(key_handle)?;
+
+        let pem = armor_rsa_public_key(public)?;
+
+        Ok(pem)
     }
 
     pub fn sign_data(&mut self, input: &str) -> anyhow::Result<Vec<u8>> {
