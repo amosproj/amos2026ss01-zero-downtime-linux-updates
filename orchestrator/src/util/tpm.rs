@@ -4,7 +4,7 @@ use std::str::FromStr as _;
 use anyhow::Result;
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
 use tss_esapi::interface_types::algorithm::HashingAlgorithm;
 use tss_esapi::interface_types::resource_handles::Hierarchy;
@@ -30,15 +30,40 @@ impl TpmSigner {
         debug!("Using tcti: {:?}", tcti_config);
         let mut ctx = Context::new(tcti_config)?;
 
-        // Load your persistent key (example handle)
+        // Try loading the persistent signing key
         let persistent_handle = PersistentTpmHandle::new(PERSISTENT_SIGNING_HANDLE)?;
-        let object_handle = ctx.tr_from_tpm_public(persistent_handle.into())?;
-        let key_handle = KeyHandle::from(object_handle);
+
+        let key_handle = match ctx.tr_from_tpm_public(persistent_handle.into()) {
+            Ok(object_handle) => {
+                // Handle exists → continue
+                KeyHandle::from(object_handle)
+            }
+
+            Err(tss_esapi::Error::Tss2Error(rc)) => {
+                match rc.kind() {
+                    Some(tss_esapi::constants::response_code::Tss2ResponseCodeKind::Handle) => {
+                        info!("Signing key not present, starting initialization routine");
+
+                        create_signing_key(&mut ctx)?
+                    }
+
+                    _ => {
+                        return Err(tss_esapi::Error::Tss2Error(rc).into());
+                    }
+                }
+            }
+
+            Err(e) => {
+                return Err(e.into());
+            }
+        };
 
         // Read public area
         let (public, _name, _qualified_name) = ctx.read_public(key_handle)?;
+        info!("Key exists, public area loaded");
+
         let pubkey = armor_rsa_public_key(public)?;
-        if let Err(e) = fs::write("/tmp/my_tpm_pubkey.pem", pubkey) {
+        if let Err(e) = fs::write("/tmp/my_tpm_pubkey2.pem", pubkey) {
             warn!("Could not write own public key to /tpm: {}", e);
         }
 
@@ -97,6 +122,10 @@ impl TpmSigner {
 
         Ok(signature_bytes)
     }
+}
+
+pub fn create_signing_key(context: &mut Context) -> anyhow::Result<KeyHandle> {
+    Ok(KeyHandle::Null)
 }
 
 fn armor_rsa_public_key(public: Public) -> Result<String, tss_esapi::Error> {
