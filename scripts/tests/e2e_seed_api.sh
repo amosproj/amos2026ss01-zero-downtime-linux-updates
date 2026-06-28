@@ -27,7 +27,4 @@ api "/v1/os-assignments" POST '{ "os_version_id": 1, "device_id": 1 }' 201
 
 echo -e "${GREEN}Database successfully initialized with testing data.${NC}"
 
-# Inject target authentication tokens directly into the VM runtime environment
-limactl shell "${VM_NAME}" -- sudo bash -c "grep -q 'auth_token' /etc/amos/config.toml || echo 'auth_token = \"${JWT}\"' >> /etc/amos/config.toml"
-
 echo -e "${GREEN}Environment is fully provisioned and primed.${NC}"

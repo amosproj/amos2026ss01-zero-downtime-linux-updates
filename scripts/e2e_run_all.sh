@@ -4,8 +4,8 @@
 set -uo pipefail
 
 # --- CONFIGURATION & STATE ---
-export PORT=8080
-export VM_NAME="edge-ipc"
+source ./tests/common_env.sh
+
 SERVER_PID=""
 FAILED_COUNT=0
 PASSED_COUNT=0
@@ -83,7 +83,8 @@ echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     -chardev socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock \
     -tpmdev emulator,id=tpm0,chardev=chrtpm \
-    -device tpm-tis,tpmdev=tpm0" \
+    -device tpm-tis,tpmdev=tpm0 \
+    -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL}" \
     limactl start "${VM_NAME}"
 
 sleep 5
