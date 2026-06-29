@@ -182,6 +182,40 @@ impl Bootc {
         }
     }
 
+    /// Fetches and stages an upgrade container image without applying it or triggering a reboot.
+    pub async fn upgrade_download_only(&self) -> Result<()> {
+        info!("Staging bootc upgrade (download-only)");
+        let args = vec!["upgrade".to_string(), "--download-only".to_string()];
+
+        let res = self.run_bootc_root(args).await?;
+
+        if res.exit_code == Some(0) {
+            info!("Upgrade successfully staged.");
+            Ok(())
+        } else {
+            error!(exit_code = ?res.exit_code, "Staging upgrade failed");
+            Err(anyhow!(
+                "Staging upgrade failed with exit code: {:?}",
+                res.exit_code
+            ))
+        }
+    }
+
+    /// Finalizes a previously downloaded/staged upgrade.
+    /// `apply` triggers an immediate system reboot.
+    pub async fn upgrade_from_downloaded(&self, is_immediate: bool) -> Result<()> {
+        info!(is_immediate, "Finalizing staged bootc upgrade");
+        let mut args = vec!["upgrade".to_string(), "--from-downloaded".to_string()];
+
+        if is_immediate {
+            args.push("--apply".to_string());
+        }
+
+        let res = self.run_bootc_root(args).await?;
+
+        self.handle_exit_code(res.exit_code)
+    }
+
     pub async fn apply(&self) -> Result<()> {
         let args = vec!["upgrade".to_string(), "--apply".to_string()];
         let res = self.run_bootc_root(args).await?;

@@ -32,6 +32,7 @@ mod util;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -114,7 +115,7 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         config.log_max_buffer,
     );
 
-    let bootc = Bootc::new(Box::new(RealExecuter));
+    let bootc = Arc::new(Bootc::new(Box::new(RealExecuter)));
     let os_state = OsState::new(bootc.status().await?)
         .ok_or(anyhow::anyhow!("Could not retrieve current OS state"))?;
 
@@ -127,10 +128,13 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         .collect();
 
     let poll_interval = Duration::from_secs(config.poll_interval_secs as u64);
+    let deferred_timer = Duration::from_secs(config.deferred_update_timer_secs);
+    let os_upgrade_in_progress = Arc::new(AtomicBool::new(false));
     let apps_task = tokio::spawn(run_apps_main_loop(
         apps,
         podman,
         api_client.clone(),
+        os_upgrade_in_progress.clone(),
         poll_interval,
         app_log_registry,
     ));
@@ -138,7 +142,9 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         os_state,
         bootc,
         api_client.clone(),
+        os_upgrade_in_progress.clone(),
         poll_interval,
+        deferred_timer,
     ));
     let ping_task = tokio::spawn(run_ping_main_loop(api_client, Duration::from_secs(60)));
 

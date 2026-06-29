@@ -29,6 +29,7 @@ TEST_SUITE=(
     "tests/e2e_tpm_init.sh"
     "tests/e2e_bootc_status.sh"
     "tests/e2e_bootc_upgrade.sh"
+    "tests/e2e_bootc_deferred_upgrade.sh"
 )
 
 # This function executes immediately when the script finishes or hits an early abort

@@ -14,6 +14,8 @@ pub struct OrchestratorConfig {
     pub log_flush_interval_secs: u64,
     pub log_max_batch: usize,
     pub log_max_buffer: usize,
+
+    pub deferred_update_timer_secs: u64,
 }
 
 impl Default for OrchestratorConfig {
@@ -27,6 +29,8 @@ impl Default for OrchestratorConfig {
             log_flush_interval_secs: 60,
             log_max_batch: 256,
             log_max_buffer: 10_000,
+
+            deferred_update_timer_secs: 43200, // 12 hours default
         }
     }
 }

@@ -69,7 +69,7 @@ impl ApiClient {
 
     /// Fetches the OS version assigned to this device from the API.
     /// Queries `/os-assignments?device_uuid=<uuid>` then `/os-versions/<id>`.
-    pub async fn get_target_os_version(&self) -> Result<OsVersion::Model> {
+    pub async fn get_target_os_version(&self) -> Result<(OsVersion::Model, bool)> {
         let assignment = self.get_target_os_assignment().await?;
         let version = self.get_os_version_by_id(assignment.os_version_id).await?;
         debug!(
@@ -77,7 +77,7 @@ impl ApiClient {
             commit_hash = %version.commit_hash,
             "Resolved target OS version",
         );
-        Ok(version)
+        Ok((version, assignment.immediate))
     }
 
     async fn get_target_os_assignment(&self) -> Result<OsAssignment::Model> {

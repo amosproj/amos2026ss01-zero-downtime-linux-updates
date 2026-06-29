@@ -2,6 +2,7 @@
 
 use std::iter::Peekable;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use amos_common::entities::{ApplicationConfig, ContainerConfigV1};
@@ -18,6 +19,7 @@ pub async fn run_apps_main_loop(
     mut apps: Vec<Application>,
     mut podman: impl Podman,
     api_client: Arc<ApiClient>,
+    os_upgrade_in_progress: Arc<AtomicBool>,
     poll_interval: Duration,
     log_registry: AppLogRegistry,
 ) -> ! {
@@ -27,6 +29,11 @@ pub async fn run_apps_main_loop(
 
     loop {
         update_interval.tick().await;
+
+        if os_upgrade_in_progress.load(Ordering::SeqCst) {
+            tracing::info!("Application update cycle frozen: OS upgrade operation is active.");
+            continue;
+        }
 
         if let Err(e) = try_update(&mut apps, &mut podman, &api_client, &log_registry).await {
             warn!("Failed to update applications: {:?}", e);
@@ -40,7 +47,7 @@ async fn try_update(
     api_client: &ApiClient,
     log_registry: &AppLogRegistry,
 ) -> anyhow::Result<()> {
-    // First, pull target config and possibly new images
+    // Pull target config and possibly new images
     let target_app_configs = api_client.get_target_application_configs().await?;
     let mut target = futures_util::future::join_all(
         target_app_configs
