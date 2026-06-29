@@ -4,7 +4,8 @@ use tracing::debug;
 use uuid::Uuid;
 
 const DMI_UUID_PATH: &str = "/sys/class/dmi/id/product_uuid";
-const DMI_SERIAL_PATH: &str = "/sys/class/dmi/id/product_serial";
+// TODO: Should be product_serial in the future - we are stuck with board_serial due to the reference hardware
+const DMI_SERIAL_PATH: &str = "/sys/class/dmi/id/board_serial";
 
 /// Reads the device UUID from DMI/SMBIOS.
 /// Returns Err if the file is missing, empty, contains a placeholder, or is not a valid UUID.
