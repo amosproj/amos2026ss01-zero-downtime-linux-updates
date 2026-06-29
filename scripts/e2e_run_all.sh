@@ -25,8 +25,8 @@ NC='\033[0m'
 
 # Test execution sequence
 TEST_SUITE=(
-    "tests/e2e_seed_api.sh"
     "tests/e2e_register_pending_device.sh"
+    "tests/e2e_seed_api.sh"
     "tests/e2e_bootc_status.sh"
     "tests/e2e_bootc_upgrade.sh"
 )

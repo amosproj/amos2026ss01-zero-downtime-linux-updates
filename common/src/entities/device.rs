@@ -18,3 +18,12 @@ pub struct CreateModel {
     pub tenant_id: i32,
     pub group_id: Option<i32>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UpdateModel {
+    pub uuid: Option<String>,
+    pub serial_number: Option<String>,
+    pub public_key: Option<String>,
+    pub tenant_id: Option<i32>,
+    pub group_id: Option<i32>,
+}

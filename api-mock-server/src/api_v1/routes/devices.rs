@@ -5,6 +5,7 @@ use crate::api_v1::routes::{
     pagination_err,
 };
 use amos_common::entities::device::CreateModel as DeviceCreate;
+use amos_common::entities::device::UpdateModel as DeviceUpdate;
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -12,6 +13,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
+use sea_orm::DbErr;
 use serde::Deserialize;
 
 pub fn routes() -> Router {
@@ -21,7 +23,7 @@ pub fn routes() -> Router {
         .route("/devices", get(list_devices).post(create_device))
         .route(
             "/devices/{id}",
-            get(get_device).put(update_device).delete(delete_device),
+            get(get_device).put(update_device).patch(patch_device).delete(delete_device),
         )
 }
 
@@ -158,6 +160,28 @@ async fn update_device(Path(id): Path<i32>, Json(body): Json<DeviceCreate>) -> R
     .await
     {
         Ok(device) => Json(device).into_response(),
+        Err(e) => db_err(e),
+    }
+}
+
+/// PATCH /devices/{id} — Update a device by ID.
+/// Body: see amos_common::entities::device::UpdateModel
+async fn patch_device(Path(id): Path<i32>, Json(body): Json<DeviceUpdate>) -> Response {
+    match db::patch_device(
+        id,
+        body.uuid,
+        body.public_key,
+        body.serial_number,
+        body.tenant_id,
+        body.group_id,
+    )
+    .await
+    {
+        Ok(device) => Json(device).into_response(),
+        Err(DbErr::RecordNotFound(_)) => err(
+            StatusCode::NOT_FOUND,
+            format!("No device with id {} found", id),
+        ),
         Err(e) => db_err(e),
     }
 }
