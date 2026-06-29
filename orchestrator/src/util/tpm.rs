@@ -1,10 +1,9 @@
-use std::fs;
 use std::str::FromStr as _;
 
 use anyhow::Result;
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use tss_esapi::attributes::ObjectAttributesBuilder;
 use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
 use tss_esapi::interface_types::algorithm::{HashingAlgorithm, PublicAlgorithm};
@@ -63,15 +62,6 @@ impl TpmSigner {
                 return Err(e.into());
             }
         };
-
-        // Read public area
-        let (public, _name, _qualified_name) = ctx.read_public(key_handle)?;
-        info!("Key exists, public area loaded");
-
-        let pubkey = armor_rsa_public_key(public)?;
-        if let Err(e) = fs::write("/tmp/my_tpm_pubkey2.pem", pubkey) {
-            warn!("Could not write own public key to /tpm: {}", e);
-        }
 
         let signer = TpmSigner { ctx, key_handle };
         Ok(signer)
