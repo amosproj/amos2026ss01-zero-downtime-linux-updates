@@ -7,7 +7,12 @@ pub(crate) mod db_migration;
 pub(crate) mod dtos;
 pub(crate) mod ts_migration;
 use amos_common::{api, util};
-use axum::{Json, Router, extract::Request, middleware as axum_middleware, routing::{get, post}};
+use axum::{
+    Json, Router,
+    extract::Request,
+    middleware as axum_middleware,
+    routing::{get, post},
+};
 mod audit_context;
 mod middleware;
 use config::get_config;
@@ -96,8 +101,10 @@ async fn main() {
 
     // Device registration needs to be public as the device needs to register
     // its JWT pubkey before it can be used for verifying its signature
-    let api_v1_public = Router::new()
-        .route("/register-device", post(api_v1::routes::devices::register_device));
+    let api_v1_public = Router::new().route(
+        "/register-device",
+        post(api_v1::routes::devices::register_device),
+    );
 
     let app = Router::new()
         .nest("/v1", api_v1)

@@ -5,9 +5,7 @@ use crate::api_v1::routes::{
     pagination_err,
 };
 use amos_common::entities::device::{
-    CreateModel as DeviceCreate,
-    UpdateModel as DeviceUpdate,
-    RegistrationModel as DeviceRegister,
+    CreateModel as DeviceCreate, RegistrationModel as DeviceRegister, UpdateModel as DeviceUpdate,
 };
 use axum::{
     Json, Router,
@@ -231,9 +229,16 @@ pub async fn register_device(Json(body): Json<DeviceRegister>) -> Response {
     }
 
     // Check if a matching pending registration is in the database
-    let found = db::search_pending_device_registration(body.serial_number.clone(), body.endorsement_public_key).await;
+    let found = db::search_pending_device_registration(
+        body.serial_number.clone(),
+        body.endorsement_public_key,
+    )
+    .await;
     if found.is_err() {
-        debug!("Failed to search for matching pending device registration: {:?}", found);
+        debug!(
+            "Failed to search for matching pending device registration: {:?}",
+            found
+        );
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
     if found.clone().unwrap().is_none() {
@@ -241,7 +246,8 @@ pub async fn register_device(Json(body): Json<DeviceRegister>) -> Response {
         return StatusCode::NOT_FOUND.into_response();
     }
 
-    let active: crate::dtos::PendingDeviceRegistration::ActiveModel = found.unwrap().unwrap().into();
+    let active: crate::dtos::PendingDeviceRegistration::ActiveModel =
+        found.unwrap().unwrap().into();
 
     let new_device = db::add_device(
         body.uuid,
@@ -249,10 +255,14 @@ pub async fn register_device(Json(body): Json<DeviceRegister>) -> Response {
         body.serial_number,
         1,
         None,
-    ).await;
+    )
+    .await;
 
     if new_device.is_err() {
-        debug!("Failed to create new device during device registration: {:?}", new_device);
+        debug!(
+            "Failed to create new device during device registration: {:?}",
+            new_device
+        );
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     } else {
         info!("Registered device: {:?}", new_device);

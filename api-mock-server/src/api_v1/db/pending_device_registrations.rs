@@ -2,7 +2,9 @@ use crate::dtos;
 use amos_common::entities::PendingDeviceRegistration;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+};
 
 use super::db;
 
@@ -59,7 +61,10 @@ pub async fn search_pending_device_registration(
     let db = db!();
     let result = dtos::PendingDeviceRegistration::Entity::find()
         .filter(dtos::PendingDeviceRegistration::Column::SerialNumber.eq(serial_number))
-        .filter(dtos::PendingDeviceRegistration::Column::EndorsementPublicKey.eq(endorsement_public_key))
+        .filter(
+            dtos::PendingDeviceRegistration::Column::EndorsementPublicKey
+                .eq(endorsement_public_key),
+        )
         .one(&db)
         .await?;
 
