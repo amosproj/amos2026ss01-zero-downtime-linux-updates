@@ -31,9 +31,7 @@ async fn list_pending_device_registrations(Query(page): Query<PageParams>) -> Re
     if let Err(e) = page.validate() {
         return pagination_err(e);
     }
-    match db::list_pending_device_registrations(page.to_db_page(), page.page_size)
-    .await
-    {
+    match db::list_pending_device_registrations(page.to_db_page(), page.page_size).await {
         Ok((data, total)) => {
             Json(Page::new(data, page.page, page.page_size, total)).into_response()
         }
@@ -46,7 +44,8 @@ async fn list_pending_device_registrations(Query(page): Query<PageParams>) -> Re
 async fn create_pending_device_registration(
     Json(body): Json<PendingDeviceRegistrationCreate>,
 ) -> Response {
-    match db::add_pending_device_registration(body.serial_number, body.endorsement_public_key).await {
+    match db::add_pending_device_registration(body.serial_number, body.endorsement_public_key).await
+    {
         Ok(a) => (StatusCode::CREATED, Json(a)).into_response(),
         Err(e) => db_err(e),
     }

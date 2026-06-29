@@ -23,7 +23,10 @@ pub fn routes() -> Router {
         .route("/devices", get(list_devices).post(create_device))
         .route(
             "/devices/{id}",
-            get(get_device).put(update_device).patch(patch_device).delete(delete_device),
+            get(get_device)
+                .put(update_device)
+                .patch(patch_device)
+                .delete(delete_device),
         )
 }
 

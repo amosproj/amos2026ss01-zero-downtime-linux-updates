@@ -1,8 +1,8 @@
-use crate::{api_v1::db, auth_device};
 use crate::audit_context::CURRENT_USER;
 use crate::auth_device::validate_device_token;
 use crate::auth_user::validate_user_token;
 use crate::config::JwtConfig;
+use crate::{api_v1::db, auth_device};
 use axum::{
     extract::{Request, State},
     http::{StatusCode, header},

@@ -37,7 +37,8 @@ pub async fn validate_device_token(
         return Err(DeviceTokenError::DeviceNotFound);
     }
 
-    let device_pubkey = device.unwrap()
+    let device_pubkey = device
+        .unwrap()
         .public_key
         .ok_or(DeviceTokenError::MissingPublicKey)?;
     let device_pubkey_decoded = device_pubkey.replace("\\n", "\n");
