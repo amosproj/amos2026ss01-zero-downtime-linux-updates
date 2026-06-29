@@ -127,37 +127,6 @@ impl MigrationTrait for Migration {
         )
         .await?;
 
-        db.execute_unprepared(
-            r#"
-            CREATE OR REPLACE FUNCTION audit_log_trigger_pings_fn()
-            RETURNS TRIGGER AS $$
-            DECLARE
-                _user_id INTEGER;
-            BEGIN
-                BEGIN
-                    _user_id := current_setting('app.audit_user', true)::integer;
-                EXCEPTION WHEN OTHERS THEN
-                    SELECT id INTO _user_id FROM users WHERE subject = 'system';
-                END;
-
-                IF (TG_OP = 'INSERT') THEN
-                    INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, NEW.device_id::TEXT, 'INSERT', NULL, to_jsonb(NEW), _user_id);
-                ELSIF (TG_OP = 'UPDATE') THEN
-                    INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, NEW.device_id::TEXT, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), _user_id);
-                ELSIF (TG_OP = 'DELETE') THEN
-                    INSERT INTO audit_log (table_name, record_id, operation, old_data, new_data, changed_by)
-                    VALUES (TG_TABLE_NAME, OLD.device_id::TEXT, 'DELETE', to_jsonb(OLD), NULL, _user_id);
-                END IF;
-
-                RETURN NULL;
-            END;
-            $$ LANGUAGE plpgsql;
-            "#,
-        )
-        .await?;
-
         for table in ID_PK_TABLES {
             let trigger_name = format!("audit_{}", table);
             db.execute_unprepared(&format!("DROP TRIGGER IF EXISTS {trigger_name} ON {table}"))
