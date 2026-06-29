@@ -71,25 +71,6 @@ provision:
     path: /etc/amos/config.toml
     file: orchestrator-config.toml
 
-  ### vTPM initialization
-  # Initialize the vTPM - see dev-env/tpm.md for explanation of the commands.
-  # If a persistent handle (aka. signing key) is detected, we are already initalized
-  - mode: boot
-    script: |
-      #!/bin/bash
-      set -eux -o pipefail
-      if [ -n "$( tpm2_getcap handles-persistent )" ]; then
-        echo "TPM already initalized (persistent handle present)"
-        exit 0
-      fi
-
-      cd /tmp
-      tpm2_createprimary -C o -c primary.ctx
-      tpm2_create -C primary.ctx -G rsa -u key.pub -r key.priv
-      tpm2_load -C primary.ctx -u key.pub -r key.priv -c key.ctx
-      tpm2_evictcontrol -C o -c key.ctx 0x81000000
-      echo "TPM initalized successfully!"
-
   # ### Random fixes
   # # Prevent lima from installing random sh*t into the VM and therefore having
   # # failed cloud-init services because our bootc system is read-only.

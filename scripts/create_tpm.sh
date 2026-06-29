@@ -18,4 +18,4 @@ export XDG_DATA_HOME="${tmp_dir}/data"
 /usr/share/swtpm/swtpm-create-user-config-files --skip-if-exist
 
 mkdir -p "$tpm_state_dir"
-swtpm_setup --tpm2 --tpmstate "$tpm_state_dir" --createek --create-ek-cert --lock-nvram
+swtpm_setup --tpm2 --tpmstate "$tpm_state_dir" --createek --create-ek-cert --lock-nvram --not-overwrite

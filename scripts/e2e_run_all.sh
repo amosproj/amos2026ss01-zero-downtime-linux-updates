@@ -26,7 +26,6 @@ NC='\033[0m'
 # Test execution sequence
 TEST_SUITE=(
     "tests/e2e_seed_api.sh"
-    "tests/e2e_tpm_init.sh"
     "tests/e2e_bootc_status.sh"
     "tests/e2e_bootc_upgrade.sh"
 )
@@ -74,7 +73,10 @@ echo " Starting TPM and VM "
 echo "========================================="
 
 echo "Initializing emulated TPM in ${TPM_DIR}..."
-mkdir -p "${TPM_DIR}"
+if ! ./create_tpm.sh "$TPM_DIR"; then
+    echo "Could not create TPM. Aborting."
+    exit 1
+fi
 swtpm socket --tpm2 -d --tpmstate dir="${TPM_DIR}" --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" --log level=20
 
 sleep 2
