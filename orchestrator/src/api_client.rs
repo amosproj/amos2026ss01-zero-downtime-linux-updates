@@ -185,9 +185,7 @@ impl ApiClient {
 
     /// Registers the device at the API. Usually called when another response indicates
     /// that the device is unknown to the API.
-    pub async fn register_self(
-        &self,
-    ) -> Result<()> {
+    pub async fn register_self(&self) -> Result<()> {
         let registration_path = "/register-device";
 
         let registration_payload = {

@@ -9,7 +9,10 @@ use tss_esapi::attributes::ObjectAttributesBuilder;
 use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
 use tss_esapi::interface_types::algorithm::{HashingAlgorithm, PublicAlgorithm};
 use tss_esapi::interface_types::resource_handles::{Hierarchy, Provision};
-use tss_esapi::structures::{HashScheme, MaxBuffer, Public, PublicBuilder, PublicRsaParametersBuilder, RsaExponent, RsaScheme, SignatureScheme};
+use tss_esapi::structures::{
+    HashScheme, MaxBuffer, Public, PublicBuilder, PublicRsaParametersBuilder, RsaExponent,
+    RsaScheme, SignatureScheme,
+};
 use tss_esapi::{Context, TctiNameConf, WrapperErrorKind};
 
 // Persistent handle where the RSA endorsement key is mapped to
@@ -44,19 +47,17 @@ impl TpmSigner {
                 KeyHandle::from(object_handle)
             }
 
-            Err(tss_esapi::Error::Tss2Error(rc)) => {
-                match rc.kind() {
-                    Some(tss_esapi::constants::response_code::Tss2ResponseCodeKind::Handle) => {
-                        info!("Signing key not present, starting initialization routine");
+            Err(tss_esapi::Error::Tss2Error(rc)) => match rc.kind() {
+                Some(tss_esapi::constants::response_code::Tss2ResponseCodeKind::Handle) => {
+                    info!("Signing key not present, starting initialization routine");
 
-                        create_signing_key(&mut ctx)?
-                    }
-
-                    _ => {
-                        return Err(tss_esapi::Error::Tss2Error(rc).into());
-                    }
+                    create_signing_key(&mut ctx)?
                 }
-            }
+
+                _ => {
+                    return Err(tss_esapi::Error::Tss2Error(rc).into());
+                }
+            },
 
             Err(e) => {
                 return Err(e.into());
@@ -77,7 +78,7 @@ impl TpmSigner {
     }
 
     /// NOTE: Accessing the Endorsement key via the persistent handle as seen below is non-standardized...
-    // 
+    //
     // To be safe, the NV index of the RSA EK (handle 0x1c00002) should be read which then allows reading
     // the RSA EK's certificate. This would then need to be parsed and have its public key constructed
     // from the extracted parameters.
