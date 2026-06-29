@@ -20,10 +20,17 @@ payload=$(cat <<EOF
 EOF
 )
 
+# We need to have a tenant here cause a newly registered device is assigned to the first known tenant (device MUST have a tenant)
+api "/v1/tenants" POST '{ "name": "Weber-Lager", "description": "Automated Testing Tenant" }' 201
 api "/v1/pending-device-registrations" POST "$payload" 201
 
 echo -e "${GREEN}Device endorsement public key successfully registered for the pending device registration.${NC}"
 
-# Restart the orchestrator so it tries to register itself immediately
+# Restart the orchestrator so it tries to register itself immediately and wait for that output
 echo "Restarting Orchestrator to make it register itself immediately..."
+
 limactl shell "${VM_NAME}" -- sudo systemctl restart orchestrator.service
+sleep 5
+
+limactl shell "${VM_NAME}" -- journalctl -u orchestrator.service --since "6 seconds ago" | \
+  grep "Successfully self-registered device"

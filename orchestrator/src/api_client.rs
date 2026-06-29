@@ -220,6 +220,7 @@ impl ApiClient {
                 registration_path,
             );
         }
+        info!("Successfully self-registered device");
 
         Ok(())
     }
