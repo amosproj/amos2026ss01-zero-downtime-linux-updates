@@ -99,6 +99,14 @@ impl TpmSigner {
         Ok(pem)
     }
 
+    pub fn read_signing_key(&mut self) -> anyhow::Result<String> {
+        let (public, _, _) = self.ctx.read_public(self.key_handle)?;
+
+        let pem = armor_rsa_public_key(public)?;
+
+        Ok(pem)
+    }
+
     pub fn sign_data(&mut self, input: &str) -> anyhow::Result<Vec<u8>> {
         let input_buffer = MaxBuffer::try_from(input.as_bytes())?;
 

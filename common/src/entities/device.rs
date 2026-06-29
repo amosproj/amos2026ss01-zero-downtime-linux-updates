@@ -27,3 +27,12 @@ pub struct UpdateModel {
     pub tenant_id: Option<i32>,
     pub group_id: Option<i32>,
 }
+
+/// Model used when device tries to register itself
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RegistrationModel {
+    pub uuid: String,
+    pub serial_number: String,
+    pub endorsement_public_key: String,
+    pub signing_public_key: String,
+}
