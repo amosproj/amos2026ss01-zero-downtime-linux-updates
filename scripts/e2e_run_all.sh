@@ -86,7 +86,8 @@ QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     -chardev socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock \
     -tpmdev emulator,id=tpm0,chardev=chrtpm \
     -device tpm-tis,tpmdev=tpm0 \
-    -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL}" \
+    -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL} \
+    -smbios type=2,serial=${DEVICE_SERIAL}" \
     limactl start "${VM_NAME}"
 
 sleep 5
