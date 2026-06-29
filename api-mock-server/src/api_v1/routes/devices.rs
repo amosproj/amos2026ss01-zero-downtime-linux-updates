@@ -253,7 +253,7 @@ pub async fn register_device(Json(body): Json<DeviceRegister>) -> Response {
         body.uuid,
         Some(body.signing_public_key),
         body.serial_number,
-        1,
+        1, // TODO: Having to guess a tenat here is BAD, tho not sure what else to do as it is mandatory
         None,
     )
     .await;
