@@ -124,6 +124,7 @@ dependencies = [
  "tracing-journald",
  "tracing-subscriber",
  "tss-esapi",
+ "uuid",
 ]
 
 [[package]]
