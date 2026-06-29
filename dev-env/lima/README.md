@@ -55,8 +55,11 @@ agent run end to end, without any physical hardware
        -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL} \
        -smbios type=2,serial=${DEVICE_SERIAL}" \
        limactl start edge-ipc
+   ./scripts/tests/e2e_register_pending_device.sh
    ```
-   (append `--log-level debug` for more verbose output)
+   (append `--log-level debug` for more verbose output from limactl)
+
+   The script for "registering" the device simulates the TPM endorsement key uploading, so after a short delay, the device can register itself.
 
 ## Accessing the VM
 
