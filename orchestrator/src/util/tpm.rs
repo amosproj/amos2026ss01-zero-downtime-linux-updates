@@ -5,16 +5,21 @@ use anyhow::Result;
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
 use tracing::{debug, info, warn};
+use tss_esapi::attributes::ObjectAttributesBuilder;
 use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
-use tss_esapi::interface_types::algorithm::HashingAlgorithm;
-use tss_esapi::interface_types::resource_handles::Hierarchy;
-use tss_esapi::structures::{HashScheme, MaxBuffer, Public, SignatureScheme};
+use tss_esapi::interface_types::algorithm::{HashingAlgorithm, PublicAlgorithm};
+use tss_esapi::interface_types::resource_handles::{Hierarchy, Provision};
+use tss_esapi::structures::{HashScheme, MaxBuffer, Public, PublicBuilder, PublicRsaParametersBuilder, RsaExponent, RsaScheme, SignatureScheme};
 use tss_esapi::{Context, TctiNameConf, WrapperErrorKind};
 
 // Persistent handle where the RSA endorsement key is mapped to
 const RSA_EK_PERSISTENT_HANDLE: u32 = 0x8101_0001;
 
-const PERSISTENT_SIGNING_HANDLE: u32 = 0x8100_0000;
+// Persistent handle for storing our signing key
+//
+// For choosing the handle, see table 11 at section 2.3.1 in the "Registry of Reserved TPM 2.0, Handles and Localities"
+// https://trustedcomputinggroup.org/wp-content/uploads/RegistryOfReservedTPM2HandlesAndLocalities_v1p1_pub.pdf
+const PERSISTENT_SIGNING_HANDLE: u32 = 0x8100_A038;
 
 pub struct TpmSigner {
     ctx: Context,
@@ -125,7 +130,48 @@ impl TpmSigner {
 }
 
 pub fn create_signing_key(context: &mut Context) -> anyhow::Result<KeyHandle> {
-    Ok(KeyHandle::Null)
+    // Create a primary key (tpm2_createprimary -C o)
+    let primary_attrs = ObjectAttributesBuilder::new()
+        .with_fixed_tpm(true)
+        .with_fixed_parent(true)
+        .with_sensitive_data_origin(true)
+        .with_user_with_auth(true)
+        .with_restricted(false)
+        .with_decrypt(false)
+        .with_sign_encrypt(true)
+        .build()?;
+
+    let rsa_params = PublicRsaParametersBuilder::new()
+        .with_scheme(RsaScheme::Null)
+        .with_key_bits(tss_esapi::interface_types::key_bits::RsaKeyBits::Rsa2048)
+        .with_exponent(RsaExponent::ZERO_EXPONENT)
+        .build()?;
+
+    let primary_pub = PublicBuilder::new()
+        .with_public_algorithm(PublicAlgorithm::Rsa)
+        .with_name_hashing_algorithm(HashingAlgorithm::Sha256)
+        .with_object_attributes(primary_attrs)
+        .with_rsa_parameters(rsa_params)
+        .with_rsa_unique_identifier(Default::default())
+        .build()?;
+
+    let primary_key = context.execute_with_nullauth_session(|ctx| {
+        ctx.create_primary(Hierarchy::Owner, primary_pub, None, None, None, None)
+    })?;
+    info!("Signing key created");
+
+    // ...persist it (tpm2_evictcontrol -C o -c key.ctx <handle>)
+    let persistent_handle = PersistentTpmHandle::new(PERSISTENT_SIGNING_HANDLE)?;
+    context.execute_with_nullauth_session(|ctx| {
+        ctx.evict_control(
+            Provision::Owner,
+            primary_key.key_handle.into(),
+            persistent_handle.into(),
+        )
+    })?;
+    info!("Signing key persisted at {:?}", PERSISTENT_SIGNING_HANDLE);
+
+    Ok(primary_key.key_handle)
 }
 
 fn armor_rsa_public_key(public: Public) -> Result<String, tss_esapi::Error> {
