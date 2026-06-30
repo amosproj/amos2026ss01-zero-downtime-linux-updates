@@ -4,8 +4,9 @@
 set -uo pipefail
 
 # --- CONFIGURATION & STATE ---
-export PORT=8080
-export VM_NAME="edge-ipc"
+readonly script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${script_dir}/tests/common_env.sh"
+
 SERVER_PID=""
 FAILED_COUNT=0
 PASSED_COUNT=0
@@ -15,13 +16,7 @@ TPM_DIR="/tmp/emulated_tpm"
 readonly timescale_container="amos-test-timescaledb"
 readonly timescale_port=55433
 readonly timescale_url="postgres://app:4M0S@127.0.0.1:${timescale_port}/amos_timeseries"
-readonly script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly devcontainer_dir="$(cd "$script_dir/../.devcontainer" && pwd)"
-
-# Color outputs
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
 
 # Test execution sequence
 TEST_SUITE=(
@@ -74,7 +69,9 @@ echo " Starting TPM and VM "
 echo "========================================="
 
 echo "Initializing emulated TPM in ${TPM_DIR}..."
+pkill -f "swtpm.*${TPM_DIR}" 2>/dev/null || true
 mkdir -p "${TPM_DIR}"
+rm -f "${TPM_DIR}/swtpm-sock"
 swtpm socket --tpm2 -d --tpmstate dir="${TPM_DIR}" --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" --log level=20
 
 sleep 2
@@ -83,10 +80,22 @@ echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     -chardev socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock \
     -tpmdev emulator,id=tpm0,chardev=chrtpm \
-    -device tpm-tis,tpmdev=tpm0" \
+    -device tpm-tis,tpmdev=tpm0 \
+    -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL}" \
     limactl start "${VM_NAME}"
 
 sleep 5
+
+echo "Verifying SMBIOS UUID was applied inside the VM..."
+ACTUAL_UUID=$(limactl shell "${VM_NAME}" -- sudo cat /sys/class/dmi/id/product_uuid | tr -d '[:space:]')
+if [ "${ACTUAL_UUID}" != "${DEVICE_UUID}" ]; then
+    echo -e "${RED}ERROR: SMBIOS UUID mismatch!${NC}" >&2
+    echo -e "${RED}  Expected: ${DEVICE_UUID}${NC}" >&2
+    echo -e "${RED}  Got:      ${ACTUAL_UUID}${NC}" >&2
+    echo -e "${RED}Lima may not be forwarding QEMU_SYSTEM_X86_64. Check your Lima config.${NC}" >&2
+    exit 1
+fi
+echo -e "${GREEN}SMBIOS UUID verified: ${ACTUAL_UUID}${NC}"
 
 echo "========================================="
 echo " Starting TimescaleDB Container "
@@ -122,7 +131,7 @@ echo "Clearing stale server instances..."
 pkill -f amos-api-mock-server || true
 sleep 0.5
 
-APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-mock-server -dd &
+APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ../target/debug/amos-api-mock-server -dd &
 SERVER_PID=$!
 
 echo "Waiting for mock server to bind to port ${PORT}..."

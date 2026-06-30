@@ -38,7 +38,7 @@ PUBKEY=$(limactl shell "${VM_NAME}" -- sudo sed -z 's/\n/\\n/g' /tmp/pubkey.pem)
 
 echo "Registering public key with the API..."
 # Note: We PUT to /v1/devices/1 assuming the seed script created this device ID
-api "/v1/devices/1" PUT "{\"uuid\": \"${DEVICE_UUID}\", \"serial_number\": \"${VM_NAME}\", \"tenant_id\": 1, \"public_key\": \"${PUBKEY}\"}" 200
+api "/v1/devices/1" PUT "{\"uuid\": \"${DEVICE_UUID}\", \"serial_number\": \"${DEVICE_SERIAL}\", \"tenant_id\": 1, \"public_key\": \"${PUBKEY}\"}" 200
 
 echo -e "${GREEN}vTPM successfully initialized and public key registered.${NC}"
 
