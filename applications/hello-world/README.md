@@ -25,18 +25,6 @@ podman logs -f hw
 podman rm -f hw
 ```
 
-## Wiring into the orchestrator (end-to-end test)
-
-Point the mock server at the pushed GHCR image by adding an entry to
-`api-mock-server/src/api_v1/db/application_configs.rs` with:
-
-```rust
-image: "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system-hello-world:latest".into(),
-environment: Some([("NAME".into(), "AMOS".into())].into()),
-```
-
-The orchestrator's `loop_apps.rs` will pull, run, and tail the container automatically.
-
 ## Versioning
 
 The image version is read from `VERSION` in this directory and applied as the
