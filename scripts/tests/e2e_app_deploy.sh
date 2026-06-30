@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Validates hello-world application deployment and reporting
 
+set -euo pipefail
+
 cd "$(dirname "$0")"
 source ./common_env.sh
 
