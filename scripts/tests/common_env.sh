@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Shared variables and helper utilities
 
-set -euo pipefail
+# Do NOT set -e here, so we don't cause side effects when sourcing this script!
+set -uo pipefail
 
 # --- CONFIGURATION ---
 export PORT=8080
 export HOST_SERVER_URL="http://127.0.0.1:${PORT}"
 export VM_NAME="edge-ipc"
 
-# Read device UUID from DMI/SMBIOS inside the VM
-export DEVICE_UUID
-DEVICE_UUID=$(limactl shell "${VM_NAME}" -- sudo cat /sys/class/dmi/id/product_uuid | tr -d '[:space:]')
+export DEVICE_UUID="00000000-0000-0000-0000-000000000001"
+export DEVICE_SERIAL="AMOS-TEST-001"
 
 # Color formatting for readable logs
 export GREEN='\033[0;32m'

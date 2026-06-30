@@ -18,3 +18,21 @@ pub struct CreateModel {
     pub tenant_id: i32,
     pub group_id: Option<i32>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UpdateModel {
+    pub uuid: Option<String>,
+    pub serial_number: Option<String>,
+    pub public_key: Option<String>,
+    pub tenant_id: Option<i32>,
+    pub group_id: Option<i32>,
+}
+
+/// Model used when device tries to register itself
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RegistrationModel {
+    pub uuid: String,
+    pub serial_number: String,
+    pub endorsement_public_key: String,
+    pub signing_public_key: String,
+}

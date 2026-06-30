@@ -4,8 +4,8 @@
 set -uo pipefail
 
 # --- CONFIGURATION & STATE ---
-export PORT=8080
-export VM_NAME="edge-ipc"
+source ./tests/common_env.sh
+
 SERVER_PID=""
 FAILED_COUNT=0
 PASSED_COUNT=0
@@ -25,8 +25,8 @@ NC='\033[0m'
 
 # Test execution sequence
 TEST_SUITE=(
+    "tests/e2e_register_pending_device.sh"
     "tests/e2e_seed_api.sh"
-    "tests/e2e_tpm_init.sh"
     "tests/e2e_bootc_status.sh"
     "tests/e2e_bootc_upgrade.sh"
 )
@@ -74,7 +74,10 @@ echo " Starting TPM and VM "
 echo "========================================="
 
 echo "Initializing emulated TPM in ${TPM_DIR}..."
-mkdir -p "${TPM_DIR}"
+if ! ./create_tpm.sh "$TPM_DIR"; then
+    echo "Could not create TPM. Aborting."
+    exit 1
+fi
 swtpm socket --tpm2 -d --tpmstate dir="${TPM_DIR}" --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" --log level=20
 
 sleep 2
@@ -83,7 +86,9 @@ echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     -chardev socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock \
     -tpmdev emulator,id=tpm0,chardev=chrtpm \
-    -device tpm-tis,tpmdev=tpm0" \
+    -device tpm-tis,tpmdev=tpm0 \
+    -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL} \
+    -smbios type=2,serial=${DEVICE_SERIAL}" \
     limactl start "${VM_NAME}"
 
 sleep 5

@@ -5,24 +5,42 @@ use serde_json::Value;
 use crate::{api_v1::db, auth_user::get_str};
 use amos_common::device_jwt::{Claims, MAX_TOKEN_LIFETIME};
 
+/// Custom Error enum for distinguishing errors during JWT validation.
+/// Specifically, we want to know the DeviceNotFound variant in the caller.
+#[derive(Debug)]
+pub enum DeviceTokenError {
+    Jwt(()),
+    DeviceNotFound,
+    MissingPublicKey,
+    DatabaseError(()),
+}
+
+impl From<jsonwebtoken::errors::Error> for DeviceTokenError {
+    fn from(_e: jsonwebtoken::errors::Error) -> Self {
+        DeviceTokenError::Jwt(())
+    }
+}
+
 /// Validate a JWT string.
 /// Returns the decoded Claims on success, or an error if the token is invalid/expired.
 pub async fn validate_device_token(
     token: String,
     token_data: TokenData<Value>,
-) -> Result<Claims, jsonwebtoken::errors::Error> {
+) -> Result<Claims, DeviceTokenError> {
     let device_uuid = get_str(&token_data.claims, "sub")?;
 
     let device = db::get_device_by_uuid(device_uuid.clone())
         .await
-        .map_err(|_| {
-            jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidToken)
-        })?
-        .ok_or(jsonwebtoken::errors::ErrorKind::InvalidToken)?;
+        .map_err(|_| DeviceTokenError::DatabaseError(()))?;
+
+    if device.is_none() {
+        return Err(DeviceTokenError::DeviceNotFound);
+    }
 
     let device_pubkey = device
+        .unwrap()
         .public_key
-        .ok_or(jsonwebtoken::errors::ErrorKind::InvalidToken)?;
+        .ok_or(DeviceTokenError::MissingPublicKey)?;
     let device_pubkey_decoded = device_pubkey.replace("\\n", "\n");
     trace!(
         "Retrieved JWT pubkey for device {}: {}",
@@ -43,7 +61,7 @@ pub async fn validate_device_token(
             "Rejected device JWT due to too long lifetime: {} secs",
             difference_secs
         );
-        return Err(jsonwebtoken::errors::ErrorKind::InvalidToken.into());
+        return Err(DeviceTokenError::Jwt(()));
     }
 
     Ok(verified_token.claims)

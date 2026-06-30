@@ -1,16 +1,27 @@
-use std::fs;
 use std::str::FromStr as _;
 
+use anyhow::Result;
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
-use tracing::{debug, warn};
+use tracing::{debug, info};
+use tss_esapi::attributes::ObjectAttributesBuilder;
 use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
-use tss_esapi::interface_types::algorithm::HashingAlgorithm;
-use tss_esapi::interface_types::resource_handles::Hierarchy;
-use tss_esapi::structures::{HashScheme, MaxBuffer, Public, SignatureScheme};
+use tss_esapi::interface_types::algorithm::{HashingAlgorithm, PublicAlgorithm};
+use tss_esapi::interface_types::resource_handles::{Hierarchy, Provision};
+use tss_esapi::structures::{
+    HashScheme, MaxBuffer, Public, PublicBuilder, PublicRsaParametersBuilder, RsaExponent,
+    RsaScheme, SignatureScheme,
+};
 use tss_esapi::{Context, TctiNameConf, WrapperErrorKind};
 
-const PERSISTENT_HANDLE: u32 = 0x8100_0000;
+// Persistent handle where the RSA endorsement key is mapped to
+const RSA_EK_PERSISTENT_HANDLE: u32 = 0x8101_0001;
+
+// Persistent handle for storing our signing key
+//
+// For choosing the handle, see table 11 at section 2.3.1 in the "Registry of Reserved TPM 2.0, Handles and Localities"
+// https://trustedcomputinggroup.org/wp-content/uploads/RegistryOfReservedTPM2HandlesAndLocalities_v1p1_pub.pdf
+const PERSISTENT_SIGNING_HANDLE: u32 = 0x8100_A038;
 
 pub struct TpmSigner {
     ctx: Context,
@@ -26,25 +37,65 @@ impl TpmSigner {
         debug!("Using tcti: {:?}", tcti_config);
         let mut ctx = Context::new(tcti_config)?;
 
-        // Load your persistent key (example handle)
-        let persistent_handle = PersistentTpmHandle::new(PERSISTENT_HANDLE)?;
-        let object_handle = ctx.tr_from_tpm_public(persistent_handle.into())?;
-        let key_handle = KeyHandle::from(object_handle);
+        // Try loading the persistent signing key
+        let persistent_handle = PersistentTpmHandle::new(PERSISTENT_SIGNING_HANDLE)?;
 
-        // Read public area
-        let (public, _name, _qualified_name) = ctx.read_public(key_handle)?;
-        let pubkey = armor_rsa_public_key(public)?;
-        if let Err(e) = fs::write("/tmp/my_tpm_pubkey.pem", pubkey) {
-            warn!("Could not write own public key to /tpm: {}", e);
-        }
+        let key_handle = match ctx.tr_from_tpm_public(persistent_handle.into()) {
+            Ok(object_handle) => {
+                // Handle exists → continue
+                KeyHandle::from(object_handle)
+            }
 
-        let mut signer = TpmSigner { ctx, key_handle };
+            Err(tss_esapi::Error::Tss2Error(rc)) => match rc.kind() {
+                Some(tss_esapi::constants::response_code::Tss2ResponseCodeKind::Handle) => {
+                    info!("Signing key not present, starting initialization routine");
 
-        let data = "hello world";
-        let sig_bytes = signer.sign_data(data)?;
-        println!("Signature ({} bytes): {:02x?}", sig_bytes.len(), sig_bytes);
+                    create_signing_key(&mut ctx)?
+                }
 
+                _ => {
+                    return Err(tss_esapi::Error::Tss2Error(rc).into());
+                }
+            },
+
+            Err(e) => {
+                return Err(e.into());
+            }
+        };
+
+        let signer = TpmSigner { ctx, key_handle };
         Ok(signer)
+    }
+
+    /// NOTE: Accessing the Endorsement key via the persistent handle as seen below is non-standardized...
+    //
+    // To be safe, the NV index of the RSA EK (handle 0x1c00002) should be read which then allows reading
+    // the RSA EK's certificate. This would then need to be parsed and have its public key constructed
+    // from the extracted parameters.
+    //
+    // Instead for now, we rely on the hardware to have a persistent handle mapped at the specified address
+    // by convention (ensured via the reference device). From there, the public EK can be read directly.
+    pub fn read_endorsement_key(&mut self) -> anyhow::Result<String> {
+        let ek_handle = PersistentTpmHandle::new(RSA_EK_PERSISTENT_HANDLE)?;
+
+        // Convert persistent -> transient ESYS handle
+        let transient = self.ctx.tr_from_tpm_public(ek_handle.into())?;
+        let key_handle = KeyHandle::from(transient);
+
+        // Read public key from transient handle
+        let (public, _, _) = self.ctx.read_public(key_handle)?;
+
+        let pem = armor_rsa_public_key(public)?;
+
+        Ok(pem)
+    }
+
+    pub fn read_signing_key(&mut self) -> anyhow::Result<String> {
+        let (public, _, _) = self.ctx.read_public(self.key_handle)?;
+
+        let pem = armor_rsa_public_key(public)?;
+
+        Ok(pem)
     }
 
     pub fn sign_data(&mut self, input: &str) -> anyhow::Result<Vec<u8>> {
@@ -75,6 +126,51 @@ impl TpmSigner {
 
         Ok(signature_bytes)
     }
+}
+
+pub fn create_signing_key(context: &mut Context) -> anyhow::Result<KeyHandle> {
+    // Create a primary key (tpm2_createprimary -C o)
+    let primary_attrs = ObjectAttributesBuilder::new()
+        .with_fixed_tpm(true)
+        .with_fixed_parent(true)
+        .with_sensitive_data_origin(true)
+        .with_user_with_auth(true)
+        .with_restricted(false)
+        .with_decrypt(false)
+        .with_sign_encrypt(true)
+        .build()?;
+
+    let rsa_params = PublicRsaParametersBuilder::new()
+        .with_scheme(RsaScheme::Null)
+        .with_key_bits(tss_esapi::interface_types::key_bits::RsaKeyBits::Rsa2048)
+        .with_exponent(RsaExponent::ZERO_EXPONENT)
+        .build()?;
+
+    let primary_pub = PublicBuilder::new()
+        .with_public_algorithm(PublicAlgorithm::Rsa)
+        .with_name_hashing_algorithm(HashingAlgorithm::Sha256)
+        .with_object_attributes(primary_attrs)
+        .with_rsa_parameters(rsa_params)
+        .with_rsa_unique_identifier(Default::default())
+        .build()?;
+
+    let primary_key = context.execute_with_nullauth_session(|ctx| {
+        ctx.create_primary(Hierarchy::Owner, primary_pub, None, None, None, None)
+    })?;
+    info!("Signing key created");
+
+    // ...persist it (tpm2_evictcontrol -C o -c key.ctx <handle>)
+    let persistent_handle = PersistentTpmHandle::new(PERSISTENT_SIGNING_HANDLE)?;
+    context.execute_with_nullauth_session(|ctx| {
+        ctx.evict_control(
+            Provision::Owner,
+            primary_key.key_handle.into(),
+            persistent_handle.into(),
+        )
+    })?;
+    info!("Signing key persisted at {:?}", PERSISTENT_SIGNING_HANDLE);
+
+    Ok(primary_key.key_handle)
 }
 
 fn armor_rsa_public_key(public: Public) -> Result<String, tss_esapi::Error> {
