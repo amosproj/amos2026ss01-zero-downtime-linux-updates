@@ -6,12 +6,11 @@ mod config;
 pub(crate) mod db_migration;
 pub(crate) mod dtos;
 pub(crate) mod ts_migration;
-use amos_common::{api, util};
 use axum::{
-    Json, Router,
+    Router,
     extract::Request,
     middleware as axum_middleware,
-    routing::{get, post},
+    routing::post,
 };
 mod audit_context;
 mod middleware;
@@ -20,24 +19,6 @@ use log::{debug, error, info};
 use middleware::jwt_auth;
 use std::path::PathBuf;
 use tokio::net::TcpListener;
-use tower_http::services::ServeDir;
-
-static CATALOG: [api::CatalogResponseEntry; 2] = [
-    api::CatalogResponseEntry {
-        name: "os",
-        version: "1.2.3",
-        url: "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system",
-        signature: util::Base64::from_slice(&[0u8; 16]),
-    },
-    api::CatalogResponseEntry {
-        name: "app",
-        version: "4.5.6",
-        url: "/v1/download/app4.5.6",
-        signature: util::Base64::from_slice(&[0u8; 16]),
-    },
-];
-
-static CATALOG_RES: api::CatalogResponse = api::CatalogResponse::from_slice(&CATALOG);
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -91,8 +72,6 @@ async fn main() {
         });
 
     let api_v1 = Router::new()
-        .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
-        .nest_service("/download", ServeDir::new("assets"))
         .merge(api_v1::routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             config.jwt.clone(),

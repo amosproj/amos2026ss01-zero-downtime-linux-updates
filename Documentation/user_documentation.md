@@ -195,30 +195,6 @@ sudo rpm-ostree rollback
 
 For application containers, use `podman` to switch back to the previous image tag manually. Automated rollback support will be added in a future sprint.
 
----
-
-## API Mock Server
-
-During development or testing, a local mock server (`amos-api-mock-server`) can stand in for a real Cloud API. It serves a static catalog at `GET /v1/catalog` and static download assets from a local `assets/` directory.
-
-> **Note:** The mock server runs on plain HTTP (port 80). The Orchestrator config accepts both `http://` and `https://` URLs, so you can point it directly at `http://localhost` for local testing without a reverse proxy.
-
-```bash
-# Start mock server on port 80 (requires root)
-sudo ./amos-api-mock-server
-```
-
-> **Tip:** To avoid `sudo`, edit `api-mock-server/src/main.rs` to bind to a high port (e.g. `8080`) and rebuild. Then set `cloud_url = "http://localhost:8080/v1"` in your config.
-
-The catalog response from the mock server looks like:
-
-```json
-[
-  { "name": "os",  "version": "1.2.3", "url": "ghcr.io/amosproj/...", "signature": "AAAA..." },
-  { "name": "app", "version": "4.5.6", "url": "/v1/download/app4.5.6", "signature": "AAAA..." }
-]
-```
-
 ### API Reference
 
 All routes are served under `/v1`. Fields marked `*` are required. Pagination is available for all list routes with `?page=x&page_size=y`, defaulting to page 1 and page size 20.

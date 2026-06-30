@@ -170,7 +170,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[Tick: poll_interval_secs] --> B[GET /v1/catalog\nfrom Cloud API]
+    A[Tick: poll_interval_secs] --> B[GET /v1/os-assignments\nfrom Cloud API]
     B --> C[Run: bootc status / rpm-ostree status]
     C --> D{running_commit\n== target_commit?}
     D -- yes --> E[No-op: already up to date]
@@ -238,39 +238,9 @@ Located in `common/src/download_manager.rs`. Provides:
 | Function | Description |
 |----------|-------------|
 | `build_http_client(config)` | Creates a `reqwest::Client`, optionally configuring an HTTPS proxy |
-| `check_for_update(client, config)` | `GET /v1/catalog` — returns the full catalog response |
 | `download_update(client, entry, config)` | Streams an artifact to disk as `update_<name>_<version>.bin` |
 
 The HTTPS proxy can be set in `Config.https_proxy` or via the `https_proxy` environment variable (reqwest default).
-
----
-
-## API Contract
-
-### `GET /v1/catalog`
-
-Returns a JSON array of available artifacts:
-
-```json
-[
-  {
-    "name":      "os",
-    "version":   "1.2.3",
-    "url":       "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system",
-    "signature": "<base64-encoded ed25519 signature>"
-  },
-  {
-    "name":      "app",
-    "version":   "4.5.6",
-    "url":       "/v1/download/app4.5.6",
-    "signature": "<base64-encoded ed25519 signature>"
-  }
-]
-```
-
-### `GET /v1/download/<filename>`
-
-Serves binary update artifact files (mock server only).
 
 ---
 
