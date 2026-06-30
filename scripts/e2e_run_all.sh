@@ -28,6 +28,7 @@ TEST_SUITE=(
     "tests/e2e_seed_api.sh"
     "tests/e2e_tpm_init.sh"
     "tests/e2e_bootc_status.sh"
+    "tests/e2e_app_deploy.sh"
     "tests/e2e_bootc_upgrade.sh"
 )
 
@@ -83,7 +84,8 @@ echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     -chardev socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock \
     -tpmdev emulator,id=tpm0,chardev=chrtpm \
-    -device tpm-tis,tpmdev=tpm0" \
+    -device tpm-tis,tpmdev=tpm0 \
+    -smbios type=1,uuid=6a1c8a6a-3fb3-4f2b-aad2-6e15f1169d61,serial=edge-ipc" \
     limactl start "${VM_NAME}"
 
 sleep 5
@@ -102,8 +104,9 @@ podman run -d --name "$timescale_container" \
 
 echo "Waiting for TimescaleDB to be completely ready..."
 for i in $(seq 1 60); do
-    if podman exec "$timescale_container" pg_isready -U postgres >/dev/null 2>&1; then
-        sleep 1
+    # Wait until the init script has finished: the app user and amos_timeseries DB must exist.
+    if podman exec -e PGPASSWORD=4M0S "$timescale_container" \
+            psql -U app -d amos_timeseries -c "SELECT 1" >/dev/null 2>&1; then
         echo "TimescaleDB is fully initialized and ready."
         break
     fi
