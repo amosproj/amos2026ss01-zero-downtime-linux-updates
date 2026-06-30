@@ -167,8 +167,8 @@ jobs:
       - name: Sign image with Cosign
         if: github.ref_type == 'tag'
         env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_PRIVATE_KEY: ${{ vars.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ vars.COSIGN_PASSWORD }}
         run: |
           cosign sign --key env://COSIGN_PRIVATE_KEY --yes \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.digest.outputs.digest }}
