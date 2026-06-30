@@ -15,11 +15,10 @@ This document explains how to install, configure, and operate the **Orchestrator
 5. [Running the Orchestrator](#running-the-orchestrator)
 6. [CLI Reference](#cli-reference)
 7. [Self-Check / Health Check](#self-check--health-check)
-8. [Inventory](#inventory)
-9. [Logging & Verbosity](#logging--verbosity)
-10. [Running as a systemd Service](#running-as-a-systemd-service)
-11. [Rollback & Error Recovery](#rollback--error-recovery)
-12. [API Mock Server](#api-mock-server)
+8. [Logging & Verbosity](#logging--verbosity)
+9. [Running as a systemd Service](#running-as-a-systemd-service)
+10. [Rollback & Error Recovery](#rollback--error-recovery)
+11. [API Mock Server](#api-mock-server)
 
 ---
 
@@ -32,7 +31,6 @@ The **Orchestrator** is a background agent that runs on each Edge IPC. It period
 ```
 Orchestrator  ──►  OS Update Loop   (compares OS state, calls placeholder update)
               ──►  App Update Loop  (reconciles container state, calls placeholder fns)
-              ──►  Inventory        (collects device info, writes to local JSON file)
 ```
 
 ---
@@ -88,7 +86,6 @@ All config values can be overridden with environment variables prefixed `APP_`:
 |----------------------|------------|-------------|
 | `APP_CLOUD_URL` | `cloud_url` | Cloud API base URL |
 | `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | Poll frequency in seconds |
-| `APP_INVENTORY_PATH` | `inventory_path` | Inventory output file path |
 | `https_proxy` | — | HTTPS proxy URL (reqwest default) |
 
 > **Note:** `APP_CONFIG_FILE` is special — it selects *which* config file to load (see precedence above) rather than overriding a value. The `--config` flag takes precedence over it.
@@ -135,7 +132,7 @@ Options:
 
 ## Self-Check / Health Check
 
-The `--self-check` flag validates the system configuration and inventory tooling without starting the main loop. Use it to verify the agent is correctly set up:
+The `--self-check` flag validates the system configuration and bootc/podman tooling without starting the main loop. Use it to verify the agent is correctly set up:
 
 ```bash
 amos-orchestrator --self-check
@@ -145,21 +142,6 @@ amos-orchestrator --self-check --config /etc/amos/config.toml
 Exit codes:
 - `0` — all checks passed
 - `1` — one or more checks failed (details printed to stderr)
-
----
-
-## Inventory
-
-On startup, the Orchestrator collects a **device inventory** and writes it as a JSON file to the path defined by `inventory_path`. The inventory includes:
-
-| Section | Contents |
-|---------|----------|
-| `system` | Hostname, OS name/version, kernel version |
-| `deployments` | rpm-ostree deployment info (checksum, version, booted/staged flags) |
-| `bootc_status` | Booted, staged, and rollback image info |
-| `applications` | Running application container names and versions |
-
-If a section cannot be collected (e.g. `bootc` is not installed), the field is marked `"status": "unavailable"` with a reason — the rest of the inventory is still written.
 
 ---
 

@@ -16,9 +16,3 @@ cloud_url = "https://your-cloud-api.example.com/v1"
 # Env: APP_POLL_INTERVAL_SECS
 # Default: 5
 poll_interval_secs = 60
-
-# Path where the device inventory JSON file is written on startup.
-# Parent directories are created automatically if they do not exist.
-# Env: APP_INVENTORY_PATH
-# Default: ./inventory/inventory.json
-inventory_path = "./inventory/inventory.json"

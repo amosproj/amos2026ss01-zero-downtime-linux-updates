@@ -56,7 +56,6 @@ cat > /etc/amos/config.toml <<'EOF'
 # AMOS orchestrator config (hardware). EDIT cloud_url for your environment.
 cloud_url = "https://CHANGE-ME.example.com/v1"
 poll_interval_secs = 30
-inventory_path = "/var/lib/amos/inventory.json"
 EOF
 chmod 0644 /etc/amos/config.toml
 %end

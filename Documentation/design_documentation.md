@@ -133,7 +133,6 @@ pub struct AppState {
 pub struct Settings {
     pub cloud_url: String,         // Cloud API base URL (must be https://)
     pub poll_interval_secs: u32,   // polling interval in seconds
-    pub inventory_path: String,    // file path for inventory JSON output
 }
 ```
 
@@ -288,42 +287,6 @@ Built-in defaults
 ```
 
 > See [User Documentation — Configuration](user_documentation.md#configuration) for all available keys, defaults, and constraints.
-
----
-
-## Inventory System
-
-On startup, `collect_and_save_inventory()` gathers device state and writes it as pretty-printed JSON. The collection is fault-tolerant: individual failures are recorded as `"status": "unavailable"` rather than aborting the entire process.
-
-```mermaid
-flowchart TD
-    A[collect_and_save_inventory] --> B[collect system info\nhostname, OS, kernel]
-    A --> C[rpm-ostree status --json]
-    A --> D[bootc status --json]
-    A --> E[podman ps]
-    B --> F[Assemble Inventory struct]
-    C --> F
-    D --> F
-    E --> F
-    F --> G[serde_json::to_string_pretty]
-    G --> H[Atomic write to inventory_path\ncreate parent dirs if needed]
-```
-
-Inventory JSON structure:
-
-```json
-{
-  "system": {
-    "hostname": "...",
-    "os_name": "...",
-    "os_version": "...",
-    "kernel_version": "..."
-  },
-  "deployments": { "status": "ok", "data": [...] },
-  "bootc_status": { "status": "ok", "data": { "booted": {...}, "staged": null, "rollback": null, "rollback_queued": false } },
-  "applications": { "status": "unavailable", "data": { "reason": "podman: command not found" } }
-}
-```
 
 ---
 
