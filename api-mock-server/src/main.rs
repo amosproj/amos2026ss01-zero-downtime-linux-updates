@@ -6,8 +6,12 @@ mod config;
 pub(crate) mod db_migration;
 pub(crate) mod dtos;
 pub(crate) mod ts_migration;
-use amos_common::{api, util};
-use axum::{Json, Router, extract::Request, middleware as axum_middleware, routing::get};
+use axum::{
+    Router,
+    extract::Request,
+    middleware as axum_middleware,
+    routing::post,
+};
 mod audit_context;
 mod middleware;
 use config::get_config;
@@ -15,24 +19,6 @@ use log::{debug, error, info};
 use middleware::jwt_auth;
 use std::path::PathBuf;
 use tokio::net::TcpListener;
-use tower_http::services::ServeDir;
-
-static CATALOG: [api::CatalogResponseEntry; 2] = [
-    api::CatalogResponseEntry {
-        name: "os",
-        version: "1.2.3",
-        url: "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system",
-        signature: util::Base64::from_slice(&[0u8; 16]),
-    },
-    api::CatalogResponseEntry {
-        name: "app",
-        version: "4.5.6",
-        url: "/v1/download/app4.5.6",
-        signature: util::Base64::from_slice(&[0u8; 16]),
-    },
-];
-
-static CATALOG_RES: api::CatalogResponse = api::CatalogResponse::from_slice(&CATALOG);
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -86,16 +72,22 @@ async fn main() {
         });
 
     let api_v1 = Router::new()
-        .route("/catalog", get(|| async { Json(&CATALOG_RES) }))
-        .nest_service("/download", ServeDir::new("assets"))
         .merge(api_v1::routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             config.jwt.clone(),
             jwt_auth,
         ));
 
+    // Device registration needs to be public as the device needs to register
+    // its JWT pubkey before it can be used for verifying its signature
+    let api_v1_public = Router::new().route(
+        "/register-device",
+        post(api_v1::routes::devices::register_device),
+    );
+
     let app = Router::new()
         .nest("/v1", api_v1)
+        .nest("/v1", api_v1_public)
         .layer(axum_middleware::from_fn(
             async |req: Request, next: axum_middleware::Next| {
                 let uri = req.uri().to_string();

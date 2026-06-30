@@ -63,4 +63,12 @@ impl DeviceJwtProvider {
 
         Ok(format!("{}.{}", data, signature_b64))
     }
+
+    pub fn get_endorsement_key(&mut self) -> anyhow::Result<String> {
+        self.signer.read_endorsement_key()
+    }
+
+    pub fn get_signing_key(&mut self) -> anyhow::Result<String> {
+        self.signer.read_signing_key()
+    }
 }

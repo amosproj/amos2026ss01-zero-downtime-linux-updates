@@ -14,3 +14,13 @@ pub struct Model {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl Model {
+    pub fn into_api(self) -> amos_common::entities::PendingDeviceRegistration::Model {
+        amos_common::entities::PendingDeviceRegistration::Model {
+            id: self.id,
+            serial_number: self.serial_number,
+            endorsement_public_key: self.endorsement_public_key,
+        }
+    }
+}

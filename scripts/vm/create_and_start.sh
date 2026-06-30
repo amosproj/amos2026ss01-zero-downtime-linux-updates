@@ -68,8 +68,9 @@ if [ -f "$swtpm_pidfile" ]; then
     rm -f "$swtpm_pidfile"
 fi
 
-# Create swtpm socket dir
-mkdir -p "$swtpm_dir"
+# Initialize the TPM with certificate an EK from host
+echo "Initializing TPM via external script"
+./create_tpm.sh
 
 # Create swtpm socket
 swtpm socket --tpm2 -d --tpmstate dir="$swtpm_dir" --ctrl type=unixio,path="$swtpm_dir/swtpm-sock" --pid file="$swtpm_pidfile" --log level=20
@@ -93,7 +94,8 @@ QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
                     -chardev socket,id=chrtpm,path=/tmp/emulated_tpm/swtpm-sock \
                     -tpmdev emulator,id=tpm0,chardev=chrtpm \
                     -device tpm-tis,tpmdev=tpm0 \
-                    -smbios type=1,uuid=${smbios_uuid},serial=${smbios_serial}" \
+                    -smbios type=1,uuid=${smbios_uuid},serial=${DEVICE_SERIAL} \
+                    -smbios type=2,serial=${smbios_serial}" \
     limactl start edge-ipc
 
 # Wait for the vTPM device to show up inside the VM
@@ -101,46 +103,6 @@ echo "Waiting for /dev/tpm0 inside the VM..."
 until limactl shell edge-ipc -- test -e /dev/tpm0 2>/dev/null; do
     sleep 1
 done
-
-# Initialize the TPM and persist a signing key, unless one already exists
-TPM_KEY_HANDLE=0x81000000
-TPM_WORKDIR=/tmp/tpm-init
-
-if limactl shell edge-ipc -- sudo tpm2_getcap handles-persistent | grep -q "$TPM_KEY_HANDLE"; then
-    echo "TPM signing key already persisted at $TPM_KEY_HANDLE"
-else
-    echo "Initializing TPM and creating persistent signing key..."
-    limactl shell edge-ipc -- sudo bash -c "
-        set -eu
-        trap 'echo \"TPM init failed at: \$BASH_COMMAND\" >&2' ERR
-        mkdir -p '$TPM_WORKDIR'
-        cd '$TPM_WORKDIR'
-        tpm2_createprimary -C o -c primary.ctx
-        tpm2_create -C primary.ctx -G rsa -u key.pub -r key.priv \
-            -a 'sign|fixedtpm|fixedparent|sensitivedataorigin|userwithauth'
-        tpm2_load -C primary.ctx -u key.pub -r key.priv -c key.ctx
-        tpm2_evictcontrol -C o -c key.ctx '$TPM_KEY_HANDLE'
-        tpm2_getcap handles-persistent
-    " || { echo "TPM initialization failed" >&2; exit 1; }
-fi
-
-# Sanity-check the persisted key by signing and verifying a test file
-echo "Testing TPM signing key..."
-limactl shell edge-ipc -- sudo bash -c "
-    set -eu
-    trap 'echo \"TPM sign/verify test failed at: \$BASH_COMMAND\" >&2' ERR
-    mkdir -p '$TPM_WORKDIR'
-    cd '$TPM_WORKDIR'
-    tpm2_readpublic -c '$TPM_KEY_HANDLE' -f pem -o pubkey.pem
-    openssl rsa -pubin -in pubkey.pem -text -noout
-    date > data.txt
-    tpm2_sign -c '$TPM_KEY_HANDLE' -g sha256 -f plain -o sig.bin data.txt
-    openssl dgst -sha256 -verify pubkey.pem -signature sig.bin data.txt
-" || { echo "TPM sign/verify test failed" >&2; exit 1; }
-
-# Copy the TPM public key out of the VM so the host can register it with the
-# api-mock-server below.
-limactl shell edge-ipc -- sudo cat "$TPM_WORKDIR/pubkey.pem" >/tmp/my_tpm_pubkey.pem
 
 echo "Waiting for TimescaleDB to be ready..."
 # Check the actual TCP endpoint api-mock-server connects to, not the socket

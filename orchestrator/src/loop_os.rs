@@ -22,7 +22,7 @@ pub async fn run_os_main_loop(
         update_interval.tick().await;
 
         if let Err(e) = try_update(&mut os_state, &bootc, &api_client).await {
-            error!("{}", e.context("OS update cycle failed"));
+            error!("{:?}", e.context("OS update cycle failed"));
         }
     }
 }

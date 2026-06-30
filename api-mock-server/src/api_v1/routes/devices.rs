@@ -4,7 +4,9 @@ use crate::api_v1::routes::{
     pagination::{Page, PageParams},
     pagination_err,
 };
-use amos_common::entities::device::CreateModel as DeviceCreate;
+use amos_common::entities::device::{
+    CreateModel as DeviceCreate, RegistrationModel as DeviceRegister, UpdateModel as DeviceUpdate,
+};
 use axum::{
     Json, Router,
     extract::{Path, Query},
@@ -12,6 +14,8 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
+use log::{debug, info};
+use sea_orm::{ActiveModelTrait, DbErr};
 use serde::Deserialize;
 
 pub fn routes() -> Router {
@@ -21,7 +25,10 @@ pub fn routes() -> Router {
         .route("/devices", get(list_devices).post(create_device))
         .route(
             "/devices/{id}",
-            get(get_device).put(update_device).delete(delete_device),
+            get(get_device)
+                .put(update_device)
+                .patch(patch_device)
+                .delete(delete_device),
         )
 }
 
@@ -162,6 +169,28 @@ async fn update_device(Path(id): Path<i32>, Json(body): Json<DeviceCreate>) -> R
     }
 }
 
+/// PATCH /devices/{id} — Update a device by ID.
+/// Body: see amos_common::entities::device::UpdateModel
+async fn patch_device(Path(id): Path<i32>, Json(body): Json<DeviceUpdate>) -> Response {
+    match db::patch_device(
+        id,
+        body.uuid,
+        body.public_key,
+        body.serial_number,
+        body.tenant_id,
+        body.group_id,
+    )
+    .await
+    {
+        Ok(device) => Json(device).into_response(),
+        Err(DbErr::RecordNotFound(_)) => err(
+            StatusCode::NOT_FOUND,
+            format!("No device with id {} found", id),
+        ),
+        Err(e) => db_err(e),
+    }
+}
+
 /// DELETE /devices/{id} — Delete a device by ID. Returns 204 on success.
 async fn delete_device(Path(id): Path<i32>) -> Response {
     match db::delete_device(id).await {
@@ -169,4 +198,78 @@ async fn delete_device(Path(id): Path<i32>) -> Response {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => db_err(e),
     }
+}
+
+/// POST /register-devices — Lets a device register itself if there is a pending device registration.
+/// Body: see amos_common::entities::device::RegistrationModel
+pub async fn register_device(Json(body): Json<DeviceRegister>) -> Response {
+    if body.uuid.trim().is_empty() {
+        return err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Device UUID cannot be empty",
+        );
+    }
+    if body.serial_number.trim().is_empty() {
+        return err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Device serial number cannot be empty",
+        );
+    }
+    if body.endorsement_public_key.trim().is_empty() {
+        return err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Device endorsement key cannot be empty",
+        );
+    }
+    if body.signing_public_key.trim().is_empty() {
+        return err(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Device signing key cannot be empty",
+        );
+    }
+
+    // Check if a matching pending registration is in the database
+    let found = db::search_pending_device_registration(
+        body.serial_number.clone(),
+        body.endorsement_public_key,
+    )
+    .await;
+    if found.is_err() {
+        debug!(
+            "Failed to search for matching pending device registration: {:?}",
+            found
+        );
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+    if found.clone().unwrap().is_none() {
+        debug!("Failed to search for matching pending device registration: No existing match");
+        return StatusCode::NOT_FOUND.into_response();
+    }
+
+    let active: crate::dtos::PendingDeviceRegistration::ActiveModel =
+        found.unwrap().unwrap().into();
+
+    let new_device = db::add_device(
+        body.uuid,
+        Some(body.signing_public_key),
+        body.serial_number,
+        1, // TODO: Having to guess a tenat here is BAD, tho not sure what else to do as it is mandatory
+        None,
+    )
+    .await;
+
+    if new_device.is_err() {
+        debug!(
+            "Failed to create new device during device registration: {:?}",
+            new_device
+        );
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    } else {
+        info!("Registered device: {:?}", new_device);
+    }
+
+    let db_conn = db::db!();
+    let _ = active.delete(&db_conn).await;
+
+    StatusCode::CREATED.into_response()
 }

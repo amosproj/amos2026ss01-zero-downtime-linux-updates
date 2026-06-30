@@ -4,15 +4,16 @@ use std::time::Duration;
 
 use crate::util::device_jwt::DeviceJwtProvider;
 use amos_common::Page;
+use amos_common::entities::Device::RegistrationModel;
 use amos_common::entities::reported_application_assignment::CreateModel as ReportedApplicationAssignmentCreate;
 use amos_common::entities::reported_os_assignment::CreateModel as ReportedOsAssignmentCreate;
 use amos_common::entities::{
     ApplicationAssignment, ApplicationConfig, ApplicationLog, DeviceLog, OsAssignment, OsVersion,
 };
 use anyhow::{Context, Result};
-use reqwest::Method;
+use reqwest::{Method, StatusCode};
 use serde::Serialize;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// Type-safe API client.
 /// Handles proxies, base urls, authentication and filtering for the current device.
@@ -20,7 +21,7 @@ pub struct ApiClient {
     client: reqwest::Client,
     base_url: String,
     device_uuid: String,
-    _serial_number: String,
+    serial_number: String,
     jwt_provider: tokio::sync::Mutex<DeviceJwtProvider>,
 }
 
@@ -57,7 +58,7 @@ impl ApiClient {
             client: cb.build()?,
             base_url,
             device_uuid,
-            _serial_number: serial_number,
+            serial_number,
             jwt_provider: tokio::sync::Mutex::const_new(jwt_provider),
         })
     }
@@ -182,6 +183,48 @@ impl ApiClient {
         .await
     }
 
+    /// Registers the device at the API. Usually called when another response indicates
+    /// that the device is unknown to the API.
+    pub async fn register_self(&self) -> Result<()> {
+        let registration_path = "/register-device";
+
+        let registration_payload = {
+            let mut provider = self.jwt_provider.lock().await;
+            let endorsement_pubkey = provider.get_endorsement_key()?;
+            let signing_pubkey = provider.get_signing_key()?;
+
+            RegistrationModel {
+                uuid: self.device_uuid.clone(),
+                serial_number: self.serial_number.clone(),
+                endorsement_public_key: endorsement_pubkey,
+                signing_public_key: signing_pubkey,
+            }
+        };
+
+        // NOTE: The .req wrapper is explicitly NOT used to avoid recursion
+        let url = format!("{}{}", self.base_url, registration_path);
+        let req = self
+            .client
+            .request(Method::POST, url)
+            .json(&registration_payload);
+
+        let res = req
+            .send()
+            .await
+            .with_context(|| format!("Failed to reach server at {}", self.base_url))?;
+
+        if !res.status().is_success() {
+            anyhow::bail!(
+                "Server responded with status {} for {}",
+                res.status(),
+                registration_path,
+            );
+        }
+        info!("Successfully self-registered device");
+
+        Ok(())
+    }
+
     // -- Internal helper functions --
     async fn req(
         &self,
@@ -208,6 +251,11 @@ impl ApiClient {
             .send()
             .await
             .with_context(|| format!("Failed to reach server at {}", self.base_url))?;
+
+        if res.status() == StatusCode::IM_A_TEAPOT {
+            warn!("Server indicated that it doesn't know this device, trying self-registration");
+            self.register_self().await?;
+        }
 
         if !res.status().is_success() {
             anyhow::bail!(

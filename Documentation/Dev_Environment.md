@@ -4,7 +4,7 @@ This repository provides a DevContainer definition for a standardized environmen
 
 The recommended setup for development on this project therefore is ```Microsoft Visual Studio Code``` with the ```Dev Containers``` extension.
 
-Inside the dev container, an instance of the mock api server can be reached under [http://mock-api-container/](). Try it out with ```curl http://mock-api-container/v1/catalog```!
+Inside the dev container, an instance of the mock api server can be reached under [http://mock-api-container/](). Try it out with ```curl http://mock-api-container/v1/devices```!
 
 ## Setup
 
