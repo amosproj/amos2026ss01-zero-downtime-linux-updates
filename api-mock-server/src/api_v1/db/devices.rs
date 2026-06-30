@@ -111,6 +111,43 @@ pub async fn update_device(
     Ok(updated_device.into_api())
 }
 
+pub async fn patch_device(
+    id: i32,
+    uuid: Option<String>,
+    public_key: Option<String>,
+    serial_number: Option<String>,
+    tenant_id: Option<i32>,
+    group_id: Option<i32>,
+) -> Result<Device::Model, DbErr> {
+    let db = db!();
+    let device = dtos::Device::Entity::find_by_id(id)
+        .one(&db)
+        .await?
+        .ok_or(DbErr::RecordNotFound("Device not found".into()))?;
+    let mut device: dtos::Device::ActiveModel = device.into();
+
+    // Conditionally update fields
+    if let Some(uuid) = uuid {
+        device.uuid = Set(uuid);
+    }
+    if let Some(public_key) = public_key {
+        device.public_key = Set(Some(public_key));
+    }
+    if let Some(serial_number) = serial_number {
+        device.serial_number = Set(serial_number);
+    }
+    if let Some(tenant_id) = tenant_id {
+        device.tenant_id = Set(tenant_id);
+    }
+    if let Some(group_id) = group_id {
+        device.group_id = Set(Some(group_id));
+    }
+
+    let updated_device = device.update(&db).await?;
+    debug!("Patched device: {:?}", updated_device);
+    Ok(updated_device.into_api())
+}
+
 pub async fn delete_device(id: i32) -> Result<u64, DbErr> {
     let db = db!();
     let del = dtos::Device::Entity::delete_by_id(id).exec(&db).await?;

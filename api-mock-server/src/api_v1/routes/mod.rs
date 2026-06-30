@@ -8,6 +8,7 @@ pub mod logs;
 pub mod os_assignments;
 pub mod os_versions;
 pub mod pagination;
+pub mod pending_device_registrations;
 pub mod pings;
 pub mod reported_application_assignments;
 pub mod reported_os_assignments;
@@ -60,6 +61,7 @@ pub fn routes() -> Router {
         .merge(logs::routes())
         .merge(os_assignments::routes())
         .merge(os_versions::routes())
+        .merge(pending_device_registrations::routes())
         .merge(pings::routes())
         .merge(reported_application_assignments::routes())
         .merge(reported_os_assignments::routes())

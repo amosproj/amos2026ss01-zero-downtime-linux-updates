@@ -86,7 +86,7 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
     let device_uuid = hardware::read_device_uuid()
         .context("Could not read device UUID from DMI (/sys/class/dmi/id/product_uuid)")?;
     let serial_number = hardware::read_serial_number()
-        .context("Could not read serial number from DMI (/sys/class/dmi/id/product_serial)")?;
+        .context("Could not read serial number from DMI (/sys/class/dmi/id/board_serial)")?;
 
     let signer = TpmSigner::new().context("Could not initialize the TPM")?;
     let jwt_provider = DeviceJwtProvider::new(signer);

@@ -1,8 +1,8 @@
-use crate::api_v1::db;
 use crate::audit_context::CURRENT_USER;
 use crate::auth_device::validate_device_token;
 use crate::auth_user::validate_user_token;
 use crate::config::JwtConfig;
+use crate::{api_v1::db, auth_device};
 use axum::{
     extract::{Request, State},
     http::{StatusCode, header},
@@ -57,13 +57,17 @@ pub async fn jwt_auth(
 
     if is_device {
         // 4. Validate the token for a device
-        trace!("Received device JWT: {}", token);
+        trace!("Received device JWT: {:?}", token_data);
         match validate_device_token(token.to_owned(), token_data).await {
             Ok(claims) => {
                 // 5. Attach the claims to the request so handlers can use them
                 req.extensions_mut().insert(claims);
                 // 6. Pass the request to the next layer
                 Ok(next.run(req).await)
+            }
+            Err(auth_device::DeviceTokenError::DeviceNotFound) => {
+                debug!("JWT rejected (device unknown)");
+                Err(StatusCode::IM_A_TEAPOT)
             }
             Err(err) => {
                 debug!("JWT rejected: {:?}", err);
@@ -73,7 +77,7 @@ pub async fn jwt_auth(
         }
     } else {
         // 4. Validate the token for a user
-        trace!("Received user JWT: {}", token);
+        trace!("Received user JWT: {:?}", token_data);
         match validate_user_token(token, &jwt_config) {
             Ok(claims) => {
                 // 5. Upsert user into the database

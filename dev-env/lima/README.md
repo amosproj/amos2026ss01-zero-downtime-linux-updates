@@ -39,8 +39,8 @@ agent run end to end, without any physical hardware
    For the TPM to work, QEMU *must* be used!
 3. Start the software TPM
    ```bash
-   mkdir -p /tmp/emulated_tpm
-   swtpm socket --tpm2 -d --tpmstate dir=/tmp/emulated_tpm --ctrl type=unixio,path=/tmp/emulated_tpm/swtpm-sock --log level=20
+   scripts/create_tpm.sh
+   swtpm socket --tpm2 --tpmstate dir=/tmp/emulated_tpm --ctrl type=unixio,path=/tmp/emulated_tpm/swtpm-sock --log level=20 -d
    ```
    (The swtpm is forked to the background and terminates, as soon the VM is shut down once it has attached to the socket)
 
@@ -52,10 +52,14 @@ agent run end to end, without any physical hardware
        -chardev socket,id=chrtpm,path=/tmp/emulated_tpm/swtpm-sock \
        -tpmdev emulator,id=tpm0,chardev=chrtpm \
        -device tpm-tis,tpmdev=tpm0 \
-       -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL}" \
+       -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL} \
+       -smbios type=2,serial=${DEVICE_SERIAL}" \
        limactl start edge-ipc
+   ./scripts/tests/e2e_register_pending_device.sh
    ```
-   (append `--log-level debug` for more verbose output)
+   (append `--log-level debug` for more verbose output from limactl)
+
+   The script for "registering" the device simulates the TPM endorsement key uploading, so after a short delay, the device can register itself.
 
 ## Accessing the VM
 

@@ -30,6 +30,9 @@ pub use crate::entities::os_assignment as OsAssignment;
 pub mod os_version;
 pub use crate::entities::os_version as OsVersion;
 
+pub mod pending_device_registration;
+pub use crate::entities::pending_device_registration as PendingDeviceRegistration;
+
 pub mod ping;
 pub use crate::entities::ping as Ping;
 

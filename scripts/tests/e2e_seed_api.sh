@@ -8,9 +8,6 @@ source ./tests/common_env.sh
 
 echo "=== Filling Mock Cloud Database ==="
 
-api "/v1/tenants" POST '{ "name": "Weber-Lager", "description": "Automated Testing Tenant" }' 201
-api "/v1/devices" POST "{\"uuid\": \"${DEVICE_UUID}\", \"serial_number\": \"edge-ipc\", \"tenant_id\": 1}" 201
-
 # Dynamically fetch the current running OSTree checksum from the VM
 echo "Extracting dynamic baseline checksum from VM for database seeding..."
 DYNAMIC_CHECKSUM=$(limactl shell "${VM_NAME}" -- sudo bootc status --json | jq -r '.status.booted.ostree.checksum')
