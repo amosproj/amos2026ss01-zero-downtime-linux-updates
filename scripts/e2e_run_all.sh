@@ -28,6 +28,7 @@ TEST_SUITE=(
     "tests/e2e_register_pending_device.sh"
     "tests/e2e_seed_api.sh"
     "tests/e2e_bootc_status.sh"
+    "tests/e2e_app_deploy.sh"
     "tests/e2e_bootc_upgrade.sh"
 )
 
@@ -107,8 +108,9 @@ podman run -d --name "$timescale_container" \
 
 echo "Waiting for TimescaleDB to be completely ready..."
 for i in $(seq 1 60); do
-    if podman exec "$timescale_container" pg_isready -U postgres >/dev/null 2>&1; then
-        sleep 1
+    # Wait until the init script has finished: the app user and amos_timeseries DB must exist.
+    if podman exec -e PGPASSWORD=4M0S "$timescale_container" \
+            psql -U app -d amos_timeseries -c "SELECT 1" >/dev/null 2>&1; then
         echo "TimescaleDB is fully initialized and ready."
         break
     fi

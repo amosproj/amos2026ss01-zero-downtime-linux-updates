@@ -130,7 +130,7 @@ impl<'a, P: PodmanImage> TargetApp<'a, P> {
                 .next()
                 .unwrap_or(&cfg.image),
             config: cfg.config.clone(),
-            application_id: cfg.id,
+            application_id: cfg.application_id,
         })
     }
 }
