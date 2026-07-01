@@ -148,8 +148,12 @@ done
 echo "========================================="
 echo " Ensuring VM Pre-requisites "
 echo "========================================="
-# Ensure Podman API socket is active for application state tracking
-limactl shell "${VM_NAME}" -- sudo systemctl enable --now podman.socket
+# Ensure Podman API socket is running
+(
+    set -e
+    limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
+    echo "Podman socket is running"
+)
 
 echo "========================================="
 echo " Running E2E Tests "
