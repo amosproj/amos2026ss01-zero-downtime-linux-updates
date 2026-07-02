@@ -8,7 +8,7 @@ source ./common_env.sh
 
 echo "=== Testing Application Deployment ==="
 
-IMAGE="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system-hello-world:latest"
+IMAGE="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-hello-world:latest"
 
 echo "Seeding hello-world application records..."
 api "/v1/applications"    POST '{ "name": "hello-world", "description": "E2E heartbeat test app" }' 201
