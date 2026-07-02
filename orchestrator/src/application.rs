@@ -25,21 +25,13 @@ pub struct Application {
 }
 
 impl Application {
-    pub fn wrap(mut container: impl PodmanContainer, registry: &AppLogRegistry) -> Self {
+    pub fn wrap(container: impl PodmanContainer, registry: &AppLogRegistry) -> Self {
         let delete_notifier = Arc::new(tokio::sync::Notify::const_new());
         let event_recv = LogEventReceiver {
             app_name: container.name().to_owned(),
         };
         let application_id = container.application_id().unwrap_or(0);
         let application_config_id = container.application_config_id();
-
-        if let Some(log_handle) = container.take_log_handle() {
-            registry.add(
-                application_id,
-                container.name().to_owned(),
-                log_handle.logs(true, None),
-            );
-        }
 
         Application {
             image_reference: container.reference().to_owned(),
@@ -50,6 +42,8 @@ impl Application {
                 container,
                 event_recv,
                 delete_notifier.clone(),
+                registry.clone(),
+                application_id,
             )),
             delete_notifier,
         }
@@ -99,11 +93,19 @@ impl Drop for Application {
 
 /// Try to keep the container alive to best of ability
 /// and output some logs otherwise
-async fn run_lifecycle_loop(
-    mut container: impl PodmanContainer,
+async fn run_lifecycle_loop<C: PodmanContainer>(
+    mut container: C,
     event_recv: impl EventReceiver,
     delete_notifier: Arc<tokio::sync::Notify>,
+    log_registry: AppLogRegistry,
+    application_id: i32,
 ) {
+    // Taken once the container yields it; reused across re-registrations so
+    // a stream that ends (container not running yet, or stopped) can be
+    // reopened later without needing a fresh log handle.
+    let mut log_handle: Option<C::LogHandle> = None;
+    let mut ever_registered = false;
+
     loop {
         let mut failure_counter = 0u32;
         let mut old_state = None;
@@ -121,9 +123,33 @@ async fn run_lifecycle_loop(
                 Err(e) => break e,
             };
             let state_changed = old_state.is_some_and(|s| s != state);
+            let entered_running =
+                state == PodmanContainerState::Running && (old_state.is_none() || state_changed);
 
             if old_state.is_none() || state_changed {
                 event_recv.send(LifecycleEvent::StateChange(old_state, state));
+            }
+
+            // (Re-)register the log stream every time the container becomes
+            // Running: Podman's follow-logs request on a container that
+            // hasn't started yet ends (EOF) almost immediately rather than
+            // waiting, and the log registry silently drops streams that
+            // end. Registering only once Running is actually observed
+            // avoids that race, and re-registering on every restart
+            // recovers logs after a crash/restart too.
+            if entered_running {
+                if log_handle.is_none() {
+                    log_handle = container.take_log_handle();
+                }
+                if let Some(handle) = &log_handle {
+                    let since = ever_registered.then(chrono::Utc::now);
+                    ever_registered = true;
+                    log_registry.add(
+                        application_id,
+                        container.name().to_owned(),
+                        handle.logs(true, since),
+                    );
+                }
             }
 
             let mut timeout = match state {
@@ -256,7 +282,7 @@ mod tests {
 
     impl crate::podman::PodmanLogHandle for NoopLogHandle {
         fn logs(
-            self,
+            &self,
             _follow: bool,
             _since: Option<chrono::DateTime<chrono::Utc>>,
         ) -> futures_util::stream::BoxStream<'static, anyhow::Result<crate::podman::LogChunk>>
@@ -321,6 +347,8 @@ mod tests {
             container,
             ChannelEventReceiver { tx },
             Arc::new(tokio::sync::Notify::const_new()),
+            crate::podman::log_registry::AppLogRegistry::noop(),
+            0,
         ));
 
         assert_rcv!(rx, StateChange(None, Stopped));
@@ -385,6 +413,8 @@ mod tests {
             container,
             ChannelEventReceiver { tx },
             Arc::new(tokio::sync::Notify::const_new()),
+            crate::podman::log_registry::AppLogRegistry::noop(),
+            0,
         ));
 
         assert_rcv!(rx, StateChange(None, Stopped));
@@ -460,6 +490,8 @@ mod tests {
             container,
             ChannelEventReceiver { tx },
             Arc::new(tokio::sync::Notify::const_new()),
+            crate::podman::log_registry::AppLogRegistry::noop(),
+            0,
         ));
 
         assert_rcv!(rx, StateChange(None, Stopped));
@@ -536,6 +568,8 @@ mod tests {
             container,
             ChannelEventReceiver { tx },
             Arc::new(tokio::sync::Notify::const_new()),
+            crate::podman::log_registry::AppLogRegistry::noop(),
+            0,
         ));
 
         assert_rcv!(rx, StateChange(None, Stopped));

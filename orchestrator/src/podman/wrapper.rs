@@ -195,15 +195,17 @@ impl PodmanWrapper {
                     .as_ref()
                     .and_then(|l| l.get(super::LABEL_APP_CONFIG_ID))
                     .and_then(|v| v.parse().ok());
+                let id = c.id?;
                 Some(PodmanWrapperContainer {
-                    container: containers.get(c.id.as_deref()?),
+                    container: containers.get(&id),
                     name: name.clone(),
                     image_ref: image.names_history?.pop()?,
                     image_digest: image.digest?,
                     application_id,
                     application_config_id,
                     log_handle: Some(PodmanWrapperLogHandle {
-                        container: containers.get(c.id.as_deref()?),
+                        podman: self.podman.clone(),
+                        id,
                     }),
                 })
             });
@@ -278,7 +280,8 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
             application_id: Some(application_id),
             application_config_id: Some(application_config_id),
             log_handle: Some(PodmanWrapperLogHandle {
-                container: pc.get(&output.id),
+                podman: self.podman.podman.clone(),
+                id: output.id,
             }),
         })
     }
@@ -295,12 +298,13 @@ pub struct PodmanWrapperContainer {
 }
 
 pub struct PodmanWrapperLogHandle {
-    container: podman_api::api::Container,
+    podman: podman_api::Podman,
+    id: String,
 }
 
 impl PodmanLogHandle for PodmanWrapperLogHandle {
     fn logs(
-        self,
+        &self,
         follow: bool,
         since: Option<DateTime<Utc>>,
     ) -> BoxStream<'static, anyhow::Result<LogChunk>> {
@@ -314,11 +318,14 @@ impl PodmanLogHandle for PodmanWrapperLogHandle {
         }
         let opts = opts.build();
 
-        // `self` (the podman client + container id) is moved into the
-        // stream body below, so everything the stream borrows from stays
-        // alive for as long as the stream itself
+        // Rebuild the container handle fresh on every call (instead of
+        // consuming `self`) so a stream that ends (e.g. the container isn't
+        // running yet, or stopped) can be reopened later without needing a
+        // brand new PodmanWrapperLogHandle.
+        let container = self.podman.containers().get(&self.id);
+
         async_stream::try_stream! {
-            let mut raw = self.container.logs(&opts);
+            let mut raw = container.logs(&opts);
             while let Some(chunk) = raw.next().await {
                 match chunk? {
                     TtyChunk::StdOut(b) => yield parse_log_line(LogStreamKind::Stdout, &b),

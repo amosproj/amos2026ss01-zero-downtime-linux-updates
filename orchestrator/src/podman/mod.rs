@@ -28,7 +28,7 @@ pub struct LogChunk {
 
 pub trait PodmanLogHandle: Send + 'static {
     fn logs(
-        self,
+        &self,
         follow: bool,
         since: Option<DateTime<Utc>>,
     ) -> BoxStream<'static, anyhow::Result<LogChunk>>;
