@@ -123,7 +123,7 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         .context("Could not initialize connection to Podman")?;
     let apps = containers
         .into_iter()
-        .map(|c| Application::wrap(c, 0, &app_log_registry))
+        .map(|c| Application::wrap(c, &app_log_registry))
         .collect();
 
     let poll_interval = Duration::from_secs(config.poll_interval_secs as u64);

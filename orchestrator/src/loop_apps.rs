@@ -63,6 +63,7 @@ async fn try_update(
                     image.name,
                     image.config,
                     image.application_id,
+                    image.application_config_id,
                     log_registry,
                 )
                 .await?;
@@ -80,6 +81,7 @@ async fn try_update(
                     target_image.name,
                     target_image.config,
                     target_image.application_id,
+                    target_image.application_config_id,
                     log_registry,
                 )
                 .await?;
@@ -109,6 +111,7 @@ struct TargetApp<'a, P: PodmanImage> {
     name: &'a str,
     config: Option<ContainerConfigV1>,
     application_id: i32,
+    application_config_id: i32,
 }
 
 impl<'a, P: PodmanImage> TargetApp<'a, P> {
@@ -131,6 +134,7 @@ impl<'a, P: PodmanImage> TargetApp<'a, P> {
                 .unwrap_or(&cfg.image),
             config: cfg.config.clone(),
             application_id: cfg.application_id,
+            application_config_id: cfg.id,
         })
     }
 }
@@ -143,13 +147,24 @@ impl<'a, P: PodmanImage> PodmanImageInfo for TargetApp<'a, P> {
     fn digest(&self) -> &str {
         self.image.digest()
     }
+
+    fn application_config_id(&self) -> Option<i32> {
+        Some(self.application_config_id)
+    }
 }
 
 /// Iterator to generate actions for merging the target application state
 /// into the current one. Returns the actions in reverse order of the current
 /// applications, so the Vec can be modified in a "for"-loop.
+struct CurrentAppEntry {
+    reference: String,
+    digest: String,
+    application_config_id: Option<i32>,
+    application_index: usize,
+}
+
 struct ReconcileIterator<PImg: PodmanImageInfo> {
-    current: Peekable<std::vec::IntoIter<(String, String, usize)>>,
+    current: Peekable<std::vec::IntoIter<CurrentAppEntry>>,
     target: Peekable<std::vec::IntoIter<(String, PImg)>>,
 }
 
@@ -166,7 +181,12 @@ impl<PImg: PodmanImageInfo> ReconcileIterator<PImg> {
             .map(|(i, app)| {
                 // Remove any tags from image reference
                 let reference = app.reference().split(':').next().unwrap().to_owned();
-                (reference, app.digest().to_owned(), i)
+                CurrentAppEntry {
+                    reference,
+                    digest: app.digest().to_owned(),
+                    application_config_id: app.application_config_id(),
+                    application_index: i,
+                }
             })
             .collect();
 
@@ -180,7 +200,7 @@ impl<PImg: PodmanImageInfo> ReconcileIterator<PImg> {
             })
             .collect();
 
-        debug_assert!(current.is_sorted_by(|a, b| a.0 > b.0));
+        debug_assert!(current.is_sorted_by(|a, b| a.reference > b.reference));
         debug_assert!(target.is_sorted_by(|a, b| a.0 > b.0));
 
         Self {
@@ -205,13 +225,13 @@ impl<PI: PodmanImageInfo> Iterator for ReconcileIterator<PI> {
                 }
                 (_, None) => {
                     return Some(ReconcileAction::Remove {
-                        application_index: self.current.next()?.2,
+                        application_index: self.current.next()?.application_index,
                     });
                 }
                 (Some(c), Some(t)) => (c, t),
             };
 
-            match (&*curr.0, &*target.0) {
+            match (&*curr.reference, &*target.0) {
                 (a, b) if a < b => {
                     return Some(ReconcileAction::Create {
                         image: self.target.next()?.1,
@@ -219,17 +239,21 @@ impl<PI: PodmanImageInfo> Iterator for ReconcileIterator<PI> {
                 }
                 (a, b) if a > b => {
                     return Some(ReconcileAction::Remove {
-                        application_index: self.current.next()?.2,
+                        application_index: self.current.next()?.application_index,
                     });
                 }
                 _ => {
                     let curr = self.current.next()?;
                     let target = self.target.next()?;
 
-                    // Digests are different if we pulled a different image earlier
-                    if curr.1 != target.1.digest() {
+                    // Update if the image changed (different digest pulled
+                    // earlier) or the application_config changed (config
+                    // and image edits both mint a new application_config id)
+                    if curr.digest != target.1.digest()
+                        || curr.application_config_id != target.1.application_config_id()
+                    {
                         return Some(ReconcileAction::Update {
-                            application_index: curr.2,
+                            application_index: curr.application_index,
                             target_image: target.1,
                         });
                     }
@@ -264,11 +288,24 @@ mod tests {
     struct MockApplication<'a> {
         reference: &'a str,
         digest: &'a str,
+        config_id: Option<i32>,
     }
 
     impl<'a> MockApplication<'a> {
         fn new(reference: &'a str, digest: &'a str) -> Self {
-            Self { reference, digest }
+            Self {
+                reference,
+                digest,
+                config_id: None,
+            }
+        }
+
+        fn with_config_id(reference: &'a str, digest: &'a str, config_id: i32) -> Self {
+            Self {
+                reference,
+                digest,
+                config_id: Some(config_id),
+            }
         }
     }
 
@@ -279,6 +316,10 @@ mod tests {
 
         fn digest(&self) -> &str {
             &self.digest
+        }
+
+        fn application_config_id(&self) -> Option<i32> {
+            self.config_id
         }
     }
 
@@ -320,6 +361,31 @@ mod tests {
             })
         ));
         assert!(iter.next().is_none())
+    }
+
+    #[test]
+    fn test_reconcile_triggers_update_on_config_change_only() {
+        // Same reference and same digest, but the target points at a
+        // different (newer) application_config id -> must still update.
+        let current = MockApplication::with_config_id("docker.io/alpine:1.0", "alpine_1", 1);
+        let target = MockApplication::with_config_id("docker.io/alpine:1.0", "alpine_1", 2);
+
+        let apps = [current];
+        let targets = [target];
+
+        let mut iter = ReconcileIterator::new(&apps, targets);
+
+        assert!(matches!(
+            iter.next(),
+            Some(Update {
+                application_index: 0,
+                target_image: MockApplication {
+                    config_id: Some(2),
+                    ..
+                }
+            })
+        ));
+        assert!(iter.next().is_none());
     }
 
     fn resolve_application_ids<C: PodmanImageInfo>(

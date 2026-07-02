@@ -54,6 +54,15 @@ impl AppLogRegistry {
     pub fn remove(&self, application_id: i32) {
         let _ = self.tx.send(RegistryCommand::Remove { application_id });
     }
+
+    /// A registry with no backing task, for tests that need an
+    /// `AppLogRegistry` handle but don't care about what's done with it.
+    /// `add`/`remove` silently no-op since the receiver is dropped.
+    #[cfg(test)]
+    pub(crate) fn noop() -> Self {
+        let (tx, _rx) = mpsc::unbounded_channel();
+        Self { tx }
+    }
 }
 
 pub fn spawn_app_log_registry(
