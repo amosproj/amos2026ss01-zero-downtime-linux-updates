@@ -19,20 +19,19 @@ pub struct Application {
     image_reference: String,
     image_digest: String,
     application_id: i32,
+    application_config_id: Option<i32>,
     lifecycle_loop: tokio::task::JoinHandle<()>,
     delete_notifier: Arc<tokio::sync::Notify>,
 }
 
 impl Application {
-    pub fn wrap(
-        mut container: impl PodmanContainer,
-        application_id: i32,
-        registry: &AppLogRegistry,
-    ) -> Self {
+    pub fn wrap(mut container: impl PodmanContainer, registry: &AppLogRegistry) -> Self {
         let delete_notifier = Arc::new(tokio::sync::Notify::const_new());
         let event_recv = LogEventReceiver {
             app_name: container.name().to_owned(),
         };
+        let application_id = container.application_id().unwrap_or(0);
+        let application_config_id = container.application_config_id();
 
         if let Some(log_handle) = container.take_log_handle() {
             registry.add(
@@ -46,6 +45,7 @@ impl Application {
             image_reference: container.reference().to_owned(),
             image_digest: container.digest().to_owned(),
             application_id,
+            application_config_id,
             lifecycle_loop: tokio::spawn(run_lifecycle_loop(
                 container,
                 event_recv,
@@ -60,10 +60,13 @@ impl Application {
         name: &str,
         config: Option<ContainerConfigV1>,
         application_id: i32,
+        application_config_id: i32,
         registry: &AppLogRegistry,
     ) -> anyhow::Result<Self> {
-        let container = image.create_container(name, config).await?;
-        Ok(Self::wrap(container, application_id, registry))
+        let container = image
+            .create_container(name, config, application_id, application_config_id)
+            .await?;
+        Ok(Self::wrap(container, registry))
     }
 
     pub async fn remove(mut self, registry: &AppLogRegistry) -> anyhow::Result<()> {
@@ -81,6 +84,10 @@ impl PodmanImageInfo for Application {
 
     fn digest(&self) -> &str {
         &self.image_digest
+    }
+
+    fn application_config_id(&self) -> Option<i32> {
+        self.application_config_id
     }
 }
 

@@ -7,6 +7,12 @@ use futures_util::stream::BoxStream;
 pub mod log_registry;
 pub mod wrapper;
 
+/// Podman label used to recover an application's id from a running container
+pub const LABEL_APP_ID: &str = "org.amos.application_id";
+/// Podman label used to recover the application_config id a container was
+/// launched from, so config-only changes can be detected on reconcile
+pub const LABEL_APP_CONFIG_ID: &str = "org.amos.application_config_id";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LogStreamKind {
     Stdout,
@@ -50,6 +56,12 @@ pub trait PodmanImageInfo {
 
     /// Unique fingerprint of the image, usually a SHA256
     fn digest(&self) -> &str;
+
+    /// The application_config id this was created from/for, if known.
+    /// Used to detect config-only changes on reconcile.
+    fn application_config_id(&self) -> Option<i32> {
+        None
+    }
 }
 
 #[async_trait]
@@ -60,6 +72,8 @@ pub trait PodmanImage: PodmanImageInfo + Send {
         &self,
         name: &str,
         config: Option<amos_common::entities::ContainerConfigV1>,
+        application_id: i32,
+        application_config_id: i32,
     ) -> anyhow::Result<Self::PContainer>;
 }
 
@@ -75,6 +89,12 @@ pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
     async fn wait_for_state_change(&self, current: PodmanContainerState) -> anyhow::Result<()>;
     fn name(&self) -> &str;
     fn take_log_handle(&mut self) -> Option<Self::LogHandle>;
+
+    /// The application id this container was launched for, if known
+    /// (recovered from a podman label on startup).
+    fn application_id(&self) -> Option<i32> {
+        None
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

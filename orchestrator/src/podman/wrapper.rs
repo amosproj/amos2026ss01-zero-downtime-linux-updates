@@ -185,11 +185,23 @@ impl PodmanWrapper {
                 let image = self.podman.images().get(c.image_id?).inspect().await.ok()?;
                 let containers = self.podman.containers();
                 let name = c.names?.pop()?;
+                let application_id = c
+                    .labels
+                    .as_ref()
+                    .and_then(|l| l.get(super::LABEL_APP_ID))
+                    .and_then(|v| v.parse().ok());
+                let application_config_id = c
+                    .labels
+                    .as_ref()
+                    .and_then(|l| l.get(super::LABEL_APP_CONFIG_ID))
+                    .and_then(|v| v.parse().ok());
                 Some(PodmanWrapperContainer {
                     container: containers.get(c.id.as_deref()?),
                     name: name.clone(),
                     image_ref: image.names_history?.pop()?,
                     image_digest: image.digest?,
+                    application_id,
+                    application_config_id,
                     log_handle: Some(PodmanWrapperLogHandle {
                         container: containers.get(c.id.as_deref()?),
                     }),
@@ -229,6 +241,8 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
         &self,
         name: &str,
         config: Option<ContainerConfigV1>,
+        application_id: i32,
+        application_config_id: i32,
     ) -> anyhow::Result<Self::PContainer> {
         let pc = self.podman.podman.containers();
         let env_pairs = match config {
@@ -238,12 +252,20 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
             },
             None => Vec::new(),
         };
+        let labels = [
+            (super::LABEL_APP_ID.to_owned(), application_id.to_string()),
+            (
+                super::LABEL_APP_CONFIG_ID.to_owned(),
+                application_config_id.to_string(),
+            ),
+        ];
         let output = pc
             .create(
                 &ContainerCreateOpts::builder()
                     .name(name)
                     .image(&self.id)
                     .env(env_pairs)
+                    .labels(labels)
                     .build(),
             )
             .await?;
@@ -253,6 +275,8 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
             name: name.to_owned(),
             image_ref: self.reference.clone(),
             image_digest: self.digest.clone(),
+            application_id: Some(application_id),
+            application_config_id: Some(application_config_id),
             log_handle: Some(PodmanWrapperLogHandle {
                 container: pc.get(&output.id),
             }),
@@ -265,6 +289,8 @@ pub struct PodmanWrapperContainer {
     name: String,
     image_ref: String,
     image_digest: String,
+    application_id: Option<i32>,
+    application_config_id: Option<i32>,
     log_handle: Option<PodmanWrapperLogHandle>,
 }
 
@@ -312,6 +338,10 @@ impl super::PodmanImageInfo for PodmanWrapperContainer {
 
     fn digest(&self) -> &str {
         &self.image_digest
+    }
+
+    fn application_config_id(&self) -> Option<i32> {
+        self.application_config_id
     }
 }
 
@@ -384,6 +414,10 @@ impl super::PodmanContainer for PodmanWrapperContainer {
 
     fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
         self.log_handle.take()
+    }
+
+    fn application_id(&self) -> Option<i32> {
+        self.application_id
     }
 }
 
@@ -512,7 +546,10 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let container = img.create_container("test-container", None).await.unwrap();
+        let container = img
+            .create_container("test-container", None, 0, 0)
+            .await
+            .unwrap();
 
         assert_eq!(container.name(), "test-container");
         assert_eq!(container.reference(), "docker.io/library/alpine:latest");
@@ -565,7 +602,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-        let mut container = image.create_container("test", None).await.unwrap();
+        let mut container = image.create_container("test", None, 0, 0).await.unwrap();
 
         assert_eq!(
             container.state().await.unwrap(),
@@ -610,7 +647,7 @@ mod tests {
             .unwrap();
 
         let mut container = img
-            .create_container("test-logs-container", None)
+            .create_container("test-logs-container", None, 0, 0)
             .await
             .unwrap();
 
