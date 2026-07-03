@@ -194,7 +194,6 @@ Edit `config.toml` to point at the mock server:
 ```toml
 cloud_url = "http://localhost/v1"
 poll_interval_secs = 10
-inventory_path = "./inventory/inventory.json"
 ```
 
 > **Note:** `cloud_url` accepts both `http://` and `https://` schemas. For local development, pointing directly at the plain-HTTP mock server with `http://localhost` is the simplest setup.

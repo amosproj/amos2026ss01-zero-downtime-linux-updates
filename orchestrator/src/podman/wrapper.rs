@@ -185,13 +185,27 @@ impl PodmanWrapper {
                 let image = self.podman.images().get(c.image_id?).inspect().await.ok()?;
                 let containers = self.podman.containers();
                 let name = c.names?.pop()?;
+                let application_id = c
+                    .labels
+                    .as_ref()
+                    .and_then(|l| l.get(super::LABEL_APP_ID))
+                    .and_then(|v| v.parse().ok());
+                let application_config_id = c
+                    .labels
+                    .as_ref()
+                    .and_then(|l| l.get(super::LABEL_APP_CONFIG_ID))
+                    .and_then(|v| v.parse().ok());
+                let id = c.id?;
                 Some(PodmanWrapperContainer {
-                    container: containers.get(c.id.as_deref()?),
+                    container: containers.get(&id),
                     name: name.clone(),
                     image_ref: image.names_history?.pop()?,
                     image_digest: image.digest?,
+                    application_id,
+                    application_config_id,
                     log_handle: Some(PodmanWrapperLogHandle {
-                        container: containers.get(c.id.as_deref()?),
+                        podman: self.podman.clone(),
+                        id,
                     }),
                 })
             });
@@ -229,6 +243,8 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
         &self,
         name: &str,
         config: Option<ContainerConfigV1>,
+        application_id: i32,
+        application_config_id: i32,
     ) -> anyhow::Result<Self::PContainer> {
         let pc = self.podman.podman.containers();
         let env_pairs = match config {
@@ -238,12 +254,20 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
             },
             None => Vec::new(),
         };
+        let labels = [
+            (super::LABEL_APP_ID.to_owned(), application_id.to_string()),
+            (
+                super::LABEL_APP_CONFIG_ID.to_owned(),
+                application_config_id.to_string(),
+            ),
+        ];
         let output = pc
             .create(
                 &ContainerCreateOpts::builder()
                     .name(name)
                     .image(&self.id)
                     .env(env_pairs)
+                    .labels(labels)
                     .build(),
             )
             .await?;
@@ -253,8 +277,11 @@ impl<'a> super::PodmanImage for PodmanWrapperImage<'a> {
             name: name.to_owned(),
             image_ref: self.reference.clone(),
             image_digest: self.digest.clone(),
+            application_id: Some(application_id),
+            application_config_id: Some(application_config_id),
             log_handle: Some(PodmanWrapperLogHandle {
-                container: pc.get(&output.id),
+                podman: self.podman.podman.clone(),
+                id: output.id,
             }),
         })
     }
@@ -265,16 +292,19 @@ pub struct PodmanWrapperContainer {
     name: String,
     image_ref: String,
     image_digest: String,
+    application_id: Option<i32>,
+    application_config_id: Option<i32>,
     log_handle: Option<PodmanWrapperLogHandle>,
 }
 
 pub struct PodmanWrapperLogHandle {
-    container: podman_api::api::Container,
+    podman: podman_api::Podman,
+    id: String,
 }
 
 impl PodmanLogHandle for PodmanWrapperLogHandle {
     fn logs(
-        self,
+        &self,
         follow: bool,
         since: Option<DateTime<Utc>>,
     ) -> BoxStream<'static, anyhow::Result<LogChunk>> {
@@ -288,11 +318,14 @@ impl PodmanLogHandle for PodmanWrapperLogHandle {
         }
         let opts = opts.build();
 
-        // `self` (the podman client + container id) is moved into the
-        // stream body below, so everything the stream borrows from stays
-        // alive for as long as the stream itself
+        // Rebuild the container handle fresh on every call (instead of
+        // consuming `self`) so a stream that ends (e.g. the container isn't
+        // running yet, or stopped) can be reopened later without needing a
+        // brand new PodmanWrapperLogHandle.
+        let container = self.podman.containers().get(&self.id);
+
         async_stream::try_stream! {
-            let mut raw = self.container.logs(&opts);
+            let mut raw = container.logs(&opts);
             while let Some(chunk) = raw.next().await {
                 match chunk? {
                     TtyChunk::StdOut(b) => yield parse_log_line(LogStreamKind::Stdout, &b),
@@ -312,6 +345,10 @@ impl super::PodmanImageInfo for PodmanWrapperContainer {
 
     fn digest(&self) -> &str {
         &self.image_digest
+    }
+
+    fn application_config_id(&self) -> Option<i32> {
+        self.application_config_id
     }
 }
 
@@ -384,6 +421,10 @@ impl super::PodmanContainer for PodmanWrapperContainer {
 
     fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
         self.log_handle.take()
+    }
+
+    fn application_id(&self) -> Option<i32> {
+        self.application_id
     }
 }
 
@@ -512,7 +553,10 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let container = img.create_container("test-container", None).await.unwrap();
+        let container = img
+            .create_container("test-container", None, 0, 0)
+            .await
+            .unwrap();
 
         assert_eq!(container.name(), "test-container");
         assert_eq!(container.reference(), "docker.io/library/alpine:latest");
@@ -565,7 +609,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-        let mut container = image.create_container("test", None).await.unwrap();
+        let mut container = image.create_container("test", None, 0, 0).await.unwrap();
 
         assert_eq!(
             container.state().await.unwrap(),
@@ -610,7 +654,7 @@ mod tests {
             .unwrap();
 
         let mut container = img
-            .create_container("test-logs-container", None)
+            .create_container("test-logs-container", None, 0, 0)
             .await
             .unwrap();
 

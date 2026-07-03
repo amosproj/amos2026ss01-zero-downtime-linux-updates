@@ -1,0 +1,9 @@
+FROM docker.io/library/alpine:3.20
+
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

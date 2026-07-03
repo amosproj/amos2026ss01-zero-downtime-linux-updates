@@ -15,11 +15,10 @@ This document explains how to install, configure, and operate the **Orchestrator
 5. [Running the Orchestrator](#running-the-orchestrator)
 6. [CLI Reference](#cli-reference)
 7. [Self-Check / Health Check](#self-check--health-check)
-8. [Inventory](#inventory)
-9. [Logging & Verbosity](#logging--verbosity)
-10. [Running as a systemd Service](#running-as-a-systemd-service)
-11. [Rollback & Error Recovery](#rollback--error-recovery)
-12. [API Mock Server](#api-mock-server)
+8. [Logging & Verbosity](#logging--verbosity)
+9. [Running as a systemd Service](#running-as-a-systemd-service)
+10. [Rollback & Error Recovery](#rollback--error-recovery)
+11. [API Mock Server](#api-mock-server)
 
 ---
 
@@ -32,7 +31,6 @@ The **Orchestrator** is a background agent that runs on each Edge IPC. It period
 ```
 Orchestrator  ──►  OS Update Loop   (compares OS state, calls placeholder update)
               ──►  App Update Loop  (reconciles container state, calls placeholder fns)
-              ──►  Inventory        (collects device info, writes to local JSON file)
 ```
 
 ---
@@ -88,7 +86,6 @@ All config values can be overridden with environment variables prefixed `APP_`:
 |----------------------|------------|-------------|
 | `APP_CLOUD_URL` | `cloud_url` | Cloud API base URL |
 | `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | Poll frequency in seconds |
-| `APP_INVENTORY_PATH` | `inventory_path` | Inventory output file path |
 | `https_proxy` | — | HTTPS proxy URL (reqwest default) |
 
 > **Note:** `APP_CONFIG_FILE` is special — it selects *which* config file to load (see precedence above) rather than overriding a value. The `--config` flag takes precedence over it.
@@ -135,7 +132,7 @@ Options:
 
 ## Self-Check / Health Check
 
-The `--self-check` flag validates the system configuration and inventory tooling without starting the main loop. Use it to verify the agent is correctly set up:
+The `--self-check` flag validates the system configuration and bootc/podman tooling without starting the main loop. Use it to verify the agent is correctly set up:
 
 ```bash
 amos-orchestrator --self-check
@@ -145,21 +142,6 @@ amos-orchestrator --self-check --config /etc/amos/config.toml
 Exit codes:
 - `0` — all checks passed
 - `1` — one or more checks failed (details printed to stderr)
-
----
-
-## Inventory
-
-On startup, the Orchestrator collects a **device inventory** and writes it as a JSON file to the path defined by `inventory_path`. The inventory includes:
-
-| Section | Contents |
-|---------|----------|
-| `system` | Hostname, OS name/version, kernel version |
-| `deployments` | rpm-ostree deployment info (checksum, version, booted/staged flags) |
-| `bootc_status` | Booted, staged, and rollback image info |
-| `applications` | Running application container names and versions |
-
-If a section cannot be collected (e.g. `bootc` is not installed), the field is marked `"status": "unavailable"` with a reason — the rest of the inventory is still written.
 
 ---
 
@@ -212,30 +194,6 @@ sudo rpm-ostree rollback
 ```
 
 For application containers, use `podman` to switch back to the previous image tag manually. Automated rollback support will be added in a future sprint.
-
----
-
-## API Mock Server
-
-During development or testing, a local mock server (`amos-api-mock-server`) can stand in for a real Cloud API. It serves a static catalog at `GET /v1/catalog` and static download assets from a local `assets/` directory.
-
-> **Note:** The mock server runs on plain HTTP (port 80). The Orchestrator config accepts both `http://` and `https://` URLs, so you can point it directly at `http://localhost` for local testing without a reverse proxy.
-
-```bash
-# Start mock server on port 80 (requires root)
-sudo ./amos-api-mock-server
-```
-
-> **Tip:** To avoid `sudo`, edit `api-mock-server/src/main.rs` to bind to a high port (e.g. `8080`) and rebuild. Then set `cloud_url = "http://localhost:8080/v1"` in your config.
-
-The catalog response from the mock server looks like:
-
-```json
-[
-  { "name": "os",  "version": "1.2.3", "url": "ghcr.io/amosproj/...", "signature": "AAAA..." },
-  { "name": "app", "version": "4.5.6", "url": "/v1/download/app4.5.6", "signature": "AAAA..." }
-]
-```
 
 ### API Reference
 
