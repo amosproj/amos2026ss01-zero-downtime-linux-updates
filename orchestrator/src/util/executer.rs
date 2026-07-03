@@ -1,6 +1,9 @@
+use anyhow::Context;
 use async_trait::async_trait;
 use std::process::Stdio;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tracing::info;
 
 #[derive(Debug, Clone)]
 pub struct ExecResult {
@@ -20,24 +23,59 @@ pub struct RealExecuter;
 #[async_trait]
 impl Executer for RealExecuter {
     async fn execute(&self, command: String, args: Vec<String>) -> anyhow::Result<ExecResult> {
-        let output = Command::new(command)
+        let mut child = Command::new(&command)
             .args(args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .output()
-            .await?;
+            .spawn()?;
 
-        // Handle 137 signal (SIGKILL + 128) logic if killed by an atomic reboot context
-        let exit_code = if output.status.code().is_none() {
-            Some(137)
-        } else {
-            output.status.code()
-        };
+        let stdout = child.stdout.take().context("Failed to open stdout")?;
+        let stderr = child.stderr.take().context("Failed to open stderr")?;
 
-        Ok(ExecResult {
-            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-            exit_code,
-        })
+        let mut stdout_reader = BufReader::new(stdout).lines();
+        let mut stderr_reader = BufReader::new(stderr).lines();
+
+        let mut captured_stdout = String::new();
+        let mut captured_stderr = String::new();
+
+        loop {
+            tokio::select! {
+                res = stdout_reader.next_line() => {
+                    match res {
+                        Ok(Some(line)) => {
+                            info!(target: "bootc_subproc", "{}", line);
+                            captured_stdout.push_str(&line);
+                            captured_stdout.push('\n');
+                        }
+                        _ => {}
+                    }
+                }
+                res = stderr_reader.next_line() => {
+                    match res {
+                        Ok(Some(line)) => {
+                            info!(target: "bootc_subproc_err", "{}", line);
+                            captured_stderr.push_str(&line);
+                            captured_stderr.push('\n');
+                        }
+                        _ => {}
+                    }
+                }
+                status = child.wait() => {
+                    let exit_status = status?;
+
+                    let exit_code = if exit_status.code().is_none() {
+                        Some(137)
+                    } else {
+                        exit_status.code()
+                    };
+
+                    return Ok(ExecResult {
+                        stdout: captured_stdout,
+                        stderr: captured_stderr,
+                        exit_code,
+                    });
+                }
+            }
+        }
     }
 }
