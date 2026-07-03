@@ -12,7 +12,7 @@ pub async fn run_os_main_loop(
     mut os_state: OsState,
     bootc: Arc<Bootc>,
     api_client: Arc<ApiClient>,
-    os_upgrade_in_progress: Arc<std::sync::atomic::AtomicBool>,
+    os_switch_in_progress: Arc<std::sync::atomic::AtomicBool>,
     poll_interval: Duration,
     deferred_timer: Duration,
 ) -> ! {
@@ -23,31 +23,36 @@ pub async fn run_os_main_loop(
     loop {
         update_interval.tick().await;
 
-        if let Err(e) = try_update(
+        if let Err(e) = try_switch(
             &mut os_state,
             &bootc,
             &api_client,
-            &os_upgrade_in_progress,
+            &os_switch_in_progress,
             deferred_timer,
         )
         .await
         {
-            error!("{}", e.context("OS update cycle failed"));
+            error!("{:?}", e.context("OS update cycle failed"));
         }
     }
 }
 
-async fn try_update(
+async fn try_switch(
     state: &mut OsState,
     bootc: &Arc<Bootc>,
     api_client: &ApiClient,
-    os_upgrade_in_progress: &Arc<std::sync::atomic::AtomicBool>,
+    os_switch_in_progress: &Arc<std::sync::atomic::AtomicBool>,
     deferred_timer: Duration,
 ) -> anyhow::Result<()> {
     let status = bootc.status().await?;
 
+    let current_countdown = state.countdown_started;
+
     *state = match OsState::new(status) {
-        Some(s) => s,
+        Some(mut s) => {
+            s.countdown_started = current_countdown;
+            s
+        }
         None => {
             warn!("bootc status reports no booted deployment; skipping OS update cycle");
             return Ok(());
@@ -55,26 +60,29 @@ async fn try_update(
     };
 
     let (target, immediate) = api_client.get_target_os_version().await?;
-    if state.booted_image == target.commit_hash {
-        // Yay, we are up to date!
+
+    if state.booted_checksum == target.commit_hash
+        || state.booted_image_ref.as_deref() == Some(target.commit_hash.as_str())
+    {
+        info!("System is already up to date.");
         api_client.report_current_os_assignment(target.id).await?;
         return Ok(());
     }
 
-    if state.staged_image.as_deref() == Some(&target.commit_hash) {
+    // Allows to assign a ghcr.io link instead of checksum
+    let is_target_staged = state.staged_checksum.as_deref() == Some(target.commit_hash.as_str())
+        || state.staged_image_ref.as_deref() == Some(target.commit_hash.as_str());
+
+    if is_target_staged {
         if immediate {
-            // It was staged deferred before, but now the database flag changed to 'immediate'
-            info!("Target image is already staged. 'immediate' flag is true; forcing reboot.");
+            info!("Target image is already staged, flag changed. Forcing immediate reboot.");
+            os_switch_in_progress.store(true, std::sync::atomic::Ordering::SeqCst);
             bootc
-                .upgrade_from_downloaded(true)
+                .apply()
                 .await
-                .context("Immediate apply failed")?;
+                .context("Immediate apply of staged image failed")?;
         } else {
-            // Normal case: It's already staged and the timer is already running in the background.
-            tracing::debug!(
-                "Target image {} is already staged. Waiting for reboot.",
-                target.commit_hash
-            );
+            info!("Target image is staged and counting down. Waiting for timer.");
         }
         return Ok(());
     }
@@ -82,67 +90,83 @@ async fn try_update(
     if state.update_pending {
         warn!(
             "An update is already staged but the target has changed; \
-                re-staging on top of the existing staged deployment",
+             re-staging on top of the existing staged deployment",
         );
     }
 
     info!(
         "Switching OS image: current {} -> target {}, immediate = {}",
-        state.booted_image, target.commit_hash, immediate
+        state.booted_image_ref.as_deref().unwrap_or("unknown"),
+        target.commit_hash,
+        immediate
     );
 
+    // Handle fresh image targets that haven't been downloaded yet
     if immediate {
         info!(
             "Switching OS image immediately: {} -> {}",
-            state.booted_image, target.commit_hash
+            state.booted_image_ref.as_deref().unwrap_or("unknown"),
+            target.commit_hash
         );
         info!("Locking application loops and forcing immediate OS update...");
-        os_upgrade_in_progress.store(true, std::sync::atomic::Ordering::SeqCst);
+        // Lock application loops immediately
+        os_switch_in_progress.store(true, std::sync::atomic::Ordering::SeqCst);
+
         bootc.switch(&target.commit_hash).await?;
         bootc.apply().await.context("Immediate apply failed")?;
     } else {
         info!(
             "Staging OS image deferred: {} -> {}",
-            state.booted_image, target.commit_hash
+            state.booted_image_ref.as_deref().unwrap_or("unknown"),
+            target.commit_hash
         );
 
-        bootc
-            .upgrade_download_only()
-            .await
-            .context("Deferred staging failed")?;
+        bootc.switch(&target.commit_hash).await?;
+
+        state.countdown_started = true;
 
         let timer_bootc = Arc::clone(bootc);
-        let timer_upgrade_flag = Arc::clone(os_upgrade_in_progress);
+        let timer_upgrade_flag = Arc::clone(os_switch_in_progress);
 
+        let b_state = bootc.status().await?;
+        info!("Current OS State right before timer spawn: {:?}", b_state);
+
+        // Defer only the application/reboot phase to the background timer thread
         tokio::spawn(async move {
             info!("Started countdown for deferred OS update.");
-            // User reboot automatically cleans up the timer, leading to a switch
             tokio::time::sleep(deferred_timer).await;
 
             info!("Timer expired! Locking application updates and executing OS reboot...");
+            // Lock container updates when the countdown finishes
             timer_upgrade_flag.store(true, std::sync::atomic::Ordering::SeqCst);
-            if let Err(e) = timer_bootc.upgrade_from_downloaded(true).await {
+            if let Err(e) = timer_bootc.apply().await {
                 error!("Failed to apply deferred update after timer: {}", e);
             }
         });
     }
-
     Ok(())
 }
 
 #[derive(Debug, Clone)]
 pub struct OsState {
-    update_pending: bool, // When an update is pending (updated but not yet rebooted)
-    booted_image: String, // The version and tag of the running image
-    staged_image: Option<String>, // The checksum of the staged update, if any
+    update_pending: bool,
+    booted_checksum: String,
+    booted_image_ref: Option<String>,
+    staged_checksum: Option<String>,
+    staged_image_ref: Option<String>,
+    countdown_started: bool,
 }
 
 impl OsState {
     pub fn new(status: BootcStatus) -> Option<Self> {
+        let booted = status.booted?;
         Some(Self {
             update_pending: status.staged.is_some(),
-            booted_image: status.booted?.checksum,
-            staged_image: status.staged.map(|deployment| deployment.checksum),
+            booted_checksum: booted.checksum,
+            booted_image_ref: booted.image.map(|i| i.image_ref),
+            staged_checksum: status.staged.as_ref().map(|d| d.checksum.clone()),
+            staged_image_ref: status.staged.and_then(|d| d.image).map(|i| i.image_ref),
+            countdown_started: false,
         })
     }
 }
