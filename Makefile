@@ -17,6 +17,15 @@ RUST_VERSION  ?= 1.95
 # builds from clobbering each other in podman's local storage.
 RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
 
+# dev-vm: knobs for the "just a VM with the orchestrator" target (see below).
+# SERVER_IP/SERVER_PORT compose the orchestrator's cloud_url (the /v1 prefix is
+# added automatically); VM_UUID/VM_SERIAL are the SMBIOS values the emulated
+# device presents (VM_UUID is its device id).
+SERVER_IP     ?= host.lima.internal
+SERVER_PORT   ?= 8080
+VM_UUID       ?= 00000000-0000-0000-0000-000000000001
+VM_SERIAL     ?= AMOS-TEST-001
+
 # Prebuilt disk image published by .github/workflows/disk-image.yml as an OCI
 # artifact (each tag bundles both <name>.raw.xz and <name>.qcow2.xz).
 # PULL_REF is required: pass the branch/release tag (without the arch suffix),
@@ -229,6 +238,24 @@ _dev-deploy:
 # from a clean slate; the VM is left around afterwards for post-mortem.
 e2e: ## Run the full e2e suite against a freshly recreated Lima VM
 	cd scripts && ./e2e_run_all.sh
+
+# run-vm: like e2e, but with nothing on the host -- no mock server, no
+# TimescaleDB, no tests. Recreates the Lima VM from scratch, boots it with an
+# emulated TPM and the given SMBIOS UUID, points the (image-baked) orchestrator
+# at an external server, and leaves the VM running.
+#   make dev-vm SERVER_IP=192.168.1.10 VM_UUID=<device-uuid>
+run-vm: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB), pointed at SERVER_IP; set the device id via VM_UUID
+	@set -eu; \
+	echo ">>> Recreating Lima VM $(DEV_VM) from scratch"; \
+	limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; \
+	limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true; \
+	limactl create -y --name $(DEV_VM) dev-env/lima/edge-ipc.yaml; \
+	cd scripts && \
+	  VM_NAME="$(DEV_VM)" \
+	  DEVICE_UUID="$(VM_UUID)" \
+	  DEVICE_SERIAL="$(VM_SERIAL)" \
+	  CLOUD_URL="http://$(SERVER_IP):$(SERVER_PORT)/v1" \
+	  ./dev_vm_run.sh
 
 # ---------------------------------------------------------------------------
 # Installer ISO for bare-metal IPCs. The ISO embeds our bootc image and
