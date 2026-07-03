@@ -1,4 +1,4 @@
-.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build
+.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build demo
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
@@ -17,7 +17,7 @@ RUST_VERSION  ?= 1.95
 # builds from clobbering each other in podman's local storage.
 RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
 
-# dev-vm: knobs for the "just a VM with the orchestrator" target (see below).
+# settings for demo
 # SERVER_IP/SERVER_PORT compose the orchestrator's cloud_url (the /v1 prefix is
 # added automatically); VM_UUID/VM_SERIAL are the SMBIOS values the emulated
 # device presents (VM_UUID is its device id).
@@ -233,9 +233,7 @@ e2e: ## Create a fresh Lima VM, deploy the local orchestrator build, run the e2e
 	cd scripts && ./e2e_run_all.sh
 
 # run-vm: like e2e, but with nothing on the host -- no mock server, no
-# TimescaleDB, no tests. Recreates the Lima VM from scratch, boots it with an
-# emulated TPM and the given SMBIOS UUID, points the (image-baked) orchestrator
-# at an external server, and leaves the VM running.
+# TimescaleDB, no tests.
 #   make dev-vm SERVER_IP=192.168.1.10 VM_UUID=<device-uuid>
 run-vm: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB), pointed at SERVER_IP; set the device id via VM_UUID
 	@set -eu; \
@@ -249,6 +247,18 @@ run-vm: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB), 
 	  DEVICE_SERIAL="$(VM_SERIAL)" \
 	  CLOUD_URL="http://$(SERVER_IP):$(SERVER_PORT)/v1" \
 	  ./dev_vm_run.sh
+
+# demo: same full stack as e2e (mock cloud API + TimescaleDB + edge VM +
+# orchestrator), primed with a registered device, but instead of running the
+# test suite it leaves everything running so you can send your own API commands
+# (scripts/demo_api.sh) and watch the orchestrator react. Ctrl+C tears it down.
+demo: ## Bring up the full e2e stack, primed and left running for a live demo (send commands with scripts/demo_api.sh)
+	@set -eu; \
+	echo ">>> Recreating Lima VM $(DEV_VM) from scratch"; \
+	limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; \
+	limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true; \
+	limactl create -y --name $(DEV_VM) dev-env/lima/edge-ipc.yaml; \
+	cd scripts && ./demo_run.sh
 
 # ---------------------------------------------------------------------------
 # Installer ISO for bare-metal IPCs. The ISO embeds our bootc image and
