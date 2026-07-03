@@ -319,7 +319,8 @@ mod tests {
     #[tokio::test]
     async fn test_switch_success() {
         let mut mock_exec = MockExecuter::new();
-        let target_image = "quay.io/repo:latest";
+        let target_image =
+            "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:commit-4b3a71d";
 
         mock_exec
             .expect_execute()
