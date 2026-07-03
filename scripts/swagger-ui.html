@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AMOS — API Documentation</title>
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js" defer></script>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+</head>
+
+<body>
+    <div id="swagger-ui"></div>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const url = window.location.href.split('/')
+            url[url.length - 1] = "device_api.yaml"
+            
+            window.ui = SwaggerUIBundle({
+                url: url.join('/'),
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                layout: "StandaloneLayout"
+            })
+        })
+    </script>
+</body>
+
+</html>
