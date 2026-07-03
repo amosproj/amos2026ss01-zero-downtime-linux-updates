@@ -28,8 +28,8 @@ TEST_SUITE=(
     "tests/e2e_register_pending_device.sh"
     "tests/e2e_seed_api.sh"
     "tests/e2e_bootc_status.sh"
-    "tests/e2e_bootc_upgrade.sh"
-    "tests/e2e_bootc_deferred_upgrade.sh"
+    "tests/e2e_bootc_switch.sh"
+    "tests/e2e_bootc_deferred_switch.sh"
 )
 
 # This function executes immediately when the script finishes or hits an early abort

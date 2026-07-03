@@ -128,7 +128,7 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         .collect();
 
     let poll_interval = Duration::from_secs(config.poll_interval_secs as u64);
-    let deferred_timer = Duration::from_secs(config.deferred_update_timer_secs);
+    let deferred_timer = Duration::from_secs(config.deferred_switch_timer_secs);
     let os_upgrade_in_progress = Arc::new(AtomicBool::new(false));
     let apps_task = tokio::spawn(run_apps_main_loop(
         apps,
