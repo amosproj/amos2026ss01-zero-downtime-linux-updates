@@ -213,24 +213,26 @@ mod tests {
             )
             .times(1)
             .returning(|_, _| {
-                Ok(ExecResult {
-                    stdout: r#"{
-                        "apiVersion": "org.containers.bootc/v1",
-                        "kind": "BootcHost",
-                        "metadata": {},
-                        "spec": {},
-                        "status": {
-                            "booted": {
-                                "ostree": { "checksum": "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443" },
-                                "image": null
-                            },
-                            "staged": null,
-                            "rollback": null,
-                            "rollbackQueued": false
-                        }
-                    }"#.to_string(),
-                    stderr: "".to_string(),
-                    exit_code: Some(0),
+                Box::pin(async move {
+                    Ok(ExecResult {
+                        stdout: r#"{
+                            "apiVersion": "org.containers.bootc/v1",
+                            "kind": "BootcHost",
+                            "metadata": {},
+                            "spec": {},
+                            "status": {
+                                "booted": {
+                                    "ostree": { "checksum": "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443" },
+                                    "image": null
+                                },
+                                "staged": null,
+                                "rollback": null,
+                                "rollbackQueued": false
+                            }
+                        }"#.to_string(),
+                        stderr: "".to_string(),
+                        exit_code: Some(0),
+                    })
                 })
             });
 
@@ -264,10 +266,12 @@ mod tests {
             )
             .times(1)
             .returning(|_, _| {
-                Ok(ExecResult {
-                    stdout: "".to_string(),
-                    stderr: "".to_string(),
-                    exit_code: Some(137),
+                Box::pin(async move {
+                    Ok(ExecResult {
+                        stdout: "".to_string(),
+                        stderr: "".to_string(),
+                        exit_code: Some(137),
+                    })
                 })
             });
 
@@ -291,10 +295,12 @@ mod tests {
             )
             .times(1)
             .returning(|_, _| {
-                Ok(ExecResult {
-                    stdout: "".to_string(),
-                    stderr: "No space left on device".to_string(),
-                    exit_code: Some(1),
+                Box::pin(async move {
+                    Ok(ExecResult {
+                        stdout: "".to_string(),
+                        stderr: "No space left on device".to_string(),
+                        exit_code: Some(1),
+                    })
                 })
             });
 
@@ -328,10 +334,12 @@ mod tests {
             )
             .times(1)
             .returning(|_, _| {
-                Ok(ExecResult {
-                    stdout: "success".to_string(),
-                    stderr: "".to_string(),
-                    exit_code: Some(0),
+                Box::pin(async move {
+                    Ok(ExecResult {
+                        stdout: "success".to_string(),
+                        stderr: "".to_string(),
+                        exit_code: Some(0),
+                    })
                 })
             });
 
