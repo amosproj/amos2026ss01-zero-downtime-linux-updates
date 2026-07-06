@@ -1,6 +1,6 @@
 FROM registry.access.redhat.com/hi/core-runtime:2.42-openssl
 
 ARG API_BINARY_PATH
-COPY ${API_BINARY_PATH} /usr/local/bin/api-server
+COPY --chmod=0755 ${API_BINARY_PATH} /usr/local/bin/api-server
 
 ENTRYPOINT ["/usr/local/bin/api-server"]

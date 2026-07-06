@@ -3,7 +3,7 @@ services:
     image: localhost/api-server
     environment:
       APP_HTTP_PORT: "8080"
-      APP_DATABASE_URL: "postgres://app:4M0S@postgres:5432/amos_timeseries"
+      APP_DATABASE_URL: "postgres://app:4M0S@postgres:5432/amos"
       APP_TIMESCALE_DATABASE_URL: "postgres://app:4M0S@timescaledb:5432/amos_timeseries"
       APP_JWT__SUBJECT_CLAIM: "sub"
       APP_JWT__NAME_CLAIM: "name"
