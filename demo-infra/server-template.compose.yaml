@@ -1,0 +1,58 @@
+services:
+  api:
+    image: localhost/api-server
+    environment:
+      APP_HTTP_PORT: "8080"
+      APP_DATABASE_URL: "postgres://app:4M0S@postgres:5432/amos_timeseries"
+      APP_TIMESCALE_DATABASE_URL: "postgres://app:4M0S@timescaledb:5432/amos_timeseries"
+      APP_JWT__SUBJECT_CLAIM: "sub"
+      APP_JWT__NAME_CLAIM: "name"
+      APP_JWT__PUBLIC_KEY: |-
+        -----BEGIN PUBLIC KEY-----
+        MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzP3Oc7fe4hRq7wMKxyfS
+        wiQclOzJIvoTLB0Tnxy6sEqUcg7WFV1Xcw25DuzIj6ZIlGhKIr6jKs+8G1rLymTZ
+        tIdJEx2wcKTPfTezth2/nMT9E2Dct0Q9aM2Yi/LUyVBmGD3Go14KoXA8EZbDOQOW
+        0wMREw5qsim6gI5Jm9O2XUUFwS+U28CoSqMKFNlJFdZodqa6mVsTQG6gmdtMbjyG
+        kX8KjEPcShNTZePWFimk3hBuBwSLtsYG2Ws2eyVYTbYPuI9Prmbfboykm/L9OYFZ
+        ZNyC/2bv7P9jJWIv6dwByKhcBZBHCxTYiPkTuxzN51JMyJA4okCPDoNJJRai5top
+        4oWtf7VQJHyKHUIpCZNMUD9bo+wBccvsd+o9WcQg/l5JRuKYipz61tiwKdbExPUh
+        RC6SgfDNg5YIPadLNbA+NGeFeXQtn+PYExcGkAcB/hbS6Ppj1Het67zuOGOZF8SE
+        /HzbIAQ4lHcOLCXVfGrXwB7DvhYYgQ3DAypvVS67fyggzcule2jcTGbrGpjb4YIk
+        eOovQuaa/ks1ymihNl18iJYZEDr/o/OhMiWaWOrLp/vnHeCIubgX6N1hMwopqgen
+        Anm8E788IHh9EybwO/uEiDqfSXlR8cmeBhD3B+vrkjbCnz/p6o8nhOzVabJUkYGa
+        RwsluOuHZzbXjtbwKS9rJ5sCAwEAAQ==
+        -----END PUBLIC KEY-----
+    depends_on:
+      - postgres
+      - timescaledb
+    networks:
+      - internal
+    ports:
+      - "${API_HOST_PORT}:8080"
+
+  postgres:
+    image: registry.access.redhat.com/hi/postgresql:18.3
+    environment:
+      POSTGRES_PASSWORD: dummy
+    networks:
+      - internal
+    volumes:
+      - ./files/10_setup_app_db.sh:/docker-entrypoint-initdb.d/10_setup_amos.sh:ro,Z
+      - postgres_data:/var/lib/postgresql/data
+
+  timescaledb:
+    image: docker.io/timescale/timescaledb:latest-pg18
+    environment:
+      POSTGRES_PASSWORD: dummy
+    networks:
+      - internal
+    volumes:
+      - ./files/20_setup_timescale_db.sh:/docker-entrypoint-initdb.d/20_setup_timescale_db.sh:ro,Z
+      - timescale_data:/var/lib/postgresql:rw
+
+volumes:
+  postgres_data:
+  timescale_data:
+
+networks:
+  internal:
