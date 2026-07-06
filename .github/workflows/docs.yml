@@ -40,6 +40,11 @@ jobs:
       - uses: peaceiris/actions-mdbook@v2
         with:
           mdbook-version: latest
+      # mdbook-mermaid renders the ```mermaid diagrams (see book.toml
+      # [preprocessor.mermaid]). Installs a prebuilt binary — no compilation.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook-mermaid
       # Single source of truth for the docs build, shared with `make docs` so the
       # published site and local previews are produced the exact same way.
       - name: Build documentation website

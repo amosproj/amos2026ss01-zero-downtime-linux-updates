@@ -9,3 +9,9 @@ default-theme = "light"
 preferred-dark-theme = "navy"
 git-repository-url = "https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates"
 edit-url-template = "https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/edit/main/Documentation/{path}"
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"

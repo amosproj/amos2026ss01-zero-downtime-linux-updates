@@ -31,13 +31,15 @@ cd "$REPO_ROOT"
 OUT_DIR="$REPO_ROOT/target/doc"
 
 # check for dependencies (cargo only needed for the rustdoc step)
-tools="mdbook"
+# mdbook-mermaid is required by the [preprocessor.mermaid] hook in book.toml.
+tools="mdbook mdbook-mermaid"
 [ -n "$SKIP_RUSTDOC" ] || tools="cargo $tools"
 for tool in $tools; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         echo "Error: '$tool' not found on PATH." >&2
         case "$tool" in
         mdbook) echo "  Install it with: cargo install mdbook" >&2 ;;
+        mdbook-mermaid) echo "  Install it with: cargo install mdbook-mermaid" >&2 ;;
         cargo) echo "  Install the Rust toolchain: https://rustup.rs" >&2 ;;
         esac
         exit 1
