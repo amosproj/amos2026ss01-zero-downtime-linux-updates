@@ -5,6 +5,12 @@ use serde_json::Value;
 use crate::api_v1::db;
 use amos_common::device_jwt::{Claims, MAX_TOKEN_LIFETIME};
 
+#[derive(Debug, Clone)]
+pub struct ClientDevice {
+    pub id: i32,
+    pub group_id: Option<i32>,
+}
+
 /// Custom Error enum for distinguishing errors during JWT validation.
 /// Specifically, we want to know the DeviceNotFound variant in the caller.
 #[derive(Debug)]
@@ -26,7 +32,7 @@ impl From<jsonwebtoken::errors::Error> for DeviceTokenError {
 pub async fn validate_token(
     token: String,
     token_data: TokenData<Value>,
-) -> Result<Claims, DeviceTokenError> {
+) -> Result<ClientDevice, DeviceTokenError> {
     let device_uuid = super::extract_claim(&token_data.claims, "sub")?;
 
     let device = db::get_device_by_uuid(device_uuid.clone())
@@ -38,6 +44,7 @@ pub async fn validate_token(
     }
 
     let device_pubkey = device
+        .clone()
         .unwrap()
         .public_key
         .ok_or(DeviceTokenError::MissingPublicKey)?;
@@ -64,5 +71,9 @@ pub async fn validate_token(
         return Err(DeviceTokenError::Jwt(()));
     }
 
-    Ok(verified_token.claims)
+    let dev = device.unwrap();
+    Ok(ClientDevice {
+        id: dev.id,
+        group_id: dev.group_id
+    })
 }
