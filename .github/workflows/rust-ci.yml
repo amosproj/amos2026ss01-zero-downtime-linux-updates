@@ -55,9 +55,12 @@ jobs:
           cache-on-failure: true
       - run: cargo test --all-features
 
-  # Release Build if a Tag is pushed
-  release_build:
-    name: Release Build
+# Release Build if a Tag is pushed
+# https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-api-mock-server
+# https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-orchestrator
+
+  build_binaries:
+    name: Build Binaries & Upload as artifact
     # only run when a tag is pushed
     if: github.ref_type == 'tag'
     needs: test
@@ -91,11 +94,28 @@ jobs:
           name: ${{ github.ref_name }}-binaries
           path: release-bin/*
 
-      - name: Upload Binaries (Unzipped)
+      - name: Upload Binary amos-api-mock-server (Unzipped)
         uses: actions/upload-artifact@v7
         with:
-          path: release-bin/*
+          path: release-bin/amos-api-mock-server
           archive: false
+
+      - name: Upload Binary amos-orchestrator (Unzipped)
+        uses: actions/upload-artifact@v7
+        with:
+          path: release-bin/amos-orchestrator
+          archive: false
+
+  # Release Build if a Tag is pushed
+  release_build:
+    name: Release Build
+    # only run when a tag is pushed
+    if: github.ref_type == 'tag'
+    needs: build_binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
 
       - name: Generate release notes
         if: startsWith(github.ref_name, 'sprint-') && contains(github.ref_name, '-release')
