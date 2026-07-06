@@ -2,6 +2,7 @@ mod apps;
 mod logs;
 mod os;
 mod ping;
+mod register;
 
 #[derive(Clone)]
 pub struct DataStore {

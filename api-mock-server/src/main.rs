@@ -75,7 +75,7 @@ async fn main() {
         post(api_v1::routes::devices::register_device),
     );
 
-    let api_v2 = api_v2::router(api_v1::db::db!());
+    let api_v2 = api_v2::router(api_v1::db::db!(), config.jwt);
 
     let app = Router::new()
         .nest("/v1", api_v1)
@@ -83,9 +83,10 @@ async fn main() {
         .nest("/v2", api_v2)
         .layer(axum_middleware::from_fn(
             async |req: Request, next: axum_middleware::Next| {
+                let method = req.method().to_string();
                 let uri = req.uri().to_string();
                 let res = next.run(req).await;
-                debug!("{} -> {}", uri, res.status());
+                debug!("{} {} -> {}", method, uri, res.status());
                 res
             },
         ));
