@@ -429,8 +429,6 @@ mod tests {
             config_version: 1,
             config: None,
             image: "docker.io/alpine:1.0".into(),
-            deleted_at: None,
-            superseded_by: None,
         }];
         let containers = vec![MockApplication::new("docker.io/alpine:1.0", "digest1")];
         let (matched, unmatched) = resolve_application_ids(containers, &configs);

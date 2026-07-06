@@ -1,0 +1,41 @@
+use axum::{
+    Json,
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
+
+use crate::{api_v2::db::DataStore, auth::extractors::AuthDevice};
+
+/// GET /device/apps - Get the assigned applications
+pub async fn get(State(db): State<DataStore>, AuthDevice(device): AuthDevice) -> Response {
+    let apps = match db.apps_get_assigned(device.id).await {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("{:?}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    Json(
+        apps.into_iter()
+            .map(|a| amos_common::device_api::apps::GetResponseItem {
+                id: a.id,
+                application_id: a.application_id,
+                image: a.image,
+                version: a.version,
+                config_version: a.config_version,
+                config: a.config,
+            })
+            .collect::<Vec<_>>(),
+    )
+    .into_response()
+}
+
+/// PUT /device/apps - Report the currently running applications
+pub async fn put(
+    AuthDevice(device): AuthDevice,
+    Json(body): Json<amos_common::device_api::apps::PutBody>,
+) -> StatusCode {
+    StatusCode::CREATED
+}

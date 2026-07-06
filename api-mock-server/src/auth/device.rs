@@ -74,6 +74,6 @@ pub async fn validate_token(
     let dev = device.unwrap();
     Ok(ClientDevice {
         id: dev.id,
-        group_id: dev.group_id
+        group_id: dev.group_id,
     })
 }

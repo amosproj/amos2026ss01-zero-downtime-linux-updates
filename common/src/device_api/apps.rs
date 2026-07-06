@@ -9,8 +9,6 @@ pub struct GetResponseItem {
     pub version: i32,
     pub config_version: i32,
     pub config: Option<crate::entities::ContainerConfigV1>,
-    pub deleted_at: Option<std::time::SystemTime>,
-    pub superseded_by: Option<i32>,
 }
 
 /// PUT /device/apps - Report the currently running applications

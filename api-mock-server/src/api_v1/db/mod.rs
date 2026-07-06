@@ -45,7 +45,7 @@ macro_rules! db {
         crate::api_v1::db::DB.read().await.clone().unwrap()
     };
 }
-pub(super) use db;
+pub(crate) use db;
 
 pub async fn initialialize_db(
     database_url: String,

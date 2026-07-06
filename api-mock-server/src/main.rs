@@ -1,5 +1,6 @@
 use clap::Parser;
 mod api_v1;
+mod api_v2;
 mod auth;
 mod config;
 pub(crate) mod db_migration;
@@ -74,9 +75,12 @@ async fn main() {
         post(api_v1::routes::devices::register_device),
     );
 
+    let api_v2 = api_v2::router(api_v1::db::db!());
+
     let app = Router::new()
         .nest("/v1", api_v1)
         .nest("/v1", api_v1_public)
+        .nest("/v2", api_v2)
         .layer(axum_middleware::from_fn(
             async |req: Request, next: axum_middleware::Next| {
                 let uri = req.uri().to_string();
