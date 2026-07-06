@@ -3,7 +3,9 @@ info:
   title: AMOS Zero Downtime Linux Update - Device-facing API
   description: |-
     This is the device-facing part of the API, implemented in both server and orchestrator.
-    Usually it is located inside the subpath ```/v2```. In order to gain access, devices have to send a valid JWT token signed by their registered TPM as an ```Authorization: Bearer ...``` header.
+    Usually it is located inside the subpath ```/v2```. In order to gain access, devices 
+    have to send a valid JWT token signed by their registered TPM as an ```Authorization: Bearer ...``` header
+    (except for the /register endpoint).
   version: 2.0.0
 externalDocs:
   description: The code is in our GitHub repository
@@ -31,18 +33,10 @@ paths:
                 required: 
                   - id
                   - commit_hash
-                  - orchestrator_version
                 properties:
                   id:
                     type: integer
                   commit_hash: string
-                  orchestrator_version: string
-                  description: string
-                  deleted_at:
-                    type: integer
-                    description: Optional Unix seconds timestamp
-                  superseded_by:
-                    type: integer
         '418':
           description: Device not registered
         '500':
@@ -52,7 +46,7 @@ paths:
         - configuration
       summary: Report the currently running OS version
       requestBody:
-        description: "As found in ```amos_common::device::os_report```"
+        description: "As found in ```amos_common::device_api::os```"
         content:
           application/json:
             schema:
@@ -86,28 +80,19 @@ paths:
                   type: object
                   required: 
                     - id
-                    - commit_hash
-                    - orchestrator_version
+                    - application_id
+                    - image
                   properties:
                     id:
                       type: integer
                     application_id:
                       type: integer
                     image: string
-                    version:
-                      type: integer
-                    config_version:
-                      type: integer
                     config:
                       type: object
                       properties: 
                         environment:
                           type: object
-                    deleted_at:
-                      type: integer
-                      description: Optional Unix seconds timestamp
-                    superseded_by:
-                      type: integer
         '418':
           description: Device not registered
         '500':
@@ -117,7 +102,7 @@ paths:
         - configuration
       summary: Report the currently running applications
       requestBody:
-        description: "As found in ```amos_common::device::apps_report```"
+        description: "As found in ```amos_common::device_api::apps```"
         content:
           application/json:
             schema:
@@ -149,7 +134,7 @@ paths:
           schema:
             type: integer
       requestBody: 
-        description: "As found in ```amos_common::device::apps_report```"
+        description: "As found in ```amos_common::device_api::apps```"
         content:
           application/json:
             schema:
@@ -161,8 +146,8 @@ paths:
                   - message
                 properties: 
                   time:
-                    type: integer
-                    description: Timestamp in Unix seconds
+                    type: string
+                    description: ISO timestamp
                   level:
                     type: string
                     enum: [trace, debug, info, warn, error, fatal]
@@ -197,7 +182,7 @@ paths:
         - other
       summary: Try and register a device with the server. Can only succeed if there is a pending registration.
       requestBody: 
-        description: "As found in ```amos_common::device::register```"
+        description: "As found in ```amos_common::device_api::register```"
         content: 
           application/json:
             schema: 
