@@ -153,7 +153,7 @@ async fn flush_application_logs(
         return;
     }
     match api_client
-        .push_application_logs(application_id, &buffer)
+        .push_application_logs(application_id, buffer)
         .await
     {
         Ok(()) => buffer.clear(),
