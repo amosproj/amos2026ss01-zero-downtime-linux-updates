@@ -3,6 +3,7 @@
 pub struct GetResponse {
     pub id: i32,
     pub commit_hash: String,
+    pub immediate: bool,
     pub orchestrator_version: String,
     pub description: Option<String>,
     pub deleted_at: Option<std::time::SystemTime>,

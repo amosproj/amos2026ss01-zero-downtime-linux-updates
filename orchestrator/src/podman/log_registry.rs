@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::{collections::HashMap, time::Duration};
 
-use amos_common::entities::{ApplicationLog, LogLevel};
+use amos_common::entities::LogLevel;
 use chrono::Utc;
 use futures_util::stream::BoxStream;
 use tokio::sync::mpsc;
@@ -75,7 +75,8 @@ pub fn spawn_app_log_registry(
 
     tokio::spawn(async move {
         let mut streams: StreamMap<i32, AppLogStream> = StreamMap::new();
-        let mut buffers: HashMap<i32, Vec<ApplicationLog::CreateEntry>> = HashMap::new();
+        let mut buffers: HashMap<i32, Vec<amos_common::device_api::logs::PostBodyItem>> =
+            HashMap::new();
         let mut names: HashMap<i32, String> = HashMap::new();
         let mut interval = tokio::time::interval(log_flush_interval);
         interval.tick().await;
@@ -109,7 +110,7 @@ pub fn spawn_app_log_registry(
                 Some((application_id, result)) = streams.next() => {
                     match result {
                         Ok(chunk) => {
-                            let entry = ApplicationLog::CreateEntry {
+                            let entry = amos_common::device_api::logs::PostBodyItem {
                                 time: chunk.time.or_else(|| Some(Utc::now())),
                                 level: stream_to_level(chunk.stream),
                                 message: chunk.message,
@@ -143,7 +144,7 @@ pub fn spawn_app_log_registry(
 }
 
 async fn flush_application_logs(
-    buffer: &mut Vec<ApplicationLog::CreateEntry>,
+    buffer: &mut Vec<amos_common::device_api::logs::PostBodyItem>,
     application_id: i32,
     api_client: &ApiClient,
     max_buffer: usize,
@@ -152,7 +153,7 @@ async fn flush_application_logs(
         return;
     }
     match api_client
-        .push_application_logs(application_id, buffer.clone())
+        .push_application_logs(application_id, &buffer)
         .await
     {
         Ok(()) => buffer.clear(),

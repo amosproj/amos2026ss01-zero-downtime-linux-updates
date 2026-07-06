@@ -59,7 +59,7 @@ async fn try_switch(
         }
     };
 
-    let (target, immediate) = api_client.get_target_os_version().await?;
+    let target = api_client.get_target_os_version().await?;
 
     if state.booted_checksum == target.commit_hash
         || state.booted_image_ref.as_deref() == Some(target.commit_hash.as_str())
@@ -74,7 +74,7 @@ async fn try_switch(
         || state.staged_image_ref.as_deref() == Some(target.commit_hash.as_str());
 
     if is_target_staged {
-        if immediate {
+        if target.immediate {
             info!("Target image is already staged, flag changed. Forcing immediate reboot.");
             os_switch_in_progress.store(true, std::sync::atomic::Ordering::SeqCst);
             bootc
@@ -98,11 +98,11 @@ async fn try_switch(
         "Switching OS image: current {} -> target {}, immediate = {}",
         state.booted_image_ref.as_deref().unwrap_or("unknown"),
         target.commit_hash,
-        immediate
+        target.immediate
     );
 
     // Handle fresh image targets that haven't been downloaded yet
-    if immediate {
+    if target.immediate {
         info!(
             "Switching OS image immediately: {} -> {}",
             state.booted_image_ref.as_deref().unwrap_or("unknown"),
