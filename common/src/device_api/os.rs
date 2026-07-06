@@ -6,8 +6,6 @@ pub struct GetResponse {
     pub immediate: bool,
     pub orchestrator_version: String,
     pub description: Option<String>,
-    pub deleted_at: Option<std::time::SystemTime>,
-    pub superseded_by: Option<i32>,
 }
 
 /// PUT /device/os - Report the currently running OS version

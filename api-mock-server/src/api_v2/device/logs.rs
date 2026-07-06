@@ -1,3 +1,4 @@
+use amos_common::entities::{ApplicationLog, DeviceLog};
 use axum::{
     Json,
     extract::{Query, State},
@@ -13,5 +14,39 @@ pub async fn post(
     Query(params): Query<amos_common::device_api::logs::PostQueryParams>,
     Json(body): Json<amos_common::device_api::logs::PostBody>,
 ) -> StatusCode {
-    StatusCode::OK
+    let result = match params.application_id {
+        Some(app_id) => {
+            let entries = body
+                .into_iter()
+                .map(|item| ApplicationLog::CreateEntry {
+                    time: item.time,
+                    level: item.level,
+                    message: item.message,
+                    source: item.source,
+                })
+                .collect::<Vec<_>>();
+            db.logs_publish_application(device.id, app_id, entries)
+                .await
+        }
+        None => {
+            let entries = body
+                .into_iter()
+                .map(|item| DeviceLog::CreateEntry {
+                    time: item.time,
+                    level: item.level,
+                    message: item.message,
+                    source: item.source,
+                })
+                .collect::<Vec<_>>();
+            db.logs_publish_device(device.id, entries).await
+        }
+    };
+
+    match result {
+        Ok(_) => StatusCode::CREATED,
+        Err(e) => {
+            log::error!("{:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
 }

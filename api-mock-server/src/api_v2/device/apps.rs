@@ -34,8 +34,16 @@ pub async fn get(State(db): State<DataStore>, AuthDevice(device): AuthDevice) ->
 
 /// PUT /device/apps - Report the currently running applications
 pub async fn put(
+    State(db): State<DataStore>,
     AuthDevice(device): AuthDevice,
     Json(body): Json<amos_common::device_api::apps::PutBody>,
 ) -> StatusCode {
-    StatusCode::CREATED
+    let config_ids = body.into_iter().map(|item| item.application_config_id);
+    match db.apps_put_report(device.id, config_ids).await {
+        Ok(_) => StatusCode::CREATED,
+        Err(e) => {
+            log::error!("{:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
 }

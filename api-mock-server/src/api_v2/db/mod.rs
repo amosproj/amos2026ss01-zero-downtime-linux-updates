@@ -1,4 +1,6 @@
 mod apps;
+mod logs;
+mod os;
 mod ping;
 
 #[derive(Clone)]
