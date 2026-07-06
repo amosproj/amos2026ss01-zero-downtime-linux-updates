@@ -1,4 +1,4 @@
 include:
   - path: ../server-template.compose.yaml
     env_file:
-      - ./run1/.env
+      - .env
