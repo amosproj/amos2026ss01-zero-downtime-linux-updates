@@ -1,0 +1,4 @@
+include:
+  - path: ../server-template.compose.yaml
+    env_file:
+      - ./run3/.env
