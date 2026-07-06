@@ -58,20 +58,20 @@ impl ApiClient {
 
     // Sends device pings to the API to indicate the orchestrator is still running
     pub async fn send_ping(&self) -> anyhow::Result<()> {
-        self.put("ping", None as Option<()>).await
+        self.put("/device/ping", None as Option<()>).await
     }
 
     /// Fetches the OS version assigned to this device from the API
     pub async fn get_target_os_version(
         &self,
     ) -> anyhow::Result<amos_common::device_api::os::GetResponse> {
-        self.get("os").await
+        self.get("/device/os").await
     }
 
     /// Reports the current OS assignment for this device to the API
     pub async fn report_current_os_assignment(&self, os_version_id: i32) -> anyhow::Result<()> {
         self.put(
-            "os",
+            "/device/os",
             Some(amos_common::device_api::os::PutBody { os_version_id }),
         )
         .await
@@ -81,7 +81,7 @@ impl ApiClient {
     pub async fn get_target_application_configs(
         &self,
     ) -> anyhow::Result<amos_common::device_api::apps::GetResponse> {
-        self.get("apps").await
+        self.get("/device/apps").await
     }
 
     /// Reports the current running application config for this device to the API
@@ -95,7 +95,7 @@ impl ApiClient {
             })
             .collect();
 
-        self.put("os", Some(entries)).await
+        self.put("/device/apps", Some(entries)).await
     }
 
     /// Pushes device log entries to the API
@@ -103,7 +103,7 @@ impl ApiClient {
         &self,
         entries: &[amos_common::device_api::logs::PostBodyItem],
     ) -> Result<()> {
-        self.post("/apps", entries).await
+        self.post("/device/logs", entries).await
     }
 
     /// Pushes application log entries for a given application to the API
@@ -112,7 +112,7 @@ impl ApiClient {
         application_id: i32,
         entries: &[amos_common::device_api::logs::PostBodyItem],
     ) -> Result<()> {
-        self.post(&format!("/logs?application_id={}", application_id), entries)
+        self.post(&format!("/device/logs?application_id={}", application_id), entries)
             .await
     }
 
