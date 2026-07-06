@@ -89,7 +89,7 @@ jobs:
       - name: Upload Binaries (Zipped)
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ github.ref_name }}-binaries
+          name: binaries-zipped
           path: release-bin/*
 
       - name: Upload Binary amos-api-mock-server (Unzipped)
