@@ -61,8 +61,6 @@ jobs:
 
   build_binaries:
     name: Build Binaries & Upload as artifact
-    # only run when a tag is pushed
-    if: github.ref_type == 'tag'
     needs: test
     runs-on: ubuntu-latest
     permissions:
