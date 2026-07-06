@@ -15,7 +15,7 @@ impl super::DataStore {
         )
         .await?;
 
-        if assignments.len() == 0 {
+        if assignments.is_empty() {
             return Err(sea_orm::DbErr::RecordNotFound("OsVersion".to_owned()));
         }
 

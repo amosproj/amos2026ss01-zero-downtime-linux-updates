@@ -112,8 +112,11 @@ impl ApiClient {
         application_id: i32,
         entries: &[amos_common::device_api::logs::PostBodyItem],
     ) -> Result<()> {
-        self.post(&format!("/device/logs?application_id={}", application_id), entries)
-            .await
+        self.post(
+            &format!("/device/logs?application_id={}", application_id),
+            entries,
+        )
+        .await
     }
 
     /// Registers the device at the API. Usually called when another response indicates

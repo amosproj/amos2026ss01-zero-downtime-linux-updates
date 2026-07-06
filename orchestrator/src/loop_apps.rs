@@ -425,8 +425,6 @@ mod tests {
         let configs = vec![amos_common::device_api::apps::GetResponseItem {
             id: 1,
             application_id: 1,
-            version: 1,
-            config_version: 1,
             config: None,
             image: "docker.io/alpine:1.0".into(),
         }];

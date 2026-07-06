@@ -23,8 +23,6 @@ pub async fn get(State(db): State<DataStore>, AuthDevice(device): AuthDevice) ->
                 id: a.id,
                 application_id: a.application_id,
                 image: a.image,
-                version: a.version,
-                config_version: a.config_version,
                 config: a.config,
             })
             .collect::<Vec<_>>(),

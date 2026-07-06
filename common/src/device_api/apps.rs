@@ -6,8 +6,6 @@ pub struct GetResponseItem {
     pub id: i32,
     pub application_id: i32,
     pub image: String,
-    pub version: i32,
-    pub config_version: i32,
     pub config: Option<crate::entities::ContainerConfigV1>,
 }
 

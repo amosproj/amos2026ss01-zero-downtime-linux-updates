@@ -6,6 +6,7 @@ mod register;
 
 #[derive(Clone)]
 pub struct DataStore {
+    #[expect(dead_code)]
     connection: sea_orm::DatabaseConnection,
 }
 

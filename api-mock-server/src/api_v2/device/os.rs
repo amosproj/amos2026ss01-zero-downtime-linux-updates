@@ -20,8 +20,6 @@ pub async fn get(State(db): State<DataStore>, AuthDevice(device): AuthDevice) ->
     Json(amos_common::device_api::os::GetResponse {
         id: os.id,
         commit_hash: os.commit_hash,
-        orchestrator_version: os.orchestrator_version,
-        description: os.description,
     })
     .into_response()
 }

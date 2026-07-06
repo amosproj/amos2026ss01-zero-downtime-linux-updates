@@ -31,10 +31,13 @@ where
 /// Use as middleware with [`axum::middleware::from_extractor`].
 /// Needs to be behind [`super::jwt_middleware`].
 /// Contains the user's ID and name.
+#[expect(dead_code)]
 pub struct AuthUser(pub UserData);
 
 pub struct UserData {
+    #[expect(dead_code)]
     id: String,
+    #[expect(dead_code)]
     name: String,
 }
 
