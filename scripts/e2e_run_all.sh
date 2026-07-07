@@ -148,12 +148,19 @@ done
 echo "========================================="
 echo " Ensuring VM Pre-requisites "
 echo "========================================="
+set -e
+
+# Ensure boot was successful
+echo "Checking for successful Greenboot orchestrator check"
+limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service \
+    | tee /dev/stderr \
+    | grep "required script /etc/greenboot/check/required.d/10-orchestrator-check.sh success" \
+
 # Ensure Podman API socket is running
-(
-    set -e
-    limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
-    echo "Podman socket is running"
-)
+echo "Checking for running Podman socket"
+limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
+
+set +e
 
 echo "========================================="
 echo " Deploying Local Orchestrator Build "
