@@ -2,6 +2,7 @@ pub mod application_assignments;
 pub mod application_configs;
 pub mod applications;
 pub mod audit_log;
+mod device;
 pub mod devices;
 pub mod groups;
 pub mod logs;
@@ -10,11 +11,12 @@ pub mod os_versions;
 pub mod pagination;
 pub mod pending_device_registrations;
 pub mod pings;
+mod register;
 pub mod reported_application_assignments;
 pub mod reported_os_assignments;
 pub mod tenants;
 
-use axum::Router;
+use axum::{Router, routing::post};
 
 use amos_common::ErrorResponse;
 use axum::{
@@ -22,6 +24,8 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+
+use crate::auth::extractors::AuthUser;
 
 pub(super) fn err(status: StatusCode, message: impl ToString) -> Response {
     (
@@ -51,8 +55,8 @@ pub(super) fn pagination_err(msg: &str) -> Response {
     err(StatusCode::UNPROCESSABLE_ENTITY, msg)
 }
 
-pub fn routes() -> Router {
-    Router::new()
+pub fn routes(jwt_middleware_provider: &dyn crate::auth::JwtMiddlewareProvider) -> Router {
+    let router = Router::new()
         .merge(application_assignments::routes())
         .merge(application_configs::routes())
         .merge(applications::routes())
@@ -67,6 +71,15 @@ pub fn routes() -> Router {
         .merge(reported_os_assignments::routes())
         .merge(tenants::routes())
         .merge(audit_log::routes())
+        // All previous routes are only accessible to users
+        .route_layer(axum::middleware::from_extractor::<AuthUser>())
+        // The device router includes its own AuthDevice barrier
+        .nest("/device", device::router());
+
+    jwt_middleware_provider
+        .register_middleware(router)
+        // Register endpoint has to be unprotected
+        .route("/register", post(register::post))
 }
 
 // --Tests--
@@ -89,7 +102,10 @@ mod tests {
         )
         .await
         .unwrap();
-        Router::new().nest("/v1", routes())
+        Router::new().nest(
+            "/v1",
+            routes(&crate::auth::tests::MockJwtMiddlewareProvider),
+        )
     }
 
     async fn test_app_postgres() -> (
@@ -105,7 +121,13 @@ mod tests {
             .await
             .unwrap();
 
-        (Router::new().nest("/v1", routes()), container)
+        (
+            Router::new().nest(
+                "/v1",
+                routes(&crate::auth::tests::MockJwtMiddlewareProvider),
+            ),
+            container,
+        )
     }
 
     async fn get(app: Router, uri: &str) -> (StatusCode, String) {
@@ -981,48 +1003,6 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_create_reported_app_assignment_with_device_uuid_returns_201() {
-        let app = test_app().await;
-        post(
-            app.clone(),
-            "/v1/tenants",
-            r#"{"id":0,"name":"T","description":null}"#,
-        )
-        .await;
-        post(
-            app.clone(),
-            "/v1/devices",
-            r#"{"id":0,"uuid":"app-uuid-7","serial_number":"host-1","tenant_id":1,"group_id":null}"#,
-        )
-        .await;
-        post(
-            app.clone(),
-            "/v1/applications",
-            r#"{"id":0,"name":"my-app","description":"desc"}"#,
-        )
-        .await;
-        post(
-            app.clone(),
-            "/v1/app-configs",
-            r#"{"device_id":1,"group_id":null,"application_id":1,"image":"ghcr.io/example/app:1"}"#,
-        )
-        .await;
-
-        let (status, body) = post(
-            app,
-            "/v1/reported-app-assignments?device_uuid=app-uuid-7",
-            r#"{"application_config_id":1}"#,
-        )
-        .await;
-
-        assert_eq!(status, StatusCode::CREATED);
-        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json["application_config_id"], 1);
-        assert_eq!(json["device_id"], 1);
-    }
-
-    #[tokio::test]
-    #[serial]
     async fn test_list_reported_os_assignments_returns_200_with_page_envelope() {
         let (status, body) = get(test_app().await, "/v1/reported-os-assignments").await;
         assert_eq!(status, StatusCode::OK);
@@ -1037,91 +1017,6 @@ mod tests {
         assert_eq!(status, StatusCode::OK);
         let json: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json["data"], serde_json::json!([]));
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_create_reported_os_assignment_with_device_id_returns_201() {
-        let app = test_app().await;
-        post(
-            app.clone(),
-            "/v1/tenants",
-            r#"{"id":0,"name":"T","description":null}"#,
-        )
-        .await;
-        post(
-            app.clone(),
-            "/v1/devices",
-            r#"{"id":0,"uuid":"dev-uuid-1","serial_number":"host-1","tenant_id":1,"group_id":null}"#,
-        )
-        .await;
-        post(
-            app.clone(),
-            "/v1/os-versions",
-            r#"{"id":0,"commit_hash":"abc123","orchestrator_version":"1.0","description":null}"#,
-        )
-        .await;
-
-        let (status, body) = post(
-            app,
-            "/v1/reported-os-assignments",
-            r#"{"id":0,"os_version_id":1,"device_id":1,"updated_at":"2024-01-01T00:00:00Z"}"#,
-        )
-        .await;
-
-        assert_eq!(status, StatusCode::CREATED);
-        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json["os_version_id"], 1);
-        assert_eq!(json["device_id"], 1);
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_create_reported_os_assignment_with_device_uuid_returns_201() {
-        let app = test_app().await;
-        post(
-            app.clone(),
-            "/v1/tenants",
-            r#"{"id":0,"name":"T","description":null}"#,
-        )
-        .await;
-        post(
-            app.clone(),
-            "/v1/devices",
-            r#"{"id":0,"uuid":"test-uuid-42","serial_number":"host-1","tenant_id":1,"group_id":null}"#,
-        )
-        .await;
-        post(
-            app.clone(),
-            "/v1/os-versions",
-            r#"{"id":0,"commit_hash":"abc123","orchestrator_version":"1.0","description":null}"#,
-        )
-        .await;
-
-        let (status, body) = post(
-            app,
-            "/v1/reported-os-assignments?device_uuid=test-uuid-42",
-            r#"{"id":0,"os_version_id":1,"device_id":0,"updated_at":"2024-01-01T00:00:00Z"}"#,
-        )
-        .await;
-
-        assert_eq!(status, StatusCode::CREATED);
-        let json: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json["os_version_id"], 1);
-        assert_eq!(json["device_id"], 1);
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn test_create_reported_os_assignment_with_unknown_device_uuid_returns_404() {
-        let (status, _) = post(
-            test_app().await,
-            "/v1/reported-os-assignments?device_uuid=does-not-exist",
-            r#"{"id":0,"os_version_id":1,"device_id":0,"updated_at":"2024-01-01T00:00:00Z"}"#,
-        )
-        .await;
-
-        assert_eq!(status, StatusCode::NOT_FOUND);
     }
 
     // --- Audit logs ---
