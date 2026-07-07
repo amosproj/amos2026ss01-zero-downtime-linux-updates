@@ -163,11 +163,29 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
 async fn self_check(cli: &Cli) -> anyhow::Result<()> {
     let config = OrchestratorConfig::load(cli.config.as_deref())?;
 
+    // TPM check
+    let mut signer = TpmSigner::new().context("Could not initialize the TPM")?;
+    signer
+        .read_endorsement_key()
+        .context("Could not read read endorsement key")?;
+    signer
+        .read_signing_key()
+        .context("Could not read read signing key")?;
+    signer
+        .sign_data("hello world")
+        .context("Could not sign test data")?;
+
+    // DMI check
+    hardware::read_device_uuid().context("Could not read device UUID")?;
+    hardware::read_serial_number().context("Could not read device serial number")?;
+
+    // Bootc check
     let bootc = Bootc::new(Box::new(RealExecuter));
     bootc.status().await?;
 
-    // TODO: Maybe check if container can start properly?
-    PodmanWrapper::connect(Path::new(&config.podman_path)).await?;
+    PodmanWrapper::connect(Path::new(&config.podman_path))
+        .await
+        .context("Could not connect to Podman socket")?;
 
     Ok(())
 }
