@@ -20,7 +20,7 @@ pub async fn get(AuthDevice(device): AuthDevice) -> Response {
     Json(amos_common::device_api::os::GetResponse {
         id: os.id,
         commit_hash: os.commit_hash,
-        immediate
+        immediate,
     })
     .into_response()
 }

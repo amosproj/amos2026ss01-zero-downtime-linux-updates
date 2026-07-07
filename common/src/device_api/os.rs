@@ -3,7 +3,7 @@
 pub struct GetResponse {
     pub id: i32,
     pub commit_hash: String,
-    pub immediate: bool
+    pub immediate: bool,
 }
 
 /// PUT /device/os - Report the currently running OS version
