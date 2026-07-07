@@ -68,7 +68,8 @@ $SUDO apt-get install -y --no-install-recommends \
     podman \
     uidmap \
     passt \
-    fzf
+    fzf \
+    htop
 
 # --- fzf Ctrl+R shell integration --------------------------------------------
 # Debian's fzf ships key bindings but doesn't wire them into the shell. Enable
@@ -156,6 +157,14 @@ else
     $SUDO tar -C /usr/local/bin -xzf "$tmp/zellij.tar.gz" zellij
     rm -rf "$tmp"
 fi
+
+
+
+
+# --- other ------------------------------------------------------------------
+
+log "add user to kvm group (for qemu)"
+sudo usermod -aG kvm debian
 
 # --- summary -----------------------------------------------------------------
 echo
