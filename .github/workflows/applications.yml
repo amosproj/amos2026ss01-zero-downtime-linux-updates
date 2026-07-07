@@ -77,5 +77,5 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ vars.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ vars.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key env://COSIGN_PRIVATE_KEY --yes \
+          cosign sign --key --recursive env://COSIGN_PRIVATE_KEY --yes \
             ${{ env.REGISTRY }}/${{ github.repository }}-${{ env.APP }}@${{ steps.build.outputs.digest }}
