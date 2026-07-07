@@ -54,8 +54,13 @@ api() {
 }
 
 start_swtpm() {
-    swtpm socket --tpm2 -d \
+    swtpm socket --tpm2 -t -d \
         --tpmstate dir="${TPM_DIR}" \
         --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" \
         --log level=20
+}
+
+stop_vm() {
+    echo "Stopping Lima VM '${VM_NAME}'..."
+    limactl stop -y "${VM_NAME}" 2>/dev/null || true
 }

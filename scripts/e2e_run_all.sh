@@ -28,6 +28,7 @@ TEST_SUITE=(
     "tests/e2e_seed_api.sh"
     "tests/e2e_bootc_status.sh"
     "tests/e2e_app_deploy.sh"
+    "tests/e2e_selfcheck.sh"
     "tests/e2e_bootc_upgrade.sh"
 )
 
@@ -35,11 +36,8 @@ TEST_SUITE=(
 cleanup() {
     echo -e "\n${NC}=== Cleaning up background processes ==="
     
-    limactl shell "${VM_NAME}" -- sudo systemctl stop orchestrator.service 2>/dev/null || true
-
     # Shut down the VM, also automatically terminates the backgrounded swtpm process
-    echo "Stopping Lima VM '${VM_NAME}'..."
-    limactl stop "${VM_NAME}" 2>/dev/null || true
+    stop_vm
 
     # 2. Terminate the mock server process group on the host machine
     if [ -n "${SERVER_PID:-}" ]; then
