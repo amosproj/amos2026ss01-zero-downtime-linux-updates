@@ -10,11 +10,13 @@
 #   libtss2-dev,pkgcfg   the orchestrator links libtss2        -> apt: libtss2-dev pkg-config
 #   oras, jq, xz         `make pull-image` (prebuilt disk)     -> oras (upstream), apt: jq xz-utils
 #   curl, make, git      test scripts / build orchestration    -> apt
+#   fzf                  fuzzy finder + Ctrl+R history search  -> apt: fzf
+#   zellij               terminal multiplexer                  -> zellij (upstream)
 #
 # Run as a normal user that has sudo (do NOT `sudo bash` this — rustup then
 # installs Rust for root instead of you). Privileged steps call sudo themselves.
 #
-# Overridable via env: RUST_VERSION, LIMA_VERSION, ORAS_VERSION.
+# Overridable via env: RUST_VERSION, LIMA_VERSION, ORAS_VERSION, ZELLIJ_VERSION.
 
 set -euo pipefail
 
@@ -24,8 +26,10 @@ RUST_VERSION="${RUST_VERSION:-1.95}"
 # to pin. The *_FALLBACK values are only used if the GitHub API is unreachable.
 LIMA_VERSION="${LIMA_VERSION:-}"
 ORAS_VERSION="${ORAS_VERSION:-}"
+ZELLIJ_VERSION="${ZELLIJ_VERSION:-}"
 LIMA_FALLBACK="v1.0.0"
 ORAS_FALLBACK="v1.2.0"
+ZELLIJ_FALLBACK="v0.43.1"
 
 log() { printf '\033[0;32m>>> %s\033[0m\n' "$*"; }
 warn() { printf '\033[0;33m!!! %s\033[0m\n' "$*" >&2; }
@@ -63,7 +67,18 @@ $SUDO apt-get install -y --no-install-recommends \
     swtpm swtpm-tools \
     podman \
     uidmap \
-    passt
+    passt \
+    fzf
+
+# --- fzf Ctrl+R shell integration --------------------------------------------
+# Debian's fzf ships key bindings but doesn't wire them into the shell. Enable
+# Ctrl+R (history search), Ctrl+T and Alt+C for interactive bash sessions.
+BASHRC="$HOME/.bashrc"
+if ! grep -q 'fzf --bash' "$BASHRC" 2>/dev/null; then
+    log "Enabling fzf key bindings (Ctrl+R) in $BASHRC"
+    # shellcheck disable=SC2016  # write $(fzf --bash) literally, expand at shell startup
+    printf '\n# fzf key bindings + completion (Ctrl+R history search)\ncommand -v fzf >/dev/null 2>&1 && eval "$(fzf --bash)"\n' >> "$BASHRC"
+fi
 
 # --- Rust via rustup ---------------------------------------------------------
 # Debian's rustc is older than the pinned toolchain, so use rustup. Installed
@@ -122,6 +137,26 @@ else
     rm -rf "$tmp"
 fi
 
+# --- zellij ------------------------------------------------------------------
+# Not packaged for Debian 13; single static (musl) binary from the upstream
+# release tarball, which unpacks a bare `zellij` binary.
+if command -v zellij >/dev/null 2>&1; then
+    log "zellij present: $(zellij --version 2>/dev/null | head -n1)"
+else
+    tag="$ZELLIJ_VERSION"
+    if [ -z "$tag" ]; then
+        tag="$(curl -fsSL https://api.github.com/repos/zellij-org/zellij/releases/latest \
+            | jq -r .tag_name 2>/dev/null)" || tag=""
+        if [ -z "$tag" ] || [ "$tag" = null ]; then tag="$ZELLIJ_FALLBACK"; fi
+    fi
+    url="https://github.com/zellij-org/zellij/releases/download/${tag}/zellij-${arch}-unknown-linux-musl.tar.gz"
+    log "Installing zellij $tag into /usr/local/bin"
+    tmp="$(mktemp -d)"
+    curl -fsSL "$url" -o "$tmp/zellij.tar.gz"
+    $SUDO tar -C /usr/local/bin -xzf "$tmp/zellij.tar.gz" zellij
+    rm -rf "$tmp"
+fi
+
 # --- summary -----------------------------------------------------------------
 echo
 log "Installed tool versions:"
@@ -139,6 +174,8 @@ check swtpm    swtpm --version
 check podman   podman --version
 check oras     oras version
 check jq       jq --version
+check fzf      fzf --version
+check zellij   zellij --version
 
 cat <<'EOF'
 
