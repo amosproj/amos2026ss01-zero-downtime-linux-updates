@@ -9,7 +9,7 @@ mod ping;
 
 /// Provides routes for the device-facing API, usually nested in ```/v2/device```.
 /// Serves requests with a valid device JWT only.
-pub fn router() -> super::Router {
+pub fn router() -> axum::Router {
     axum::Router::new()
         .route("/apps", get(apps::get).put(apps::put))
         .route("/logs", post(logs::post))

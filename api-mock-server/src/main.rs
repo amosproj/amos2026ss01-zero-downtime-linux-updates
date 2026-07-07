@@ -1,6 +1,5 @@
 use clap::Parser;
 mod api_v1;
-mod api_v2;
 mod auth;
 mod config;
 pub(crate) mod db_migration;
@@ -66,19 +65,11 @@ async fn main() {
 
     // User-facing API
     let api_v1 = Router::new()
-        .merge(api_v1::routes::routes())
-        .route_layer(axum::middleware::from_extractor::<auth::extractors::AuthUser>())
-        .route_layer(axum::middleware::from_fn_with_state(
-            config.jwt.clone(),
-            auth::jwt_middleware,
-        ));
-
-    let api_v2 = api_v2::router(api_v1::db::db!(), config.jwt);
+        .merge(api_v1::routes::routes(config.jwt));
 
     let app =
         Router::new()
             .nest("/v1", api_v1)
-            .nest("/v2", api_v2)
             .layer(axum_middleware::from_fn(
                 async |req: Request, next: axum_middleware::Next| {
                     let method = req.method().to_string();

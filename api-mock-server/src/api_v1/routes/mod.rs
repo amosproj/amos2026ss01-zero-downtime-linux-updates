@@ -2,6 +2,7 @@ pub mod application_assignments;
 pub mod application_configs;
 pub mod applications;
 pub mod audit_log;
+mod device;
 pub mod devices;
 pub mod groups;
 pub mod logs;
@@ -10,11 +11,12 @@ pub mod os_versions;
 pub mod pagination;
 pub mod pending_device_registrations;
 pub mod pings;
+mod register;
 pub mod reported_application_assignments;
 pub mod reported_os_assignments;
 pub mod tenants;
 
-use axum::Router;
+use axum::{Router, routing::post};
 
 use amos_common::ErrorResponse;
 use axum::{
@@ -22,6 +24,8 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+
+use crate::auth::extractors::AuthUser;
 
 pub(super) fn err(status: StatusCode, message: impl ToString) -> Response {
     (
@@ -51,7 +55,7 @@ pub(super) fn pagination_err(msg: &str) -> Response {
     err(StatusCode::UNPROCESSABLE_ENTITY, msg)
 }
 
-pub fn routes() -> Router {
+pub fn routes(jwt_config: crate::config::JwtConfig) -> Router {
     Router::new()
         .merge(application_assignments::routes())
         .merge(application_configs::routes())
@@ -67,6 +71,16 @@ pub fn routes() -> Router {
         .merge(reported_os_assignments::routes())
         .merge(tenants::routes())
         .merge(audit_log::routes())
+        // All previous routes are only accessible to users
+        .route_layer(axum::middleware::from_extractor::<AuthUser>())
+        // The device router includes its own AuthDevice barrier
+        .nest("/device", device::router())
+        .route_layer(axum::middleware::from_fn_with_state(
+            jwt_config,
+            crate::auth::jwt_middleware,
+        ))
+        // Register endpoint has to be unprotected
+        .route("/register", post(register::post))
 }
 
 // --Tests--

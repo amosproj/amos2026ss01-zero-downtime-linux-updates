@@ -1,15 +1,14 @@
-use amos_common::entities::{ApplicationLog, DeviceLog};
+use amos_common::entities::{ApplicationLog, DeviceLog, LogEvent};
 use axum::{
     Json,
-    extract::{Query, State},
+    extract::Query,
     http::StatusCode,
 };
 
-use crate::{api_v2::db::DataStore, auth::extractors::AuthDevice};
+use crate::auth::extractors::AuthDevice;
 
 /// POST /device/logs - Publish some log lines
 pub async fn post(
-    State(db): State<DataStore>,
     AuthDevice(device): AuthDevice,
     Query(params): Query<amos_common::device_api::logs::PostQueryParams>,
     Json(body): Json<amos_common::device_api::logs::PostBody>,
@@ -25,8 +24,7 @@ pub async fn post(
                     source: item.source,
                 })
                 .collect::<Vec<_>>();
-            db.logs_publish_application(device.id, app_id, entries)
-                .await
+            logs_publish_application(device.id, app_id, entries).await
         }
         None => {
             let entries = body
@@ -38,7 +36,7 @@ pub async fn post(
                     source: item.source,
                 })
                 .collect::<Vec<_>>();
-            db.logs_publish_device(device.id, entries).await
+            logs_publish_device(device.id, entries).await
         }
     };
 
@@ -49,4 +47,35 @@ pub async fn post(
             StatusCode::INTERNAL_SERVER_ERROR
         }
     }
+}
+
+async fn logs_publish_device(
+    device_id: i32,
+    entries: Vec<DeviceLog::CreateEntry>,
+) -> Result<(), sea_orm::DbErr> {
+    let rows = crate::api_v1::ts_db::insert_device_log_entries(device_id, entries).await?;
+
+    // Send log lines to real-time subscribers
+    for row in rows {
+        crate::api_v1::log_stream::publish(LogEvent::Device(row));
+    }
+
+    Ok(())
+}
+
+async fn logs_publish_application(
+    device_id: i32,
+    application_id: i32,
+    entries: Vec<ApplicationLog::CreateEntry>,
+) -> Result<(), sea_orm::DbErr> {
+    let rows =
+        crate::api_v1::ts_db::insert_application_log_entries(device_id, application_id, entries)
+            .await?;
+
+    // Send log lines to real-time subscribers
+    for row in rows {
+        crate::api_v1::log_stream::publish(LogEvent::Application(row));
+    }
+
+    Ok(())
 }
