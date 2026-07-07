@@ -5,7 +5,7 @@
 # Project documentation
 
 - [Architecture](./architecture.md)
-- [OS images & bootc](./image-based-os.md)
+- [Fundamentals: OS Images & bootc](./image-based-os.md)
 - [Design documentation](./design_documentation.md)
 - [Build documentation](./build_documentation.md)
 - [User documentation](./user_documentation.md)

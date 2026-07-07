@@ -12,8 +12,8 @@ pub struct ExecResult {
     pub exit_code: Option<i32>,
 }
 
-#[cfg_attr(test, mockall::automock)]
 #[async_trait]
+#[cfg_attr(test, mockall::automock)]
 pub trait Executer: Send + Sync {
     async fn execute(&self, command: String, args: Vec<String>) -> anyhow::Result<ExecResult>;
 }
@@ -41,25 +41,19 @@ impl Executer for RealExecuter {
         loop {
             tokio::select! {
                 res = stdout_reader.next_line() => {
-                    match res {
-                        Ok(Some(line)) => {
-                            info!(target: "bootc_subproc", "{}", line);
-                            captured_stdout.push_str(&line);
-                            captured_stdout.push('\n');
-                        }
-                        _ => {}
+                    if let Ok(Some(line)) = res {
+                        info!(target: "bootc_subproc", "{}", line);
+                        captured_stdout.push_str(&line);
+                        captured_stdout.push('\n');
                     }
-                }
+                },
                 res = stderr_reader.next_line() => {
-                    match res {
-                        Ok(Some(line)) => {
-                            info!(target: "bootc_subproc_err", "{}", line);
-                            captured_stderr.push_str(&line);
-                            captured_stderr.push('\n');
-                        }
-                        _ => {}
+                    if let Ok(Some(line)) = res {
+                        info!(target: "bootc_subproc_err", "{}", line);
+                        captured_stderr.push_str(&line);
+                        captured_stderr.push('\n');
                     }
-                }
+                },
                 status = child.wait() => {
                     let exit_status = status?;
 
