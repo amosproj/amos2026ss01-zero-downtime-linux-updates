@@ -147,7 +147,12 @@ impl Bootc {
 
         info!(?target, "Switching system image");
 
-        let args = vec!["switch".to_string(), "--retain".to_string(), target];
+        let args = vec![
+            "switch".to_string(),
+            "--retain".to_string(),
+            "--enforce-container-sigpolicy".to_string(),
+            target,
+        ];
 
         let res = self.run_bootc_root(args).await?;
 

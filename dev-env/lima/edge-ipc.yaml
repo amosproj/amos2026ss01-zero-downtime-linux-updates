@@ -62,7 +62,16 @@ provision:
   # Reload the systemd daemon as a precaution, in case the drop-in for the
   # orchestrator service or eventual symlinking caused changes.
   - mode: system
-    script: "systemctl daemon-reload"
+    script: |
+      #!/bin/bash
+      # Configure container signature discovery
+      mkdir -p /etc/containers/registries.d
+
+      # Use printf to guarantee pure ASCII regular spaces and exact YAML indentation
+      printf "docker:\n  ghcr.io:\n    use-sigstore-attachments: true\n" > /etc/containers/registries.d/ghcr.yaml
+
+      systemctl daemon-reload
+      systemctl restart orchestrator.service
 
   ### Config file setup
   # Write config file the orchestrator reads.

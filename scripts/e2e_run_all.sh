@@ -31,6 +31,7 @@ TEST_SUITE=(
     "tests/e2e_app_deploy.sh"
     "tests/e2e_bootc_switch.sh"
     "tests/e2e_bootc_deferred_switch.sh"
+    "tests/e2e_bootc_unsigned_deny.sh"
 )
 
 # This function executes immediately when the script finishes or hits an early abort
@@ -156,6 +157,27 @@ echo "========================================="
     set -e
     limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
     echo "Podman socket is running"
+)
+
+echo "========================================="
+echo " Provisioning Cryptographic Policies "
+echo "========================================="
+(
+    set -e
+    root_dir="$(cd "$script_dir/.." && pwd)"
+
+    # 1. Create the destination directory under /etc (which is writeable!)
+    limactl shell "${VM_NAME}" -- sudo mkdir -p /etc/pki/containers
+
+    # 2. Copy cosign.pub from the root directory into the VM's /etc/pki folder
+    limactl copy "$root_dir/cosign.pub" "${VM_NAME}":/tmp/cosign.pub
+    limactl shell "${VM_NAME}" -- sudo mv /tmp/cosign.pub /etc/pki/containers/cosign.pub
+
+    # 3. Copy container-policy.json into the VM's container policy engine path
+    limactl copy "$root_dir/container-policy.json" "${VM_NAME}":/tmp/policy.json
+    limactl shell "${VM_NAME}" -- sudo mv /tmp/policy.json /etc/containers/policy.json
+
+    echo "✓ Production container policy and cosign.pub provisioned successfully inside writeable /etc."
 )
 
 echo "========================================="

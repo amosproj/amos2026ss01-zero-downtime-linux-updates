@@ -70,7 +70,7 @@ COPY cosign.pub /usr/share/pki/containers/cosign.pub
 COPY container-policy.json     /usr/share/containers/policy.prod.json
 COPY container-policy.dev.json /usr/share/containers/policy.dev.json
 RUN set -eu; \
-    if [ "DEV_MODE" = "true" ]; then src=policy.dev.json; touch /etc/amos-dev-image; \
+    if [ "$DEV_MODE" = "true" ]; then src=policy.dev.json; touch /etc/amos-dev-image; \
     else src=policy.prod.json; fi; \
     cp /usr/share/containers/$src /usr/share/containers/policy.json; \
     cp /usr/share/containers/$src /etc/containers/policy.json; \

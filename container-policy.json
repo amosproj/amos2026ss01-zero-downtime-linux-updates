@@ -6,10 +6,10 @@
     ],
     "transports": {
         "docker": {
-            "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system": [
+            "": [
                 {
                     "type": "sigstoreSigned",
-                    "keyPath": "/usr/share/pki/containers/cosign.pub",
+                    "keyPath": "/etc/pki/containers/cosign.pub",
                     "signedIdentity": {
                         "type": "matchRepository"
                     }
