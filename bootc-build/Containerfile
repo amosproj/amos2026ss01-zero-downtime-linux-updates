@@ -53,6 +53,11 @@ COPY --from=builder /workspace/target/release/amos-orchestrator /usr/libexec/amo
 COPY bootc-build/orchestrator.service /etc/systemd/system/orchestrator.service
 RUN systemctl enable orchestrator.service
 
+# Set up Greenboot for automatic rollback after broken OS updates
+RUN systemctl enable greenboot-healthcheck.service \
+    && mkdir -p /etc/greenboot/check/required.d/
+COPY --chmod=0755 bootc-build/greenboot/10-orchestrator-check.sh /etc/greenboot/check/required.d/10-orchestrator-check.sh
+
 # Enable the podman socket so the orchestrator can access it
 RUN systemctl enable podman.socket
 
