@@ -15,16 +15,10 @@
         window.addEventListener('DOMContentLoaded', () => {
             const url = window.location.href.split('/')
             url[url.length - 1] = "device_api.yaml"
-            
+
             window.ui = SwaggerUIBundle({
                 url: url.join('/'),
                 dom_id: '#swagger-ui',
-                deepLinking: true,
-                presets: [
-                    SwaggerUIBundle.presets.apis,
-                    SwaggerUIBundle.SwaggerUIStandalonePreset
-                ],
-                layout: "StandaloneLayout"
             })
         })
     </script>

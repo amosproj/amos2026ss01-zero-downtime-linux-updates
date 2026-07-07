@@ -1,4 +1,4 @@
-openapi: 3.2.0
+openapi: 3.1.0
 info:
   title: AMOS Zero Downtime Linux Update - Device-facing API
   description: |-
@@ -6,7 +6,7 @@ info:
     Usually it is located inside the subpath ```/v1```. In order to gain access, devices 
     have to send a valid JWT token signed by their registered TPM as an ```Authorization: Bearer ...``` header
     (except for the /register endpoint).
-  version: 2.0.0
+  version: 1.0.0
 externalDocs:
   description: The code is in our GitHub repository
   url: https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates
