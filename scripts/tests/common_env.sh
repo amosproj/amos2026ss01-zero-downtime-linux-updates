@@ -8,6 +8,7 @@ set -uo pipefail
 export PORT=8080
 export HOST_SERVER_URL="http://127.0.0.1:${PORT}"
 export VM_NAME="edge-ipc"
+export TPM_DIR="/tmp/emulated_tpm"
 
 export DEVICE_UUID="00000000-0000-0000-0000-000000000001"
 export DEVICE_SERIAL="AMOS-TEST-001"
@@ -50,4 +51,16 @@ api() {
         test_failed=1
         exit 1
     fi
+}
+
+start_swtpm() {
+    swtpm socket --tpm2 -t -d \
+        --tpmstate dir="${TPM_DIR}" \
+        --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" \
+        --log level=20
+}
+
+stop_vm() {
+    echo "Stopping Lima VM '${VM_NAME}'..."
+    limactl stop -y "${VM_NAME}" 2>/dev/null || true
 }
