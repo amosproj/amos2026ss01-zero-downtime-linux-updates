@@ -9,7 +9,7 @@ use crate::auth::extractors::AuthDevice;
 
 /// GET /device/os - Get the assigned OS version
 pub async fn get(AuthDevice(device): AuthDevice) -> Response {
-    let os = match os_get_assigned(device.id, device.group_id).await {
+    let (os, immediate) = match os_get_assigned(device.id, device.group_id).await {
         Ok(r) => r,
         Err(e) => {
             log::error!("{:?}", e);
@@ -20,6 +20,7 @@ pub async fn get(AuthDevice(device): AuthDevice) -> Response {
     Json(amos_common::device_api::os::GetResponse {
         id: os.id,
         commit_hash: os.commit_hash,
+        immediate
     })
     .into_response()
 }
@@ -41,7 +42,7 @@ pub async fn put(
 async fn os_get_assigned(
     device_id: i32,
     group_id: Option<i32>,
-) -> Result<OsVersion::Model, sea_orm::DbErr> {
+) -> Result<(OsVersion::Model, bool), sea_orm::DbErr> {
     let (assignments, _) =
         crate::api_v1::db::list_os_assignments_for_device(device_id, group_id, None, 0, u64::MAX)
             .await?;
@@ -51,7 +52,7 @@ async fn os_get_assigned(
     }
 
     match crate::api_v1::db::get_os_version(assignments[0].os_version_id).await? {
-        Some(ver) => Ok(ver),
+        Some(ver) => Ok((ver, assignments[0].immediate)),
         None => Err(sea_orm::DbErr::RecordNotFound("OsVersion".to_owned())),
     }
 }
