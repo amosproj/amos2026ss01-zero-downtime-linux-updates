@@ -68,6 +68,9 @@ if [ -f "$swtpm_pidfile" ]; then
     rm -f "$swtpm_pidfile"
 fi
 
+echo "Cleaning up any existing TPM state in ${TPM_DIR}..."
+rm -rf "${TPM_DIR}"
+
 # Initialize the TPM with certificate an EK from host
 echo "Initializing TPM via external script"
 ./create_tpm.sh

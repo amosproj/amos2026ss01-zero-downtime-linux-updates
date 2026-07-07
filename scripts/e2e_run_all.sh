@@ -35,7 +35,7 @@ TEST_SUITE=(
 # This function executes immediately when the script finishes or hits an early abort
 cleanup() {
     echo -e "\n${NC}=== Cleaning up background processes ==="
-    
+
     limactl shell "${VM_NAME}" -- sudo systemctl stop orchestrator.service 2>/dev/null || true
 
     # Shut down the VM, also automatically terminates the backgrounded swtpm process
@@ -73,6 +73,9 @@ trap cleanup EXIT
 echo "========================================="
 echo " Starting TPM and VM "
 echo "========================================="
+
+echo "Cleaning up any existing TPM state in ${TPM_DIR}..."
+rm -rf "${TPM_DIR}"
 
 echo "Initializing emulated TPM in ${TPM_DIR}..."
 if ! ./create_tpm.sh "$TPM_DIR"; then
@@ -139,7 +142,7 @@ for i in $(seq 1 ${MAX_ATTEMPTS}); do
         echo "Mock server is up and listening."
         break
     fi
-    
+
     if [ "$i" -eq ${MAX_ATTEMPTS} ]; then
         echo "Error: Server did not become ready within timeout period." >&2
         exit 1
@@ -168,7 +171,7 @@ echo "========================================="
 
 for test_script in "${TEST_SUITE[@]}"; do
     echo -e "\n---> Executing Phase: ${test_script}"
-    
+
     if [ ! -x "$test_script" ]; then
         chmod +x "$test_script"
     fi
@@ -179,7 +182,7 @@ for test_script in "${TEST_SUITE[@]}"; do
     else
         echo -e "${RED}𐄂 FAILED: ${test_script}${NC}"
         ((FAILED_COUNT++))
-        
+
         # If seeding fails, stop immediately instead of cascading errors
         if [[ "$test_script" == *"seed_api"* ]]; then
             echo -e "${RED}Critical initialization failure in database seeding. Aborting matrix.${NC}"
