@@ -9,7 +9,6 @@ source ./tests/common_env.sh
 SERVER_PID=""
 FAILED_COUNT=0
 PASSED_COUNT=0
-TPM_DIR="/tmp/emulated_tpm"
 
 # TimescaleDB configurations
 readonly timescale_container="amos-test-timescaledb"
@@ -79,8 +78,8 @@ if ! ./create_tpm.sh "$TPM_DIR"; then
     echo "Could not create TPM. Aborting."
     exit 1
 fi
-swtpm socket --tpm2 -d --tpmstate dir="${TPM_DIR}" --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" --log level=20
 
+start_swtpm
 sleep 2
 
 echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
