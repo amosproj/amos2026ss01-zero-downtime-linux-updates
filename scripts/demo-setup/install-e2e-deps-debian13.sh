@@ -66,8 +66,7 @@ $SUDO apt-get install -y --no-install-recommends \
     qemu-system-x86 qemu-utils ovmf \
     swtpm swtpm-tools \
     podman \
-    uidmap \
-    passt \
+    uidmap passt nftables \  # missing deps of podman / image-builder / ..
     fzf \
     htop
 
