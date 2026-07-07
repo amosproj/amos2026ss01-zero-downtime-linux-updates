@@ -66,7 +66,7 @@ echo ">>> Adding landing page -> target/doc/index.html"
 cp "$SCRIPT_DIR/docs-landing.html" "$OUT_DIR/index.html"
 
 echo ">>> Adding SwaggerUI"
-cp "$SCRIPT_DIR/docs-landing.html" "$OUT_DIR/swagger-ui.html"
+cp "$SCRIPT_DIR/swagger-ui.html" "$OUT_DIR/swagger-ui.html"
 cp Documentation/DeviceApi/openapi.yaml "$OUT_DIR/device_api.yaml"
 
 # cargo leaves a lock file in the output dir; it must not ship in the artifact.
