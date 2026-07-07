@@ -163,8 +163,29 @@ fi
 
 # --- other ------------------------------------------------------------------
 
-log "add user to kvm group (for qemu)"
-sudo usermod -aG kvm debian
+target_user="${SUDO_USER:-$(id -un)}"
+log "Adding $target_user to kvm group (for qemu)"
+if getent group kvm >/dev/null 2>&1; then
+    $SUDO usermod -aG kvm "$target_user"
+else
+    warn "kvm group not found; skipping usermod"
+fi
+
+containers_conf="$HOME/.config/containers/containers.conf"
+mkdir -p "$(dirname "$containers_conf")"
+if [ -f "$containers_conf" ]; then
+    if grep -Eq '^[[:space:]]*cgroup_manager[[:space:]]*=[[:space:]]*"cgroupfs"' "$containers_conf"; then
+        log "containers.conf already configures cgroup_manager=\"cgroupfs\""
+    else
+        warn "$containers_conf exists; set [engine] cgroup_manager=\"cgroupfs\" manually"
+    fi
+else
+    log "Creating $containers_conf for podman cgroup manager"
+    cat >"$containers_conf" <<'EOF'
+[engine]
+cgroup_manager = "cgroupfs"
+EOF
+fi
 
 # --- summary -----------------------------------------------------------------
 echo
