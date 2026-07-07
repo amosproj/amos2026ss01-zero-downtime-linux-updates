@@ -1,9 +1,5 @@
 use amos_common::entities::{ApplicationLog, DeviceLog, LogEvent};
-use axum::{
-    Json,
-    extract::Query,
-    http::StatusCode,
-};
+use axum::{Json, extract::Query, http::StatusCode};
 
 use crate::auth::extractors::AuthDevice;
 

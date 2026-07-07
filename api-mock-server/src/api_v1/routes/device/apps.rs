@@ -1,16 +1,10 @@
 use amos_common::entities::ApplicationConfig;
-use axum::{
-    Json,
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{Json, http::StatusCode, response::IntoResponse};
 
 use crate::auth::extractors::AuthDevice;
 
 /// GET /device/apps - Get the assigned applications
-pub async fn get(
-    AuthDevice(device): AuthDevice,
-) -> Result<impl IntoResponse, StatusCode> {
+pub async fn get(AuthDevice(device): AuthDevice) -> Result<impl IntoResponse, StatusCode> {
     let apps = match apps_get_assigned(device.id).await {
         Ok(r) => r,
         Err(e) => {

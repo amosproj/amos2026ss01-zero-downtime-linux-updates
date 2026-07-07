@@ -102,7 +102,10 @@ mod tests {
         )
         .await
         .unwrap();
-        Router::new().nest("/v1", routes(&crate::auth::tests::MockJwtMiddlewareProvider))
+        Router::new().nest(
+            "/v1",
+            routes(&crate::auth::tests::MockJwtMiddlewareProvider),
+        )
     }
 
     async fn test_app_postgres() -> (
@@ -118,7 +121,13 @@ mod tests {
             .await
             .unwrap();
 
-        (Router::new().nest("/v1", routes(&crate::auth::tests::MockJwtMiddlewareProvider)), container)
+        (
+            Router::new().nest(
+                "/v1",
+                routes(&crate::auth::tests::MockJwtMiddlewareProvider),
+            ),
+            container,
+        )
     }
 
     async fn get(app: Router, uri: &str) -> (StatusCode, String) {

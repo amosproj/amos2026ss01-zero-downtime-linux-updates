@@ -66,21 +66,19 @@ async fn main() {
     let jwt_middleware_provider = auth::DefaultJwtMiddlewareProvider(config.jwt);
 
     // User-facing API
-    let api_v1 = Router::new()
-        .merge(api_v1::routes::routes(&jwt_middleware_provider));
+    let api_v1 = Router::new().merge(api_v1::routes::routes(&jwt_middleware_provider));
 
-    let app =
-        Router::new()
-            .nest("/v1", api_v1)
-            .layer(axum_middleware::from_fn(
-                async |req: Request, next: axum_middleware::Next| {
-                    let method = req.method().to_string();
-                    let uri = req.uri().to_string();
-                    let res = next.run(req).await;
-                    debug!("{} {} -> {}", method, uri, res.status());
-                    res
-                },
-            ));
+    let app = Router::new()
+        .nest("/v1", api_v1)
+        .layer(axum_middleware::from_fn(
+            async |req: Request, next: axum_middleware::Next| {
+                let method = req.method().to_string();
+                let uri = req.uri().to_string();
+                let res = next.run(req).await;
+                debug!("{} {} -> {}", method, uri, res.status());
+                res
+            },
+        ));
 
     let bind_address = format!("0.0.0.0:{}", config.http_port);
     let listener = TcpListener::bind(&bind_address)

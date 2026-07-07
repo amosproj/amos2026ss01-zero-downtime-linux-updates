@@ -3,9 +3,7 @@ use sea_orm::ModelTrait;
 
 /// POST /register - Try and register a device with the server.
 /// Can only succeed if there is a pending registration.
-pub async fn post(
-    Json(body): Json<amos_common::device_api::register::PostBody>,
-) -> StatusCode {
+pub async fn post(Json(body): Json<amos_common::device_api::register::PostBody>) -> StatusCode {
     let err_msg = {
         if body.uuid.trim().is_empty() {
             Some("Device UUID cannot be empty")
