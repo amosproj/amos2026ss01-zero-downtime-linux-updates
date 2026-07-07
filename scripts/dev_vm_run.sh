@@ -39,6 +39,9 @@ if [ -f "$swtpm_pidfile" ]; then
     rm -f "$swtpm_pidfile"
 fi
 
+echo "Cleaning up any existing TPM state in ${TPM_DIR}..."
+rm -rf "${TPM_DIR}"
+
 echo "Initializing emulated TPM in ${TPM_DIR}..."
 if ! ./create_tpm.sh "$TPM_DIR"; then
     echo "Could not create TPM. Aborting." >&2

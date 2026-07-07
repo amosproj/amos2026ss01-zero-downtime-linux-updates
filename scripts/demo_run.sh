@@ -53,6 +53,9 @@ echo "========================================="
 echo " Starting TPM and VM "
 echo "========================================="
 
+echo "Cleaning up any existing TPM state in ${TPM_DIR}..."
+rm -rf "${TPM_DIR}"
+
 echo "Initializing emulated TPM in ${TPM_DIR}..."
 if ! ./create_tpm.sh "$TPM_DIR"; then
     echo "Could not create TPM. Aborting."
