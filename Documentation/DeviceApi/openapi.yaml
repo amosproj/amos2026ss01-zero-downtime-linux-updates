@@ -3,7 +3,7 @@ info:
   title: AMOS Zero Downtime Linux Update - Device-facing API
   description: |-
     This is the device-facing part of the API, implemented in both server and orchestrator.
-    Usually it is located inside the subpath ```/v2```. In order to gain access, devices 
+    Usually it is located inside the subpath ```/v1```. In order to gain access, devices 
     have to send a valid JWT token signed by their registered TPM as an ```Authorization: Bearer ...``` header
     (except for the /register endpoint).
   version: 2.0.0

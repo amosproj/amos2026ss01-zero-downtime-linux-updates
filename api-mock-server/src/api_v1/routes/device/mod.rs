@@ -7,7 +7,7 @@ mod logs;
 mod os;
 mod ping;
 
-/// Provides routes for the device-facing API, usually nested in ```/v2/device```.
+/// Provides routes for the device-facing API, usually nested in ```/v1/device```.
 /// Serves requests with a valid device JWT only.
 pub fn router() -> axum::Router {
     axum::Router::new()

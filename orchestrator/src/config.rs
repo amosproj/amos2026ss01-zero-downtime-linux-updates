@@ -21,7 +21,7 @@ pub struct OrchestratorConfig {
 impl Default for OrchestratorConfig {
     fn default() -> Self {
         Self {
-            cloud_url: "https://cloud.weber.de/v2".to_owned(),
+            cloud_url: "https://cloud.weber.de/v1".to_owned(),
             poll_interval_secs: 5,
             podman_path: "/run/podman/podman.sock".to_owned(),
             https_proxy: None,
