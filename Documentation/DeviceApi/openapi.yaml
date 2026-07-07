@@ -37,6 +37,8 @@ paths:
                   id:
                     type: integer
                   commit_hash: string
+                  immediate:
+                    type: boolean
         '418':
           description: Device not registered
         '500':
