@@ -55,8 +55,8 @@ pub(super) fn pagination_err(msg: &str) -> Response {
     err(StatusCode::UNPROCESSABLE_ENTITY, msg)
 }
 
-pub fn routes(jwt_config: crate::config::JwtConfig) -> Router {
-    Router::new()
+pub fn routes(jwt_middleware_provider: &dyn crate::auth::JwtMiddlewareProvider) -> Router {
+    let router = Router::new()
         .merge(application_assignments::routes())
         .merge(application_configs::routes())
         .merge(applications::routes())
@@ -74,11 +74,10 @@ pub fn routes(jwt_config: crate::config::JwtConfig) -> Router {
         // All previous routes are only accessible to users
         .route_layer(axum::middleware::from_extractor::<AuthUser>())
         // The device router includes its own AuthDevice barrier
-        .nest("/device", device::router())
-        .route_layer(axum::middleware::from_fn_with_state(
-            jwt_config,
-            crate::auth::jwt_middleware,
-        ))
+        .nest("/device", device::router());
+
+    jwt_middleware_provider
+        .register_middleware(router)
         // Register endpoint has to be unprotected
         .route("/register", post(register::post))
 }
@@ -103,7 +102,7 @@ mod tests {
         )
         .await
         .unwrap();
-        Router::new().nest("/v1", routes())
+        Router::new().nest("/v1", routes(&crate::auth::tests::MockJwtMiddlewareProvider))
     }
 
     async fn test_app_postgres() -> (
@@ -119,7 +118,7 @@ mod tests {
             .await
             .unwrap();
 
-        (Router::new().nest("/v1", routes()), container)
+        (Router::new().nest("/v1", routes(&crate::auth::tests::MockJwtMiddlewareProvider)), container)
     }
 
     async fn get(app: Router, uri: &str) -> (StatusCode, String) {

@@ -17,7 +17,22 @@ use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend};
 use serde_json::Value;
 use std::cell::RefCell;
 
-pub async fn jwt_middleware(
+pub trait JwtMiddlewareProvider {
+    fn register_middleware(&self, input: axum::Router) -> axum::Router;
+}
+
+pub struct DefaultJwtMiddlewareProvider(pub JwtConfig);
+
+impl JwtMiddlewareProvider for DefaultJwtMiddlewareProvider {
+    fn register_middleware(&self, input: axum::Router) -> axum::Router {
+        input.route_layer(axum::middleware::from_fn_with_state(
+            self.0.clone(),
+            jwt_middleware,
+        ))
+    }
+}
+
+async fn jwt_middleware(
     State(jwt_config): State<JwtConfig>,
     mut req: Request,
     next: Next,
@@ -137,4 +152,33 @@ fn extract_claim(claim: &Value, key: &str) -> Result<String, jsonwebtoken::error
         .and_then(Value::as_str)
         .map(|s| s.to_owned())
         .ok_or_else(|| jsonwebtoken::errors::Error::from(ErrorKind::InvalidToken))
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    /// Provides a mock implementation for unit testing,
+    /// permitting any request with test details
+    pub struct MockJwtMiddlewareProvider;
+
+    impl crate::auth::JwtMiddlewareProvider for MockJwtMiddlewareProvider {
+        fn register_middleware(&self, input: axum::Router) -> axum::Router {
+            input.route_layer(axum::middleware::from_fn(mock_jwt_middleware))
+        }
+    }
+
+    async fn mock_jwt_middleware(mut req: Request, next: Next) -> Result<Response, StatusCode> {
+        let exts = req.extensions_mut();
+        exts.insert(device::ClientDevice {
+            id: 1,
+            group_id: None,
+        });
+        exts.insert(user::Claims {
+            subject: "test".to_owned(),
+            name: "Test-User".to_owned(),
+            expiry: usize::MAX,
+        });
+        Ok(next.run(req).await)
+    }
 }

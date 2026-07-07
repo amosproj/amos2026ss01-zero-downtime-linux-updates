@@ -63,9 +63,11 @@ async fn main() {
             std::process::exit(1);
         });
 
+    let jwt_middleware_provider = auth::DefaultJwtMiddlewareProvider(config.jwt);
+
     // User-facing API
     let api_v1 = Router::new()
-        .merge(api_v1::routes::routes(config.jwt));
+        .merge(api_v1::routes::routes(&jwt_middleware_provider));
 
     let app =
         Router::new()
