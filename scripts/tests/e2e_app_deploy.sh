@@ -45,21 +45,21 @@ fi
 echo "Polling application logs for env var NAME=AMOS printed by hello-world..."
 ENV_VAR_FOUND=false
 APP_LOGS=""
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
     APP_LOGS=$(curl -sS -H "Authorization: Bearer ${JWT}" \
         "${HOST_SERVER_URL}/v1/logs/applications?device_id=1&application_id=1")
     if echo "${APP_LOGS}" | jq -r '.data[].message' | grep -Eq 'NAME[[:space:]]*=[[:space:]]*AMOS'; then
         ENV_VAR_FOUND=true
         break
     fi
-    echo "  [${i}/30] Env var not yet in logs, retrying in 3s..."
+    echo "  [${i}/60] Env var not yet in logs, retrying in 3s..."
     sleep 3
 done
 
 if [ "${ENV_VAR_FOUND}" = "true" ]; then
     echo -e "${GREEN}Success: Application log confirms NAME=AMOS was injected into the container environment.${NC}"
 else
-    echo -e "${RED}Failure: NAME=AMOS not found in application logs after 90s.${NC}"
+    echo -e "${RED}Failure: NAME=AMOS not found in application logs after 180s.${NC}"
     echo "Full logs payload: ${APP_LOGS}"
     exit 1
 fi

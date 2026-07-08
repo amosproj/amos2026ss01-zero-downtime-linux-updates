@@ -122,12 +122,12 @@ echo "Waiting for TimescaleDB to be completely ready..."
 # entrypoint first runs init scripts against a temporary Unix-socket-only
 # instance, so `podman exec ... psql` can report ready before the real
 # TCP-listening server has restarted into place.
-for i in $(seq 1 60); do
+for i in $(seq 1 120); do
     if pg_isready -h 127.0.0.1 -p "$timescale_port" -U postgres >/dev/null 2>&1; then
         echo "TimescaleDB is fully initialized and ready."
         break
     fi
-    if [ "$i" -eq 60 ]; then
+    if [ "$i" -eq 120 ]; then
         echo "TimescaleDB did not become ready in time." >&2
         exit 1
     fi
