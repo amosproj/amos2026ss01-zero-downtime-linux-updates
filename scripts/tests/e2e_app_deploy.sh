@@ -7,11 +7,15 @@ cd "$(dirname "$0")"
 source ./common_env.sh
 
 echo "=== Testing Application Deployment ==="
-IMAGE="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-hello-world:0.1.1"
+IMAGE="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-hello-world:0.1.0"
 
 api "/v1/applications"    POST '{ "name": "hello-world", "description": "E2E heartbeat test app" }' 201
 api "/v1/app-configs"     POST "{\"device_id\": 1, \"application_id\": 1, \"image\": \"${IMAGE}\", \"config\": {\"environment\": {\"NAME\": \"AMOS\"}}}" 201
-api "/v1/app-assignments" POST '{ "application_config_id": 1, "device_id": 1 }' 201
+
+ASSIGNMENT=$(curl -sS -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${JWT}" \
+    -d '{ "application_config_id": 1, "device_id": 1 }' \
+    "${HOST_SERVER_URL}/v1/app-assignments")
+ASSIGNMENT_ID=$(echo "${ASSIGNMENT}" | jq -r '.id')
 
 limactl shell "${VM_NAME}" -- sudo systemctl restart orchestrator.service
 
@@ -60,22 +64,20 @@ else
     exit 1
 fi
 
-
 echo "=== Testing Application Teardown ==="
 
-
-echo "Removing app-assignment to trigger orchestrator teardown..."
-api "/v1/app-assignments" DELETE '{ "application_config_id": 1, "device_id": 1 }' 200
+echo "Removing app-assignment (id=${ASSIGNMENT_ID}) to trigger orchestrator teardown..."
+api "/v1/app-assignments/${ASSIGNMENT_ID}" DELETE '' 204
 
 echo "Waiting for orchestrator to stop and destroy the container..."
 for i in $(seq 1 30); do
     CONTAINER_COUNT=$(limactl shell "${VM_NAME}" -- sudo podman ps -a -q -f "label=org.amos.application_id=1" | wc -l)
-    
+
     if [ "${CONTAINER_COUNT}" -eq 0 ]; then
         echo -e "${GREEN}Success: Container was successfully stopped and destroyed.${NC}"
         exit 0
     fi
-    
+
     echo "  [${i}/30] Container still exists, waiting..."
     sleep 3
 done
