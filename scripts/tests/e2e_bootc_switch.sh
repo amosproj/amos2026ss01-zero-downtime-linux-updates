@@ -25,7 +25,7 @@ echo "Polling live bootc status for immediate upgrade execution..."
 
 # --- Dynamic Verification Loop ---
 UPGRADED=false
-for i in $(seq 1 20); do
+for i in $(seq 1 50); do
     BOOTC_STATUS_JSON=$(limactl shell "${VM_NAME}" -- sudo bootc status --json 2>/dev/null)
     
     if [ $? -eq 0 ] && [ -n "$BOOTC_STATUS_JSON" ]; then

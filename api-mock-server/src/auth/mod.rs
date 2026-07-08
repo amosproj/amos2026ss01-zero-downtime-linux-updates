@@ -1,31 +1,38 @@
+mod device;
+pub mod extractors;
+pub mod user;
+
+use crate::api_v1::db;
 use crate::audit_context::CURRENT_USER;
-use crate::auth_device::validate_device_token;
-use crate::auth_user::validate_user_token;
 use crate::config::JwtConfig;
-use crate::{api_v1::db, auth_device};
 use axum::{
     extract::{Request, State},
     http::{StatusCode, header},
     middleware::Next,
     response::Response,
 };
-use jsonwebtoken::{TokenData, dangerous::insecure_decode};
+use jsonwebtoken::{TokenData, dangerous::insecure_decode, errors::ErrorKind};
 use log::{debug, error, trace};
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend};
 use serde_json::Value;
 use std::cell::RefCell;
 
-async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
-    if db.get_database_backend() != DbBackend::Postgres {
-        debug!("Skipping PG session variable on non-Postgres backend");
-        return Ok(());
-    }
-    let sql = format!("SET app.audit_user = '{}'", user_id);
-    db.execute_unprepared(&sql).await?;
-    Ok(())
+pub trait JwtMiddlewareProvider {
+    fn register_middleware(&self, input: axum::Router) -> axum::Router;
 }
 
-pub async fn jwt_auth(
+pub struct DefaultJwtMiddlewareProvider(pub JwtConfig);
+
+impl JwtMiddlewareProvider for DefaultJwtMiddlewareProvider {
+    fn register_middleware(&self, input: axum::Router) -> axum::Router {
+        input.route_layer(axum::middleware::from_fn_with_state(
+            self.0.clone(),
+            jwt_middleware,
+        ))
+    }
+}
+
+async fn jwt_middleware(
     State(jwt_config): State<JwtConfig>,
     mut req: Request,
     next: Next,
@@ -58,14 +65,14 @@ pub async fn jwt_auth(
     if is_device {
         // 4. Validate the token for a device
         trace!("Received device JWT: {:?}", token_data);
-        match validate_device_token(token.to_owned(), token_data).await {
+        match device::validate_token(token.to_owned(), token_data).await {
             Ok(claims) => {
                 // 5. Attach the claims to the request so handlers can use them
                 req.extensions_mut().insert(claims);
                 // 6. Pass the request to the next layer
                 Ok(next.run(req).await)
             }
-            Err(auth_device::DeviceTokenError::DeviceNotFound) => {
+            Err(device::DeviceTokenError::DeviceNotFound) => {
                 debug!("JWT rejected (device unknown)");
                 Err(StatusCode::IM_A_TEAPOT)
             }
@@ -78,7 +85,7 @@ pub async fn jwt_auth(
     } else {
         // 4. Validate the token for a user
         trace!("Received user JWT: {:?}", token_data);
-        match validate_user_token(token, &jwt_config) {
+        match user::validate_token(token, &jwt_config) {
             Ok(claims) => {
                 // 5. Upsert user into the database
                 let user = match db::upsert_user(claims.clone()).await {
@@ -119,6 +126,16 @@ pub async fn jwt_auth(
     }
 }
 
+async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
+    if db.get_database_backend() != DbBackend::Postgres {
+        debug!("Skipping PG session variable on non-Postgres backend");
+        return Ok(());
+    }
+    let sql = format!("SET app.audit_user = '{}'", user_id);
+    db.execute_unprepared(&sql).await?;
+    Ok(())
+}
+
 fn is_device_token(token: &TokenData<Value>) -> bool {
     token
         .claims
@@ -126,4 +143,42 @@ fn is_device_token(token: &TokenData<Value>) -> bool {
         .and_then(|v| v.as_str())
         .map(|s| s == "device")
         .unwrap_or(false)
+}
+
+/// helpers that map missing/invalid -> ErrorKind::InvalidToken
+fn extract_claim(claim: &Value, key: &str) -> Result<String, jsonwebtoken::errors::Error> {
+    claim
+        .get(key)
+        .and_then(Value::as_str)
+        .map(|s| s.to_owned())
+        .ok_or_else(|| jsonwebtoken::errors::Error::from(ErrorKind::InvalidToken))
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    /// Provides a mock implementation for unit testing,
+    /// permitting any request with test details
+    pub struct MockJwtMiddlewareProvider;
+
+    impl crate::auth::JwtMiddlewareProvider for MockJwtMiddlewareProvider {
+        fn register_middleware(&self, input: axum::Router) -> axum::Router {
+            input.route_layer(axum::middleware::from_fn(mock_jwt_middleware))
+        }
+    }
+
+    async fn mock_jwt_middleware(mut req: Request, next: Next) -> Result<Response, StatusCode> {
+        let exts = req.extensions_mut();
+        exts.insert(device::ClientDevice {
+            id: 1,
+            group_id: None,
+        });
+        exts.insert(user::Claims {
+            subject: "test".to_owned(),
+            name: "Test-User".to_owned(),
+            expiry: usize::MAX,
+        });
+        Ok(next.run(req).await)
+    }
 }
