@@ -27,6 +27,10 @@ QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     limactl start --log-level warn "${VM_NAME}"
 limactl shell "${VM_NAME}" -- bash -c 'sudo /var/usrlocal/bin/amos-orchestrator -s 2>&1 \
     | grep "Could not initialize the TPM"'
+limactl shell "${VM_NAME}" -- sudo mount -o remount,rw /boot
+limactl shell "${VM_NAME}" -- sudo grub2-editenv - set boot_success=1
+limactl shell "${VM_NAME}" -- sudo grub2-editenv - unset boot_counter
+limactl shell "${VM_NAME}" -- sudo mount -o remount,ro /boot
 stop_vm
 
 # Case: Wrongly/unexpectedly intialized TPM should fail
@@ -44,6 +48,10 @@ QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     limactl start --log-level warn "${VM_NAME}"
 limactl shell "${VM_NAME}" -- bash -c 'sudo /var/usrlocal/bin/amos-orchestrator -s 2>&1 \
     | grep "Could not read read endorsement key"'
+limactl shell "${VM_NAME}" -- sudo mount -o remount,rw /boot
+limactl shell "${VM_NAME}" -- sudo grub2-editenv - set boot_success=1
+limactl shell "${VM_NAME}" -- sudo grub2-editenv - unset boot_counter
+limactl shell "${VM_NAME}" -- sudo mount -o remount,ro /boot
 stop_vm
 
 # Case: Failing to read DMI info should fail
@@ -57,6 +65,10 @@ QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     limactl start --log-level warn "${VM_NAME}"
 limactl shell "${VM_NAME}" -- bash -c 'sudo /var/usrlocal/bin/amos-orchestrator -s 2>&1 \
     | grep "Could not read device UUID"'
+limactl shell "${VM_NAME}" -- sudo mount -o remount,rw /boot
+limactl shell "${VM_NAME}" -- sudo grub2-editenv - set boot_success=1
+limactl shell "${VM_NAME}" -- sudo grub2-editenv - unset boot_counter
+limactl shell "${VM_NAME}" -- sudo mount -o remount,ro /boot
 stop_vm
 
 # Restore "normal" vm

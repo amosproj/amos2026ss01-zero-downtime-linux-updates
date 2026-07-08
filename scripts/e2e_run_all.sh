@@ -90,7 +90,7 @@ QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     -smbios type=2,serial=${DEVICE_SERIAL}" \
     limactl start "${VM_NAME}"
 
-sleep 5
+sleep 20
 
 echo "========================================="
 echo " Starting TimescaleDB Container "
@@ -152,10 +152,22 @@ set -e
 
 # Ensure boot was successful
 echo "Checking for successful Greenboot orchestrator check"
-limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service \
-    | tee /dev/stderr \
-    | grep "required script /etc/greenboot/check/required.d/10-orchestrator-check.sh success" \
+GREENBOOT_OK=0
+for i in $(seq 1 60); do
+    if limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service 2>/dev/null \
+            | grep -q "required script /etc/greenboot/check/required.d/10-orchestrator-check.sh success"; then
+        echo "Greenboot orchestrator check passed."
+        GREENBOOT_OK=1
+        break
+    fi
+    sleep 2
+done
 
+if [ "$GREENBOOT_OK" -ne 1 ]; then
+    echo "Greenboot orchestrator check did not succeed in time." >&2
+    limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service || true
+    exit 1
+fi
 # Ensure Podman API socket is running
 echo "Checking for running Podman socket"
 limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
