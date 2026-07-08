@@ -55,9 +55,9 @@ jobs:
           cache-on-failure: true
       - run: cargo test --all-features
 
-# Release Build if a Tag is pushed
-# https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-api-mock-server
-# https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-orchestrator
+  # Release Build if a Tag is pushed
+  # https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-api-mock-server
+  # https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-orchestrator
 
   build_binaries:
     name: Build Binaries & Upload as artifact
@@ -114,6 +114,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Generate release notes
         if: startsWith(github.ref_name, 'sprint-') && contains(github.ref_name, '-release')
