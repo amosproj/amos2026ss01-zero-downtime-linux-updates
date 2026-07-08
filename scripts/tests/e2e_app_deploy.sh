@@ -21,14 +21,14 @@ limactl shell "${VM_NAME}" -- sudo systemctl restart orchestrator.service
 
 echo "Polling for reported application assignment (allows time for GHCR image pull)..."
 REPORTED_CFG_ID=""
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
     REPORTED=$(curl -sS -H "Authorization: Bearer ${JWT}" \
         "${HOST_SERVER_URL}/v1/reported-app-assignments?device_id=1")
     REPORTED_CFG_ID=$(echo "${REPORTED}" | jq '.data[0].application_config_id // empty')
     if [ "${REPORTED_CFG_ID}" = "1" ]; then
         break
     fi
-    echo "  [${i}/30] Not yet reported, retrying in 3s..."
+    echo "  [${i}/60] Not yet reported, retrying in 3s..."
     sleep 3
 done
 
