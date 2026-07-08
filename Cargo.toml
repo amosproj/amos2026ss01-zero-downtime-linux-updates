@@ -1,9 +1,9 @@
 [workspace]
 resolver = "3"
-members = ["api-mock-server", "common", "orchestrator", "sea-orm-timescale"]
+members = ["api-server", "common", "orchestrator", "sea-orm-timescale"]
 
 [workspace.dependencies]
-amos-api-mock-server = { path = "api-mock-server" }
+amos-api-server = { path = "api-server" }
 amos-common = { path = "common" }
 amos-orchestrator = { path = "orchestrator" }
 sea-orm-timescale = { path = "sea-orm-timescale" }

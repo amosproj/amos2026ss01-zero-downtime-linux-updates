@@ -45,7 +45,7 @@ cleanup() {
 
     # 2. Terminate the mock server process group on the host machine
     if [ -n "${SERVER_PID:-}" ]; then
-        echo "Stopping api-mock-server on host (PGID -${SERVER_PID})..."
+        echo "Stopping api-server on host (PGID -${SERVER_PID})..."
         kill -- "-${SERVER_PID}" 2>/dev/null || true
         wait "${SERVER_PID}" 2>/dev/null || true
     fi
@@ -123,14 +123,14 @@ for i in $(seq 1 60); do
 done
 
 echo "========================================="
-echo " Starting api-mock-server in Background "
+echo " Starting api-server in Background "
 echo "========================================="
 
 echo "Clearing stale server instances..."
-pkill -f amos-api-mock-server || true
+pkill -f amos-api-server || true
 sleep 0.5
 
-APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-mock-server -dd &
+APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-server -dd &
 SERVER_PID=$!
 
 echo "Waiting for mock server to bind to port ${PORT}..."

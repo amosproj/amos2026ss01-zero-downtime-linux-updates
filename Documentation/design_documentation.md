@@ -69,11 +69,11 @@ Shared code used by both the orchestrator and the mock server:
 
 ---
 
-### `amos-api-mock-server` (binary crate)
+### `amos-api-server` (binary crate)
 
 A lightweight Axum-based HTTP server used during development and testing to simulate the Cloud API. Serves a hardcoded catalog and static download files from an `assets/` directory.
 
-**Entry point:** `api-mock-server/src/main.rs`
+**Entry point:** `api-server/src/main.rs`
 
 ---
 
@@ -269,7 +269,7 @@ workspace
 │       └── reqwest, serde, serde_json, tokio, futures-util
 │   └── clap, config, ed25519-dalek, env_logger, log, anyhow, tokio
 │
-└── amos-api-mock-server (bin)
+└── amos-api-server (bin)
     └── amos-common (lib)
     └── axum, tower-http, tokio
 ```

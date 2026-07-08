@@ -76,13 +76,13 @@ jobs:
       - name: Build Release Binaries
         run: >-
           cargo build --release --target x86_64-unknown-linux-gnu
-          -p amos-api-mock-server
+          -p amos-api-server
           -p amos-orchestrator
 
       - name: Stage Release Binaries
         run: |
           mkdir -p release-bin
-          cp target/x86_64-unknown-linux-gnu/release/amos-api-mock-server release-bin/
+          cp target/x86_64-unknown-linux-gnu/release/amos-api-server release-bin/
           cp target/x86_64-unknown-linux-gnu/release/amos-orchestrator release-bin/
 
       - name: Upload Binaries
