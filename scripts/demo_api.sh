@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Convenience wrapper for sending authenticated API commands to the mock cloud
-# server started by `make demo` (scripts/demo_run.sh). It attaches the dev JWT
+# server started by `make demo-server` (scripts/demo_run.sh). It attaches the dev JWT
 # and pretty-prints the JSON response, so you can drive the demo without
 # retyping curl + the auth header every time.
 #
 # Usage:
-#   scripts/demo_api.sh GET  /v1/devices
-#   scripts/demo_api.sh GET  /v1/devices/1/summary
-#   scripts/demo_api.sh POST /v1/applications '{ "name": "hello", "description": "x" }'
+#   ./scripts/demo_api.sh GET  /v1/devices
+#   ./scripts/demo_api.sh GET  /v1/devices/1/summary
+#   ./scripts/demo_api.sh POST /v1/applications '{ "name": "hello", "description": "x" }'
 #
 # The path may be given with or without the leading /v1.
 
