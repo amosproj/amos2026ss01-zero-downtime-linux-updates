@@ -128,6 +128,9 @@ echo "Clearing stale server instances..."
 pkill -f amos-api-mock-server || true
 sleep 0.5
 
+echo "Building amos-api-mock-server..."
+cargo build --manifest-path ../api-mock-server/Cargo.toml
+
 APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-mock-server -dd &
 SERVER_PID=$!
 

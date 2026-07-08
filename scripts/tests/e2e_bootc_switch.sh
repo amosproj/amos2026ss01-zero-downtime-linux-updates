@@ -5,6 +5,8 @@ source ./common_env.sh
 
 echo "=== Testing Bootc Switch & Apply Sequence ==="
 
+ensure_vm_running
+
 # Define the remote target upgrade reference image
 TARGET_UPGRADE_REF="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:switch-1-tag"
 
