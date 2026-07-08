@@ -1,4 +1,4 @@
-.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build
+.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
@@ -74,6 +74,21 @@ setup-hooks: ## Install git hooks
 	@cp scripts/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
 	@chmod +x .git/hooks/prepare-commit-msg
 	@echo "  Git hooks installed."
+
+# Documentation website (rustdoc + mdBook + landing page). scripts/build-docs.sh
+# is the single source of truth for the build; CI (.github/workflows/docs.yml)
+# runs the same script, so local and published builds cannot drift.
+DOCS_PORT ?= 8000
+
+docs: ## Build the full documentation website (rustdoc + mdBook) into ./target/doc
+	scripts/build-docs.sh
+
+docs-book: ## Build only the mdBook prose (skips rustdoc; works where the TPM crate can't compile, e.g. macOS)
+	SKIP_RUSTDOC=1 scripts/build-docs.sh
+
+docs-serve: docs ## Build the full docs website and serve it locally (DOCS_PORT, default 8000)
+	@echo ">>> Serving docs at http://localhost:$(DOCS_PORT)/ (Ctrl-C to stop)"
+	@cd target/doc && python3 -m http.server $(DOCS_PORT)
 
 image: ARCH ?= $(HOST_ARCH)
 image: _image-build ## Build bootc disk image (qcow2 + raw) for host arch into ./dist

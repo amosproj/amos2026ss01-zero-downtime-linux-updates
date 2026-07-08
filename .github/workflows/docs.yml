@@ -40,22 +40,15 @@ jobs:
       - uses: peaceiris/actions-mdbook@v2
         with:
           mdbook-version: latest
-      - name: Build rustdoc
-        run: cargo doc --no-deps --workspace --all-features --document-private-items
-      # Pull docs that live next to the code/config they describe into the
-      # mdBook source tree. Source of truth stays put; SUMMARY.md links these
-      # under the "Development environment" section.
-      - name: Stage external docs into Documentation tree
-        run: |
-          mkdir -p Documentation/dev-env
-          cp dev-env/tpm.md         Documentation/dev-env/tpm.md
-          cp dev-env/lima/README.md Documentation/dev-env/lima.md
-      - name: Build project documentation (mdBook)
-        run: mdbook build Documentation --dest-dir target/doc/docs
-      - name: Add landing page
-        run: cp .github/pages/index.html target/doc/index.html
-      - name: Remove cargo lock file from the artifact
-        run: rm -f target/doc/.lock
+      # mdbook-mermaid renders the ```mermaid diagrams (see book.toml
+      # [preprocessor.mermaid]). Installs a prebuilt binary — no compilation.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook-mermaid
+      # Single source of truth for the docs build, shared with `make docs` so the
+      # published site and local previews are produced the exact same way.
+      - name: Build documentation website
+        run: scripts/build-docs.sh
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
