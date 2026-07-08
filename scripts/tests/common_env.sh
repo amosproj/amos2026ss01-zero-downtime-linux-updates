@@ -62,5 +62,5 @@ start_swtpm() {
 
 stop_vm() {
     echo "Stopping Lima VM '${VM_NAME}'..."
-    limactl stop -y "${VM_NAME}" 2>/dev/null || true
+    limactl stop -f "${VM_NAME}" 2>/dev/null || true
 }
