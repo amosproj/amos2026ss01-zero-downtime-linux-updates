@@ -9,7 +9,7 @@
             "": [
                 {
                     "type": "sigstoreSigned",
-                    "keyPath": "/etc/pki/containers/cosign.pub",
+                    "keyPath": "/usr/share/pki/containers/cosign.pub",
                     "signedIdentity": {
                         "type": "matchRepository"
                     }

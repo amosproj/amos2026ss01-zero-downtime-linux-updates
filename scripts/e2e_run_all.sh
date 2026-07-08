@@ -166,18 +166,13 @@ echo "========================================="
     set -e
     root_dir="$(cd "$script_dir/.." && pwd)"
 
-    # 1. Create the destination directory under /etc (which is writeable!)
-    limactl shell "${VM_NAME}" -- sudo mkdir -p /etc/pki/containers
-
-    # 2. Copy cosign.pub from the root directory into the VM's /etc/pki folder
-    limactl copy "$root_dir/cosign.pub" "${VM_NAME}":/tmp/cosign.pub
-    limactl shell "${VM_NAME}" -- sudo mv /tmp/cosign.pub /etc/pki/containers/cosign.pub
-
-    # 3. Copy container-policy.json into the VM's container policy engine path
+    # cosign.pub already ships baked into /usr/share/pki/containers on every
+    # image (regardless of DEV_MODE), so only the policy itself needs forcing
+    # to the prod variant here.
     limactl copy "$root_dir/container-policy.json" "${VM_NAME}":/tmp/policy.json
     limactl shell "${VM_NAME}" -- sudo mv /tmp/policy.json /etc/containers/policy.json
 
-    echo "✓ Production container policy and cosign.pub provisioned successfully inside writeable /etc."
+    echo "✓ Production container policy provisioned successfully inside writeable /etc."
 )
 
 echo "========================================="

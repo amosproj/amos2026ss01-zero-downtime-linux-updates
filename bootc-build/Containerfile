@@ -34,6 +34,7 @@ RUN cargo build --package amos-orchestrator --release
 
 
 FROM quay.io/fedora/fedora-bootc:${FEDORA_VERSION}
+ARG DEV_MODE
 
 # Install following components:
 #  - greenboot: health checks after bootc switch
