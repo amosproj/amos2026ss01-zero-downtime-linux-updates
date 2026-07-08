@@ -36,6 +36,9 @@ TEST_SUITE=(
 
 # This function executes immediately when the script finishes or hits an early abort
 cleanup() {
+    # Capture the script's exit code so an early abort (before any test ran)
+    # is reported as a failure instead of "0 failed" masquerading as a pass.
+    local rc=$?
     echo -e "\n${NC}=== Cleaning up background processes ==="
     
     # Shut down the VM, also automatically terminates the backgrounded swtpm process
@@ -59,7 +62,7 @@ cleanup() {
     echo -e " Total Failed: ${RED}${FAILED_COUNT}${NC}"
     echo "========================================="
 
-    if [ "${FAILED_COUNT}" -gt 0 ]; then
+    if [ "${FAILED_COUNT}" -gt 0 ] || [ "$rc" -ne 0 ]; then
         echo -e "${RED}=== E2E TEST HARNESS FAILED ===${NC}"
         exit 1
     else
@@ -81,6 +84,15 @@ fi
 
 start_swtpm
 sleep 2
+
+# Recreate the VM from the template every run: the bootc switch tests
+# permanently change the instance disk's booted image (whose greenboot
+# service is disabled), so reusing the instance breaks the next run.
+echo "Recreating VM '${VM_NAME}' from template..."
+limactl stop -f "${VM_NAME}" 2>/dev/null || true
+limactl delete -f "${VM_NAME}" 2>/dev/null || true
+# The template's image location is relative to the repo root.
+(cd "$script_dir/.." && limactl create -y --name "${VM_NAME}" dev-env/lima/edge-ipc.yaml)
 
 echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
@@ -106,10 +118,12 @@ podman run -d --name "$timescale_container" \
     docker.io/timescale/timescaledb:latest-pg18 >/dev/null
 
 echo "Waiting for TimescaleDB to be completely ready..."
+# Probe the TCP endpoint api-mock-server actually connects to: the postgres
+# entrypoint first runs init scripts against a temporary Unix-socket-only
+# instance, so `podman exec ... psql` can report ready before the real
+# TCP-listening server has restarted into place.
 for i in $(seq 1 60); do
-    # Wait until the init script has finished: the app user and amos_timeseries DB must exist.
-    if podman exec -e PGPASSWORD=4M0S "$timescale_container" \
-            psql -U app -d amos_timeseries -c "SELECT 1" >/dev/null 2>&1; then
+    if pg_isready -h 127.0.0.1 -p "$timescale_port" -U postgres >/dev/null 2>&1; then
         echo "TimescaleDB is fully initialized and ready."
         break
     fi

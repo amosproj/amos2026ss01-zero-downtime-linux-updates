@@ -54,6 +54,11 @@ api() {
 }
 
 start_swtpm() {
+    # Kill any swtpm from a previous case still holding this socket: the new
+    # instance can't bind it, and the stale one keeps answering the next
+    # qemu's TPM chardev, delaying boot past lima's QMP-dial timeout.
+    pkill -f "swtpm socket.*${TPM_DIR}/swtpm-sock" 2>/dev/null || true
+
     swtpm socket --tpm2 -t -d \
         --tpmstate dir="${TPM_DIR}" \
         --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" \
