@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use amos_common::entities::{ApplicationConfig, ContainerConfigV1};
+use amos_common::entities::ContainerConfigV1;
 use tracing::warn;
 
 use crate::api_client::ApiClient;
@@ -102,11 +102,10 @@ async fn try_update(
         }
     }
 
-    for app in target_app_configs {
-        api_client
-            .report_current_application_assignment(app.id)
-            .await?;
-    }
+    let ids = target_app_configs.into_iter().map(|a| a.id);
+    api_client
+        .report_current_application_assignment(ids)
+        .await?;
 
     podman.prune_images().await?;
 
@@ -123,7 +122,7 @@ struct TargetApp<'a, P: PodmanImage> {
 
 impl<'a, P: PodmanImage> TargetApp<'a, P> {
     async fn from_config(
-        cfg: &'a ApplicationConfig::Model,
+        cfg: &'a amos_common::device_api::apps::GetResponseItem,
         podman: &'a impl Podman<PImage<'a> = P>,
     ) -> anyhow::Result<Self> {
         Ok(Self {
@@ -397,7 +396,7 @@ mod tests {
 
     fn resolve_application_ids<C: PodmanImageInfo>(
         containers: Vec<C>,
-        target_app_configs: &[ApplicationConfig::Model],
+        target_app_configs: &[amos_common::device_api::apps::GetResponseItem],
     ) -> (Vec<(C, i32)>, Vec<C>) {
         let mut matched = Vec::new();
         let mut unmatched = Vec::new();
@@ -423,17 +422,11 @@ mod tests {
 
     #[test]
     fn resolve_application_ids_matches_by_reference() {
-        let configs = vec![ApplicationConfig::Model {
+        let configs = vec![amos_common::device_api::apps::GetResponseItem {
             id: 1,
             application_id: 1,
-            device_id: Some(1),
-            group_id: None,
-            version: 1,
-            config_version: 1,
             config: None,
             image: "docker.io/alpine:1.0".into(),
-            deleted_at: None,
-            superseded_by: None,
         }];
         let containers = vec![MockApplication::new("docker.io/alpine:1.0", "digest1")];
         let (matched, unmatched) = resolve_application_ids(containers, &configs);

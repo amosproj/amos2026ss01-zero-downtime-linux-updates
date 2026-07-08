@@ -1,17 +1,14 @@
 use clap::Parser;
 mod api_v1;
-mod auth_device;
-mod auth_user;
+mod auth;
 mod config;
 pub(crate) mod db_migration;
 pub(crate) mod dtos;
 pub(crate) mod ts_migration;
-use axum::{Router, extract::Request, middleware as axum_middleware, routing::post};
+use axum::{Router, extract::Request, middleware as axum_middleware};
 mod audit_context;
-mod middleware;
 use config::get_config;
 use log::{debug, error, info};
-use middleware::jwt_auth;
 use std::path::PathBuf;
 use tokio::net::TcpListener;
 
@@ -66,25 +63,19 @@ async fn main() {
             std::process::exit(1);
         });
 
-    let api_v1 = Router::new().merge(api_v1::routes::routes()).route_layer(
-        axum::middleware::from_fn_with_state(config.jwt.clone(), jwt_auth),
-    );
+    let jwt_middleware_provider = auth::DefaultJwtMiddlewareProvider(config.jwt);
 
-    // Device registration needs to be public as the device needs to register
-    // its JWT pubkey before it can be used for verifying its signature
-    let api_v1_public = Router::new().route(
-        "/register-device",
-        post(api_v1::routes::devices::register_device),
-    );
+    // User-facing API
+    let api_v1 = Router::new().merge(api_v1::routes::routes(&jwt_middleware_provider));
 
     let app = Router::new()
         .nest("/v1", api_v1)
-        .nest("/v1", api_v1_public)
         .layer(axum_middleware::from_fn(
             async |req: Request, next: axum_middleware::Next| {
+                let method = req.method().to_string();
                 let uri = req.uri().to_string();
                 let res = next.run(req).await;
-                debug!("{} -> {}", uri, res.status());
+                debug!("{} {} -> {}", method, uri, res.status());
                 res
             },
         ));

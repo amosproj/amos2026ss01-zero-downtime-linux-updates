@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use amos_common::entities::{DeviceLog, LogLevel};
+use amos_common::entities::LogLevel;
 use chrono::Utc;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
@@ -23,7 +23,7 @@ const LOG_INTERNAL_TARGET: &str = "amos_orchestrator::log_internal";
 /// channel so a flush request is guaranteed to be processed after every
 /// entry sent ahead of it (FIFO), instead of racing it via a separate channel.
 pub enum LogMessage {
-    Entry(DeviceLog::CreateEntry),
+    Entry(amos_common::device_api::logs::PostBodyItem),
     Flush(oneshot::Sender<()>),
 }
 
@@ -51,7 +51,7 @@ impl LogFlusher {
 
 pub struct OrchestratorLogger {
     log_rx: UnboundedReceiver<LogMessage>,
-    buffer: Vec<DeviceLog::CreateEntry>,
+    buffer: Vec<amos_common::device_api::logs::PostBodyItem>,
 }
 
 impl OrchestratorLogger {
@@ -161,7 +161,7 @@ impl OrchestratorLogger {
         if self.buffer.is_empty() {
             return;
         }
-        match api_client.push_device_logs(self.buffer.clone()).await {
+        match api_client.push_device_logs(&self.buffer).await {
             Ok(()) => {
                 self.buffer.clear();
             }
@@ -243,7 +243,7 @@ where
         let Some(message) = visitor.message else {
             return;
         };
-        let entry = DeviceLog::CreateEntry {
+        let entry = amos_common::device_api::logs::PostBodyItem {
             time: Some(Utc::now()),
             level: tracing_level_to_log_level(metadata.level()),
             message,

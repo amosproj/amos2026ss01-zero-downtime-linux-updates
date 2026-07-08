@@ -1,129 +1,30 @@
 use std::convert::Infallible;
 use std::time::Duration;
 
-use crate::api_v1::db;
 use crate::api_v1::log_stream;
 use crate::api_v1::routes::{
-    db_err, err,
+    db_err,
     pagination::{Page, PageParams},
     pagination_err,
 };
 use crate::api_v1::ts_db;
-use amos_common::entities::{
-    ApplicationLog, DeviceLog, LogEvent, LogKind, LogLevel, LogQuery, LogStreamQuery,
-};
+use amos_common::entities::{LogEvent, LogKind, LogLevel, LogQuery, LogStreamQuery};
 use axum::{
     Json, Router,
     extract::Query,
-    http::StatusCode,
     response::sse::{Event, KeepAlive, Sse},
     response::{IntoResponse, Response},
     routing::get,
 };
-use serde::Deserialize;
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 
 pub fn routes() -> Router {
     Router::new()
-        .route(
-            "/logs/devices",
-            get(list_device_logs).post(create_device_logs),
-        )
-        .route(
-            "/logs/applications",
-            get(list_application_logs).post(create_application_logs),
-        )
+        .route("/logs/devices", get(list_device_logs))
+        .route("/logs/applications", get(list_application_logs))
         .route("/logs/stream", get(stream_logs))
-}
-
-#[derive(Deserialize)]
-struct DeviceUuidQuery {
-    device_uuid: Option<String>,
-}
-
-/// POST /logs/devices?device_uuid=<uuid> — Publish device log entries.
-async fn create_device_logs(
-    Query(params): Query<DeviceUuidQuery>,
-    Json(body): Json<DeviceLog::CreateModel>,
-) -> Response {
-    let Some(device_uuid) = params.device_uuid else {
-        return err(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "device_uuid query param must be provided",
-        );
-    };
-
-    if body.entries.is_empty() {
-        return err(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "entries must not be empty",
-        );
-    }
-
-    let device_id = match db::get_device_by_uuid(device_uuid.clone()).await {
-        Ok(Some(device)) => device.id,
-        Ok(None) => {
-            return err(
-                StatusCode::NOT_FOUND,
-                format!("No device with uuid {} found", device_uuid),
-            );
-        }
-        Err(e) => return db_err(e),
-    };
-
-    match ts_db::insert_device_log_entries(device_id, body.entries).await {
-        Ok(entries) => {
-            for entry in &entries {
-                log_stream::publish(LogEvent::Device(entry.clone()));
-            }
-            (StatusCode::CREATED, Json(entries)).into_response()
-        }
-        Err(e) => db_err(e),
-    }
-}
-
-/// POST /logs/applications?device_uuid=<uuid> — Publish application container log entries.
-async fn create_application_logs(
-    Query(params): Query<DeviceUuidQuery>,
-    Json(body): Json<ApplicationLog::CreateModel>,
-) -> Response {
-    let Some(device_uuid) = params.device_uuid else {
-        return err(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "device_uuid query param must be provided",
-        );
-    };
-
-    if body.entries.is_empty() {
-        return err(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "entries must not be empty",
-        );
-    }
-
-    let device_id = match db::get_device_by_uuid(device_uuid.clone()).await {
-        Ok(Some(device)) => device.id,
-        Ok(None) => {
-            return err(
-                StatusCode::NOT_FOUND,
-                format!("No device with uuid {} found", device_uuid),
-            );
-        }
-        Err(e) => return db_err(e),
-    };
-
-    match ts_db::insert_application_log_entries(device_id, body.application_id, body.entries).await
-    {
-        Ok(entries) => {
-            for entry in &entries {
-                log_stream::publish(LogEvent::Application(entry.clone()));
-            }
-            (StatusCode::CREATED, Json(entries)).into_response()
-        }
-        Err(e) => db_err(e),
-    }
 }
 
 /// GET /logs/devices?device_id=&level=&from=&to=&page=&page_size= — Query historic device logs.

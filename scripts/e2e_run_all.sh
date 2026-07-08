@@ -9,7 +9,6 @@ source ./tests/common_env.sh
 SERVER_PID=""
 FAILED_COUNT=0
 PASSED_COUNT=0
-TPM_DIR="/tmp/emulated_tpm"
 
 # TimescaleDB configurations
 readonly timescale_container="amos-test-timescaledb"
@@ -29,6 +28,7 @@ TEST_SUITE=(
     "tests/e2e_seed_api.sh"
     "tests/e2e_bootc_status.sh"
     "tests/e2e_app_deploy.sh"
+    "tests/e2e_selfcheck.sh"
     "tests/e2e_bootc_switch.sh"
     "tests/e2e_bootc_deferred_switch.sh"
 )
@@ -37,11 +37,8 @@ TEST_SUITE=(
 cleanup() {
     echo -e "\n${NC}=== Cleaning up background processes ==="
     
-    limactl shell "${VM_NAME}" -- sudo systemctl stop orchestrator.service 2>/dev/null || true
-
     # Shut down the VM, also automatically terminates the backgrounded swtpm process
-    echo "Stopping Lima VM '${VM_NAME}'..."
-    limactl stop "${VM_NAME}" 2>/dev/null || true
+    stop_vm
 
     # 2. Terminate the server process group on the host machine
     if [ -n "${SERVER_PID:-}" ]; then
@@ -80,8 +77,8 @@ if ! ./create_tpm.sh "$TPM_DIR"; then
     echo "Could not create TPM. Aborting."
     exit 1
 fi
-swtpm socket --tpm2 -d --tpmstate dir="${TPM_DIR}" --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" --log level=20
 
+start_swtpm
 sleep 2
 
 echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
@@ -93,7 +90,7 @@ QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     -smbios type=2,serial=${DEVICE_SERIAL}" \
     limactl start "${VM_NAME}"
 
-sleep 5
+sleep 20
 
 echo "========================================="
 echo " Starting TimescaleDB Container "
@@ -151,12 +148,31 @@ done
 echo "========================================="
 echo " Ensuring VM Pre-requisites "
 echo "========================================="
+set -e
+
+# Ensure boot was successful
+echo "Checking for successful Greenboot orchestrator check"
+GREENBOOT_OK=0
+for i in $(seq 1 60); do
+    if limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service 2>/dev/null \
+            | grep -q "required script /etc/greenboot/check/required.d/10-orchestrator-check.sh success"; then
+        echo "Greenboot orchestrator check passed."
+        GREENBOOT_OK=1
+        break
+    fi
+    sleep 2
+done
+
+if [ "$GREENBOOT_OK" -ne 1 ]; then
+    echo "Greenboot orchestrator check did not succeed in time." >&2
+    limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service || true
+    exit 1
+fi
 # Ensure Podman API socket is running
-(
-    set -e
-    limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
-    echo "Podman socket is running"
-)
+echo "Checking for running Podman socket"
+limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
+
+set +e
 
 echo "========================================="
 echo " Deploying Local Orchestrator Build "
