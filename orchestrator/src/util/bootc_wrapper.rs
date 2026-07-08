@@ -335,6 +335,7 @@ mod tests {
                     "bootc".to_string(),
                     "switch".to_string(),
                     "--retain".to_string(),
+                    "--enforce-container-sigpolicy".to_string(),
                     target_image.to_string(),
                 ]),
             )
