@@ -1,4 +1,4 @@
-.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build demo
+.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build demo-edge demo-server
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
@@ -239,27 +239,32 @@ _dev-deploy:
 e2e: ## Run the full e2e suite against a freshly recreated Lima VM
 	cd scripts && ./e2e_run_all.sh
 
-# run-vm: like e2e, but with nothing on the host -- no mock server, no
-# TimescaleDB, no tests.
-#   make dev-vm SERVER_IP=192.168.1.10 VM_UUID=<device-uuid>
-run-vm: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB), pointed at SERVER_IP; set the device id via VM_UUID
+# demo-edge: like e2e, but with nothing on the host -- no mock server, no
+# TimescaleDB, no tests. Prompts interactively for the VM name, device uuid,
+# device serial and cloud url, each with a default you can accept by pressing
+# enter.
+demo-edge: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB); prompts for VM name/device uuid/serial/cloud url
 	@set -eu; \
-	echo ">>> Recreating Lima VM $(DEV_VM) from scratch"; \
-	limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; \
-	limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true; \
-	limactl create -y --name $(DEV_VM) dev-env/lima/edge-ipc.yaml; \
+	printf "VM name [%s]: " "$(DEV_VM)"; read vm_name; vm_name=$${vm_name:-$(DEV_VM)}; \
+	printf "Device UUID [%s]: " "$(VM_UUID)"; read device_uuid; device_uuid=$${device_uuid:-$(VM_UUID)}; \
+	printf "Device serial [%s]: " "$(VM_SERIAL)"; read device_serial; device_serial=$${device_serial:-$(VM_SERIAL)}; \
+	printf "Cloud URL [http://%s:%s/v1]: " "$(SERVER_IP)" "$(SERVER_PORT)"; read cloud_url; cloud_url=$${cloud_url:-http://$(SERVER_IP):$(SERVER_PORT)/v1}; \
+	echo ">>> Recreating Lima VM $$vm_name from scratch"; \
+	limactl stop $$vm_name -f >/dev/null 2>&1 || true; \
+	limactl delete $$vm_name -f >/dev/null 2>&1 || true; \
+	limactl create -y --name $$vm_name dev-env/lima/edge-ipc.yaml; \
 	cd scripts && \
-	  VM_NAME="$(DEV_VM)" \
-	  DEVICE_UUID="$(VM_UUID)" \
-	  DEVICE_SERIAL="$(VM_SERIAL)" \
-	  CLOUD_URL="http://$(SERVER_IP):$(SERVER_PORT)/v1" \
+	  VM_NAME="$$vm_name" \
+	  DEVICE_UUID="$$device_uuid" \
+	  DEVICE_SERIAL="$$device_serial" \
+	  CLOUD_URL="$$cloud_url" \
 	  ./dev_vm_run.sh
 
-# demo: same full stack as e2e (mock cloud API + TimescaleDB + edge VM +
+# demo-server: same full stack as e2e (mock cloud API + TimescaleDB + edge VM +
 # orchestrator), primed with a registered device, but instead of running the
 # test suite it leaves everything running so you can send your own API commands
 # (scripts/demo_api.sh) and watch the orchestrator react. Ctrl+C tears it down.
-demo: ## Bring up the full e2e stack, primed and left running for a live demo (send commands with scripts/demo_api.sh)
+demo-server: ## Bring up the full e2e stack, primed and left running for a live demo (send commands with scripts/demo_api.sh)
 	@set -eu; \
 	echo ">>> Recreating Lima VM $(DEV_VM) from scratch"; \
 	limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; \
