@@ -194,7 +194,11 @@ async fn run_lifecycle_loop<C: PodmanContainer>(
 
             tokio::select! {
                 _ = tokio::time::sleep(timeout), if timeout < Duration::MAX => {},
-                _ = container.wait_for_state_change(state) => {},
+                res = container.wait_for_state_change(state) => {
+                    // An instantly-failing wait must not spin the loop; break
+                    // to the outer loop's FatalError + 10s retry pacing.
+                    if let Err(e) = res { break e; }
+                },
                 _ = delete_notifier.notified() => {
                     // Podman refuses to delete a still-running container
                     // (without --force), so stop it first.
@@ -590,6 +594,71 @@ mod tests {
                 x => panic!("Got unexpected event {:?}", x),
             }
         }
+
+        lifecycle_loop.abort();
+        assert!(lifecycle_loop.await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_wait_error_breaks_instead_of_spinning() {
+        // Regression test: podman rejecting a wait condition made
+        // wait_for_state_change fail instantly; the select branch swallowed
+        // the error and the lifecycle loop hot-spun at 100% CPU. Errors must
+        // break to the outer loop's FatalError + retry pacing instead.
+        struct MockContainer;
+
+        #[async_trait]
+        impl PodmanContainer for MockContainer {
+            async fn start(&mut self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn stop(&mut self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn destroy(self) -> anyhow::Result<()> {
+                Ok(())
+            }
+            async fn state(&self) -> anyhow::Result<PodmanContainerState> {
+                Ok(Running)
+            }
+            async fn wait_for_state_change(
+                &self,
+                _current: PodmanContainerState,
+            ) -> anyhow::Result<()> {
+                anyhow::bail!("unknown container state: restarting: invalid argument")
+            }
+            type LogHandle = NoopLogHandle;
+            fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
+                Some(NoopLogHandle)
+            }
+            fn name(&self) -> &str {
+                "testname"
+            }
+        }
+
+        impl PodmanImageInfo for MockContainer {
+            fn reference(&self) -> &str {
+                "docker.io/library/alpine:latest"
+            }
+            fn digest(&self) -> &str {
+                "unknown"
+            }
+        }
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let lifecycle_loop = tokio::spawn(run_lifecycle_loop(
+            MockContainer,
+            ChannelEventReceiver { tx },
+            Arc::new(tokio::sync::Notify::const_new()),
+            crate::podman::log_registry::AppLogRegistry::noop(),
+            0,
+        ));
+
+        assert_rcv!(rx, StateChange(None, Running));
+        // The failing wait must surface as FatalError (outer loop), not be
+        // swallowed. Before the fix this deadlocked here while spinning.
+        assert_rcv!(rx, FatalError(_));
 
         lifecycle_loop.abort();
         assert!(lifecycle_loop.await.is_err());
