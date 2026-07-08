@@ -196,6 +196,11 @@ async fn run_lifecycle_loop<C: PodmanContainer>(
                 _ = tokio::time::sleep(timeout), if timeout < Duration::MAX => {},
                 _ = container.wait_for_state_change(state) => {},
                 _ = delete_notifier.notified() => {
+                    // Podman refuses to delete a still-running container
+                    // (without --force), so stop it first.
+                    if let Err(e) = container.stop().await {
+                        event_recv.send(LifecycleEvent::FatalError(e));
+                    }
                     if let Err(e) = container.destroy().await {
                         event_recv.send(LifecycleEvent::FatalError(e));
                     }
@@ -588,5 +593,86 @@ mod tests {
 
         lifecycle_loop.abort();
         assert!(lifecycle_loop.await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_removal_stops_running_container_before_destroying() {
+        // Regression test: Podman refuses to delete a still-running
+        // container without --force, so destroy() alone left the container
+        // orphaned (running forever) whenever it was removed while Running.
+        struct MockContainer {
+            state: Mutex<PodmanContainerState>,
+        }
+
+        #[async_trait]
+        impl PodmanContainer for MockContainer {
+            async fn start(&mut self) -> anyhow::Result<()> {
+                *self.state.lock().unwrap() = Running;
+                Ok(())
+            }
+            async fn stop(&mut self) -> anyhow::Result<()> {
+                *self.state.lock().unwrap() = Stopped;
+                Ok(())
+            }
+            async fn destroy(self) -> anyhow::Result<()> {
+                // Mirrors Podman's real behaviour: refuses to remove a
+                // container that is still Running.
+                if *self.state.lock().unwrap() == Running {
+                    anyhow::bail!("cannot remove a running container");
+                }
+                Ok(())
+            }
+            async fn state(&self) -> anyhow::Result<PodmanContainerState> {
+                Ok(*self.state.lock().unwrap())
+            }
+            async fn wait_for_state_change(
+                &self,
+                _current: PodmanContainerState,
+            ) -> anyhow::Result<()> {
+                std::future::pending().await
+            }
+            type LogHandle = NoopLogHandle;
+            fn take_log_handle(&mut self) -> Option<Self::LogHandle> {
+                Some(NoopLogHandle)
+            }
+            fn name(&self) -> &str {
+                "testname"
+            }
+        }
+
+        impl PodmanImageInfo for MockContainer {
+            fn reference(&self) -> &str {
+                "docker.io/library/alpine:latest"
+            }
+            fn digest(&self) -> &str {
+                "unknown"
+            }
+        }
+
+        let container = MockContainer {
+            state: Mutex::new(Stopped),
+        };
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let delete_notifier = Arc::new(tokio::sync::Notify::const_new());
+
+        let lifecycle_loop = tokio::spawn(run_lifecycle_loop(
+            container,
+            ChannelEventReceiver { tx },
+            delete_notifier.clone(),
+            crate::podman::log_registry::AppLogRegistry::noop(),
+            0,
+        ));
+
+        assert_rcv!(rx, StateChange(None, Stopped));
+        assert_rcv!(rx, AttemptingStart);
+        assert_rcv!(rx, StateChange(Some(Stopped), Running));
+
+        delete_notifier.notify_one();
+
+        // No FatalError from a failed destroy() must be observed: the loop
+        // must stop the container before destroying it.
+        assert_rcv!(rx, None);
+        lifecycle_loop.await.unwrap();
     }
 }
