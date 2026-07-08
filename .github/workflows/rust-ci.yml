@@ -128,6 +128,13 @@ jobs:
           OUTPUT: RELEASE_NOTES.md
           GITHUB_REPO: ${{ github.repository }}
 
+      - name: Download Binaries Artifact
+        if: startsWith(github.ref_name, 'sprint-') && contains(github.ref_name, '-release')
+        uses: actions/download-artifact@v5
+        with:
+          name: binaries-zipped
+          path: release-bin
+
       - name: Attach Binaries to GitHub Release
         if: startsWith(github.ref_name, 'sprint-') && contains(github.ref_name, '-release')
         uses: softprops/action-gh-release@v2.6.2
