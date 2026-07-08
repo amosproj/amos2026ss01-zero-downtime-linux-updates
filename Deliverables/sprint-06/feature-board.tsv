@@ -6,7 +6,7 @@ Signature verification of image delivery	https://github.com/amosproj/amos2026ss0
 Add timestamp and user information for database changes	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/72		Product Backlog		
 List device/group/application information	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/73		Product Backlog		
 Add second Logging place	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/70		Product Backlog		
-TPM-based Device Identity Verification in Mock Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/38		Product Backlog		
+TPM-based Device Identity Verification in Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/38		Product Backlog		
 Refactor: Application logging	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/76		Product Backlog		
 Edge IPC-to-Cloud API for Database Updates	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/55	IFrey, Jerry1098	In Progress	3	
 Orchestrator check for update	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/45	uzantome	In Progress	3	
@@ -34,5 +34,5 @@ Setup shared dev environment	https://github.com/amosproj/amos2026ss01-zero-downt
 Signature Verification	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/19	IFrey	Feature Archive	2	1
 Setup DCO & CI Pipeline	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/14	KathiAurina, uzantome	Feature Archive	3	5
 Edge IPC Orchestrator	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/16	Jerry1098, moritz-reinel	Feature Archive	5	5
-API Protocoll & Mock Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/15	patridu	Feature Archive	3	5
+API Protocoll & Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/15	patridu	Feature Archive	3	5
 HTTPS Download Manager	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/18	Beambamacrys	Feature Archive	3	3

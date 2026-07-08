@@ -8,10 +8,10 @@ services:
       - podman_socket:/run/podman
     command: sleep infinity
 
-  mock-api-container:
+  api-container:
     build:
       context: ..
-      dockerfile: .devcontainer/mock-api.Dockerfile
+      dockerfile: .devcontainer/api.Dockerfile
     environment:
       APP_DATABASE_URL: "sqlite::memory:"
       APP_TIMESCALE_DATABASE_URL: "postgres://app:4M0S@timescaledb-container:5432/amos_timeseries"

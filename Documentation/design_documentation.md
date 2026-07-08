@@ -60,7 +60,7 @@ The main agent running on each Edge IPC. Responsible for:
 
 ### `amos-common` (library crate)
 
-Shared code used by both the orchestrator and the mock server:
+Shared code used by both the orchestrator and the server:
 - `api` module — defines the `CatalogResponse` and `CatalogResponseEntry` types (serializable to/from JSON)
 - `util` module — Base64 newtype with serde support
 - `download_manager` module — HTTP client construction, catalog polling, and artifact downloading

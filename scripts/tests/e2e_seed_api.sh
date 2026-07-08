@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Fills the active api mock server database
+# Fills the active api server database
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 source ./tests/common_env.sh
 
-echo "=== Filling Mock Cloud Database ==="
+echo "=== Filling Cloud Database ==="
 
 # Dynamically fetch the current running OSTree checksum from the VM
 echo "Extracting dynamic baseline checksum from VM for database seeding..."

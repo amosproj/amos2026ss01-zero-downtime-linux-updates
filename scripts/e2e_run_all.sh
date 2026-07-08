@@ -43,7 +43,7 @@ cleanup() {
     echo "Stopping Lima VM '${VM_NAME}'..."
     limactl stop "${VM_NAME}" 2>/dev/null || true
 
-    # 2. Terminate the mock server process group on the host machine
+    # 2. Terminate the server process group on the host machine
     if [ -n "${SERVER_PID:-}" ]; then
         echo "Stopping api-server on host (PGID -${SERVER_PID})..."
         kill -- "-${SERVER_PID}" 2>/dev/null || true
@@ -133,11 +133,11 @@ sleep 0.5
 APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-server -dd &
 SERVER_PID=$!
 
-echo "Waiting for mock server to bind to port ${PORT}..."
+echo "Waiting for server to bind to port ${PORT}..."
 MAX_ATTEMPTS=30
 for i in $(seq 1 ${MAX_ATTEMPTS}); do
     if curl -s -o /dev/null "http://127.0.0.1:${PORT}/v1/tenants"; then
-        echo "Mock server is up and listening."
+        echo "Server is up and listening."
         break
     fi
     
