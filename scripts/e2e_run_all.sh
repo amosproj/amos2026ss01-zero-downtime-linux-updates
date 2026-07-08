@@ -73,10 +73,31 @@ cleanup() {
 trap cleanup EXIT
 
 echo "========================================="
+echo " Checking Required CLI Tools "
+echo "========================================="
+REQUIRED_TOOLS=(swtpm swtpm_setup limactl qemu-system-x86_64 podman pg_isready curl cargo make)
+MISSING_TOOLS=()
+for tool in "${REQUIRED_TOOLS[@]}"; do
+    command -v "$tool" >/dev/null 2>&1 || MISSING_TOOLS+=("$tool")
+done
+if [ "${#MISSING_TOOLS[@]}" -gt 0 ]; then
+    echo "Missing required CLI tools: ${MISSING_TOOLS[*]}" >&2
+    echo "On Debian/Ubuntu: sudo apt-get install -y swtpm swtpm-tools qemu-system-x86 podman postgresql-client curl cargo make" >&2
+    exit 1
+fi
+
+echo "========================================="
 echo " Starting TPM and VM "
 echo "========================================="
 
 echo "Initializing emulated TPM in ${TPM_DIR}..."
+# Wipe last run's TPM state first: create_tpm.sh uses swtpm_setup
+# --not-overwrite, which silently no-ops when state already exists in /tmp.
+# The VM is recreated fresh every run, so a stale TPM (still holding the
+# previous run's persistent signing key) must not survive with it.
+# Kill any leftover swtpm before wiping so it can't rewrite state on exit.
+pkill -f "swtpm socket.*${TPM_DIR}/swtpm-sock" 2>/dev/null || true
+rm -rf "$TPM_DIR"
 if ! ./create_tpm.sh "$TPM_DIR"; then
     echo "Could not create TPM. Aborting."
     exit 1
