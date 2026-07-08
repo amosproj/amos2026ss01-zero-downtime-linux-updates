@@ -5,7 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 target="$script_dir/../../"
 pushd "$target" >/dev/null || exit 1
 
-readonly server_dir="$target/api-mock-server"
+readonly server_dir="$target/api-server"
 readonly devcontainer_dir="$target/.devcontainer"
 readonly api_base_path="http://localhost:8080/v1"
 
@@ -14,7 +14,7 @@ readonly timescale_port=55433
 readonly timescale_url="postgres://app:4M0S@127.0.0.1:${timescale_port}/amos_timeseries"
 
 # Same default dev JWT used by scripts/test_logs.sh, signed for the default
-# dev key in api-mock-server/src/config.rs, valid 1000 years.
+# dev key in api-server/src/config.rs, valid 1000 years.
 readonly jwt='eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik1hcmMgV2ViYmVyIiwiZXhwIjozMzMzNzg2MDc1Nn0.YLzANsYJj5TmCAURvMyUQSSeGk6fa8xrJhrbSrm999hMVxeYqTtT2c62dT7Ast9bdHENHWAPZD7OYWsOK2sCX-jqYfNFgmAmYxCtLaXMCVgIvqzOWf9miV8F5Zd8OaSnoaWbA7iXsICJ_kBYCP6zFdRQUoO-Evok4vtzH6Y5M1LyJtsy65NIpkpQt6DAZqf0s7818mrJdqpLp_L_1vqPq9QOrMen28lv_RNjWl5x9_lGhfw15TbGhfrE5mvmzsq6RW6M5Eun3CVGWXERqNzOqdVHo13BtmyRxLbJa8kP0r0qPubMfQf-bpAIVxG6oA5xbjytiEKQ8vfl1up6XBn429N_039-exEfv8EdZ35AjqLpLaSA4BM0RFurqZMse4ELJmNRPQLVMfrBDTf0yLB3USi0su3tFZRXQ6ND7cLpqL6PUYL0KrJZUiMwD8ZMSDBO7Rilh2thkhYp0EfBncIi5lI1gVlN5qSC51NJeDBRFPYnhH_-gwxecn1WzVILpiNki0E8euOpSTXgS2FNxlHhPfBevPodoBn8j-Vu0U9-8xmfqxZirGankWz4d00rthBn_B0IFKk0WFy742TW_Qs9NdAL9UnGJGwqYv88MtGo6vgfTwdE9WASkq4ubJ8GCvFmooKb9FrMGz_-9pS2RWRgO_kT_1PSD4bTMHQIMhC1eXs'
 
 readonly swtpm_dir=/tmp/emulated_tpm
@@ -30,7 +30,7 @@ server_pid=
 
 cleanup() {
     if [ -n "$server_pid" ]; then
-        echo "Stopping api-mock-server (pid $server_pid)..."
+        echo "Stopping api-server (pid $server_pid)..."
         kill -- "-$server_pid" 2>/dev/null || true
         wait "$server_pid" 2>/dev/null || true
     fi
@@ -77,7 +77,7 @@ swtpm socket --tpm2 -d --tpmstate dir="$swtpm_dir" --ctrl type=unixio,path="$swt
 
 # Start the throwaway TimescaleDB container now, in parallel with VM
 # creation/boot/TPM provisioning below, so it has time to become ready
-# before we actually need it (right before starting api-mock-server).
+# before we actually need it (right before starting api-server).
 podman rm -f "$timescale_container" >/dev/null 2>&1 || true
 echo "Starting TimescaleDB container..."
 podman run -d --name "$timescale_container" \
@@ -105,13 +105,13 @@ until limactl shell edge-ipc -- test -e /dev/tpm0 2>/dev/null; do
 done
 
 echo "Waiting for TimescaleDB to be ready..."
-# Check the actual TCP endpoint api-mock-server connects to, not the socket
+# Check the actual TCP endpoint api-server connects to, not the socket
 # inside the container: the postgres image's entrypoint runs initdb scripts
 # against a temporary instance that only listens on a Unix socket, then
 # restarts into the real (TCP-listening) server. Checking readiness via
 # `podman exec ... pg_isready` (no host/port -> Unix socket) can report
 # ready against that temporary instance, before the TCP listener used below
-# is actually up, racing api-mock-server's connection against the restart.
+# is actually up, racing api-server's connection against the restart.
 for i in $(seq 1 60); do
     if pg_isready -h 127.0.0.1 -p "$timescale_port" -U postgres >/dev/null 2>&1; then
         echo "TimescaleDB is ready."
@@ -124,31 +124,31 @@ for i in $(seq 1 60); do
     sleep 1
 done
 
-# Start the api-mock-server in its own process group (set -m) so that
+# Start the api-server in its own process group (set -m) so that
 # kill -- -$pid reaches both cargo and the server binary it spawns.
-echo "Starting api-mock-server..."
+echo "Starting api-server..."
 set -m
 APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" \
     cargo run --manifest-path "$server_dir/Cargo.toml" -- -ddd &
 server_pid=$!
 set +m
 
-echo "Waiting for api-mock-server to be ready..."
+echo "Waiting for api-server to be ready..."
 for i in $(seq 1 60); do
     if curl -sS -o /dev/null "${api_base_path}/tenants" 2>/dev/null; then
-        echo "api-mock-server is ready."
+        echo "api-server is ready."
         break
     fi
     if [ "$i" -eq 60 ]; then
-        echo "api-mock-server did not become ready in time." >&2
+        echo "api-server did not become ready in time." >&2
         exit 1
     fi
     sleep 1
 done
 
-# Register the device with the api-mock-server, attaching the TPM public key
+# Register the device with the api-server, attaching the TPM public key
 # so the orchestrator's signed requests can be verified.
-echo "Registering tenant and device with api-mock-server..."
+echo "Registering tenant and device with api-server..."
 curl -sS -X POST "${api_base_path}/tenants" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${jwt}" \
@@ -210,5 +210,5 @@ limactl shell edge-ipc -- sudo systemctl daemon-reload
 echo "Restarting orchestrator inside the VM..."
 limactl shell edge-ipc -- sudo systemctl restart orchestrator
 
-echo "All services are up. Press Ctrl+C to stop the api-mock-server and TimescaleDB (the VM keeps running)."
+echo "All services are up. Press Ctrl+C to stop the api-server and TimescaleDB (the VM keeps running)."
 wait "$server_pid"

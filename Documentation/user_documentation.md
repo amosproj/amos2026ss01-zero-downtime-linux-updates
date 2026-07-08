@@ -18,7 +18,7 @@ This document explains how to install, configure, and operate the **Orchestrator
 8. [Logging & Verbosity](#logging--verbosity)
 9. [Running as a systemd Service](#running-as-a-systemd-service)
 10. [Rollback & Error Recovery](#rollback--error-recovery)
-11. [API Mock Server](#api-mock-server)
+11. [API Server](#api-server)
 
 ---
 

@@ -17,7 +17,7 @@ if [ -z "${BOOTED_DIGEST}" ] || [ "${BOOTED_DIGEST}" == "null" ]; then
 fi
 echo "Live VM is running deployment digest: ${BOOTED_DIGEST}"
 
-# Setup the target assignment in the Mock API
+# Setup the target assignment in the API
 api "/v1/os-versions" POST "{\"commit_hash\": \"${BOOTED_DIGEST}\", \"orchestrator_version\": \"0.1.0\", \"description\": \"Current Base Baseline\"}" 201
 api "/v1/os-assignments" POST '{"os_version_id": 2, "device_id": 1}' 201
 

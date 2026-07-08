@@ -6,7 +6,7 @@ The api server binary needs to be copied to the server first (eg. from a local b
 whatever - we don't have useful CI for this right now):
 
 ```console
-scp api-mock-server <api-server-host>:/home/almalinux
+scp api-server <api-server-host>:/home/almalinux
 ```
 
 Then on the host, clone the repo and build the image:

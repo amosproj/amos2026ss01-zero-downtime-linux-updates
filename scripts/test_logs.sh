@@ -3,7 +3,7 @@ set -eu
 
 readonly api_base_path="http://localhost:8080/v1"
 readonly script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly server_dir="$(cd "$script_dir/../api-mock-server" && pwd)"
+readonly server_dir="$(cd "$script_dir/../api-server" && pwd)"
 readonly devcontainer_dir="$(cd "$script_dir/../.devcontainer" && pwd)"
 
 readonly timescale_container="amos-test-timescaledb"
@@ -102,7 +102,7 @@ done
 
 # Start the server in its own process group (set -m) so that kill -- -$pid
 # reaches both cargo and the server binary it spawns.
-echo "Starting api-mock-server..."
+echo "Starting api-server..."
 set -m
 APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" cargo run --manifest-path "$server_dir/Cargo.toml" -- -dd &
 server_pid=$!

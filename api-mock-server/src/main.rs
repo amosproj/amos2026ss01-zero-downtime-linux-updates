@@ -40,7 +40,7 @@ async fn main() {
 
     env_logger::builder().filter_level(log_level).init();
 
-    info!("Started not-so-mock-server...");
+    info!("Started server...");
 
     let config = get_config(cli.config).unwrap_or_else(|err| {
         error!("Failed to load config: {}", err);
