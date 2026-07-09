@@ -222,7 +222,6 @@ mod tests {
         assert!(!result.rollback_queued);
     }
 
-
     #[tokio::test]
     async fn test_apply_hardware_failure() {
         let mut mock_exec = MockExecuter::new();
