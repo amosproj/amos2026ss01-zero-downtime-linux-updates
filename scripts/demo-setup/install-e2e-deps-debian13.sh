@@ -27,9 +27,11 @@ RUST_VERSION="${RUST_VERSION:-1.95}"
 LIMA_VERSION="${LIMA_VERSION:-}"
 ORAS_VERSION="${ORAS_VERSION:-}"
 ZELLIJ_VERSION="${ZELLIJ_VERSION:-}"
+LAZYGIT_VERSION="${LAZYGIT_VERSION:-}"
 LIMA_FALLBACK="v1.0.0"
 ORAS_FALLBACK="v1.2.0"
 ZELLIJ_FALLBACK="v0.43.1"
+LAZYGIT_FALLBACK="v0.63.0"
 
 log() { printf '\033[0;32m>>> %s\033[0m\n' "$*"; }
 warn() { printf '\033[0;33m!!! %s\033[0m\n' "$*" >&2; }
@@ -66,7 +68,7 @@ $SUDO apt-get install -y --no-install-recommends \
     qemu-system-x86 qemu-utils ovmf \
     swtpm swtpm-tools \
     podman \
-    uidmap passt nftables \  # missing deps of podman / image-builder / ..
+    uidmap passt nftables \
     fzf \
     htop
 
@@ -157,6 +159,26 @@ else
     rm -rf "$tmp"
 fi
 
+# --- lazygit ------------------------------------------------------------------
+# Not packaged for Debian 13
+if command -v lazygit >/dev/null 2>&1; then
+    log "lazygit present: $(lazygit --version 2>/dev/null | head -n1)"
+else
+    tag="$LAZYGIT_VERSION"
+    if [ -z "$tag" ]; then
+        tag="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest \
+            | jq -r .tag_name 2>/dev/null)" || tag=""
+        if [ -z "$tag" ] || [ "$tag" = null ]; then tag="$LAZYGIT_FALLBACK"; fi
+    fi
+    ver="${tag#v}"
+    url="https://github.com/jesseduffield/lazygit/releases/download/${tag}/lazygit_${ver}_linux_${goarch}.tar.gz"
+    log "Installing lazygit $tag into /usr/local/bin"
+    tmp="$(mktemp -d)"
+    curl -fsSL "$url" -o "$tmp/lazygit.tar.gz"
+    $SUDO tar -C /usr/local/bin -xzf "$tmp/lazygit.tar.gz" lazygit
+    rm -rf "$tmp"
+fi
+
 
 
 
@@ -205,6 +227,7 @@ check oras     oras version
 check jq       jq --version
 check fzf      fzf --version
 check zellij   zellij --version
+check lazygit   lazygit --version
 
 cat <<'EOF'
 
