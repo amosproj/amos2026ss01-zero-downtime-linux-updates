@@ -40,7 +40,7 @@ Review options for zero downtime update	https://github.com/amosproj/amos2026ss01
 Initialize SBOM and Software Architecture	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/9	KathiAurina	Feature Archive	1	1
 Setup DCO & CI Pipeline	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/14	KathiAurina, uzantome	Feature Archive	3	5
 Edge IPC Orchestrator	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/16	Jerry1098, moritz-reinel	Feature Archive	5	5
-API Protocoll & Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/15	patridu	Feature Archive	3	5
+API Protocoll & Mock Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/15	patridu	Feature Archive	3	5
 Review Backup options	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/4	uzantome	Feature Archive	2	2
 Review different Linux Distros	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/1	Jerry1098, moritz-reinel	Feature Archive	3	3
 HTTPS Download Manager	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/18	Beambamacrys	Feature Archive	3	3
