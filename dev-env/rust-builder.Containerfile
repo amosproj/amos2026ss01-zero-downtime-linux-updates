@@ -10,4 +10,4 @@ FROM docker.io/rust:${RUST_VERSION}-slim
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libtss2-dev \
- && rm -rf /var/lib/apt/lists/*
+ && apt-get clean

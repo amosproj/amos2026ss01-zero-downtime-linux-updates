@@ -1,18 +1,18 @@
 {
     "name": "AMOS Project 1 Dev Environment",
-
     "dockerComposeFile": "docker-compose.yml",
     "service": "dev-container",
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-
     "features": {
         "ghcr.io/devcontainers/features/rust:1": {
             "version": "1.95.0"
         }
     },
-
-    "onCreateCommand": ["/bin/sudo", "/bin/bash", ".devcontainer/install.sh"],
-
+    "onCreateCommand": [
+        "/bin/sudo",
+        "/bin/bash",
+        ".devcontainer/install.sh"
+    ],
     "customizations": {
         "vscode": {
             "settings": {
@@ -21,7 +21,7 @@
         },
         "amos": {
             // Update this marker when changing ./install.sh
-            "installScriptVersion": "2026-06-16 12:00"
+            "installScriptVersion": "2026-07-08 00:00"
         }
     }
 }
