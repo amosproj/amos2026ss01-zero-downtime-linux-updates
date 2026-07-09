@@ -171,7 +171,10 @@ else
         if [ -z "$tag" ] || [ "$tag" = null ]; then tag="$LAZYGIT_FALLBACK"; fi
     fi
     ver="${tag#v}"
-    url="https://github.com/jesseduffield/lazygit/releases/download/${tag}/lazygit_${ver}_linux_${goarch}.tar.gz"
+    # lazygit's asset names use "x86_64"/"arm64", not Go's "amd64"/"arm64".
+    lazygit_arch="$arch"
+    [ "$arch" = aarch64 ] && lazygit_arch=arm64
+    url="https://github.com/jesseduffield/lazygit/releases/download/${tag}/lazygit_${ver}_linux_${lazygit_arch}.tar.gz"
     log "Installing lazygit $tag into /usr/local/bin"
     tmp="$(mktemp -d)"
     curl -fsSL "$url" -o "$tmp/lazygit.tar.gz"
