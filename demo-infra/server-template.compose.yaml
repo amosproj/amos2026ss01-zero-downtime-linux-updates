@@ -1,6 +1,7 @@
 services:
   api:
     image: localhost/api-server
+    command: "-dd"
     environment:
       APP_HTTP_PORT: "8080"
       APP_DATABASE_URL: "postgres://app:4M0S@postgres:5432/amos"

@@ -31,12 +31,16 @@ TEST_SUITE=(
     "tests/e2e_selfcheck.sh"
     "tests/e2e_bootc_switch.sh"
     "tests/e2e_bootc_deferred_switch.sh"
+    "tests/e2e_bootc_unsigned_deny.sh"
 )
 
 # This function executes immediately when the script finishes or hits an early abort
 cleanup() {
+    # Capture the script's exit code so an early abort (before any test ran)
+    # is reported as a failure instead of "0 failed" masquerading as a pass.
+    local rc=$?
     echo -e "\n${NC}=== Cleaning up background processes ==="
-    
+
     # Shut down the VM, also automatically terminates the backgrounded swtpm process
     stop_vm
 
@@ -58,7 +62,7 @@ cleanup() {
     echo -e " Total Failed: ${RED}${FAILED_COUNT}${NC}"
     echo "========================================="
 
-    if [ "${FAILED_COUNT}" -gt 0 ]; then
+    if [ "${FAILED_COUNT}" -gt 0 ] || [ "$rc" -ne 0 ]; then
         echo -e "${RED}=== E2E TEST HARNESS FAILED ===${NC}"
         exit 1
     else
@@ -69,10 +73,31 @@ cleanup() {
 trap cleanup EXIT
 
 echo "========================================="
+echo " Checking Required CLI Tools "
+echo "========================================="
+REQUIRED_TOOLS=(swtpm swtpm_setup limactl qemu-system-x86_64 podman pg_isready curl cargo make)
+MISSING_TOOLS=()
+for tool in "${REQUIRED_TOOLS[@]}"; do
+    command -v "$tool" >/dev/null 2>&1 || MISSING_TOOLS+=("$tool")
+done
+if [ "${#MISSING_TOOLS[@]}" -gt 0 ]; then
+    echo "Missing required CLI tools: ${MISSING_TOOLS[*]}" >&2
+    echo "On Debian/Ubuntu: sudo apt-get install -y swtpm swtpm-tools qemu-system-x86 podman postgresql-client curl cargo make" >&2
+    exit 1
+fi
+
+echo "========================================="
 echo " Starting TPM and VM "
 echo "========================================="
 
 echo "Initializing emulated TPM in ${TPM_DIR}..."
+# Wipe last run's TPM state first: create_tpm.sh uses swtpm_setup
+# --not-overwrite, which silently no-ops when state already exists in /tmp.
+# The VM is recreated fresh every run, so a stale TPM (still holding the
+# previous run's persistent signing key) must not survive with it.
+# Kill any leftover swtpm before wiping so it can't rewrite state on exit.
+pkill -f "swtpm socket.*${TPM_DIR}/swtpm-sock" 2>/dev/null || true
+rm -rf "$TPM_DIR"
 if ! ./create_tpm.sh "$TPM_DIR"; then
     echo "Could not create TPM. Aborting."
     exit 1
@@ -80,6 +105,15 @@ fi
 
 start_swtpm
 sleep 2
+
+# Recreate the VM from the template every run: the bootc switch tests
+# permanently change the instance disk's booted image (whose greenboot
+# service is disabled), so reusing the instance breaks the next run.
+echo "Recreating VM '${VM_NAME}' from template..."
+limactl stop -f "${VM_NAME}" 2>/dev/null || true
+limactl delete -f "${VM_NAME}" 2>/dev/null || true
+# The template's image location is relative to the repo root.
+(cd "$script_dir/.." && limactl create -y --name "${VM_NAME}" dev-env/lima/edge-ipc.yaml)
 
 echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
@@ -105,14 +139,16 @@ podman run -d --name "$timescale_container" \
     docker.io/timescale/timescaledb:latest-pg18 >/dev/null
 
 echo "Waiting for TimescaleDB to be completely ready..."
-for i in $(seq 1 60); do
-    # Wait until the init script has finished: the app user and amos_timeseries DB must exist.
-    if podman exec -e PGPASSWORD=4M0S "$timescale_container" \
-            psql -U app -d amos_timeseries -c "SELECT 1" >/dev/null 2>&1; then
+# Probe the TCP endpoint api-server actually connects to: the postgres
+# entrypoint first runs init scripts against a temporary Unix-socket-only
+# instance, so `podman exec ... psql` can report ready before the real
+# TCP-listening server has restarted into place.
+for i in $(seq 1 120); do
+    if pg_isready -h 127.0.0.1 -p "$timescale_port" -U postgres >/dev/null 2>&1; then
         echo "TimescaleDB is fully initialized and ready."
         break
     fi
-    if [ "$i" -eq 60 ]; then
+    if [ "$i" -eq 120 ]; then
         echo "TimescaleDB did not become ready in time." >&2
         exit 1
     fi
@@ -127,6 +163,9 @@ echo "Clearing stale server instances..."
 pkill -f amos-api-server || true
 sleep 0.5
 
+echo "Building amos-api-server..."
+cargo build --manifest-path ../api-server/Cargo.toml
+
 APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-server -dd &
 SERVER_PID=$!
 
@@ -137,7 +176,7 @@ for i in $(seq 1 ${MAX_ATTEMPTS}); do
         echo "Server is up and listening."
         break
     fi
-    
+
     if [ "$i" -eq ${MAX_ATTEMPTS} ]; then
         echo "Error: Server did not become ready within timeout period." >&2
         exit 1
@@ -175,6 +214,22 @@ limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
 set +e
 
 echo "========================================="
+echo " Provisioning Cryptographic Policies "
+echo "========================================="
+(
+    set -e
+    root_dir="$(cd "$script_dir/.." && pwd)"
+
+    # cosign.pub already ships baked into /usr/share/pki/containers on every
+    # image (regardless of DEV_MODE), so only the policy itself needs forcing
+    # to the prod variant here.
+    limactl copy "$root_dir/container-policy.json" "${VM_NAME}":/tmp/policy.json
+    limactl shell "${VM_NAME}" -- sudo mv /tmp/policy.json /etc/containers/policy.json
+
+    echo "✓ Production container policy provisioned successfully inside writeable /etc."
+)
+
+echo "========================================="
 echo " Deploying Local Orchestrator Build "
 echo "========================================="
 DEV_VM="${VM_NAME}" make -C "$script_dir/.." dev-deploy
@@ -185,7 +240,7 @@ echo "========================================="
 
 for test_script in "${TEST_SUITE[@]}"; do
     echo -e "\n---> Executing Phase: ${test_script}"
-    
+
     if [ ! -x "$test_script" ]; then
         chmod +x "$test_script"
     fi
@@ -196,7 +251,7 @@ for test_script in "${TEST_SUITE[@]}"; do
     else
         echo -e "${RED}𐄂 FAILED: ${test_script}${NC}"
         ((FAILED_COUNT++))
-        
+
         # If seeding fails, stop immediately instead of cascading errors
         if [[ "$test_script" == *"seed_api"* ]]; then
             echo -e "${RED}Critical initialization failure in database seeding. Aborting matrix.${NC}"
