@@ -32,14 +32,6 @@ pub struct BootcImageInfo {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BootcStatusJsonWrapper {
-    #[expect(dead_code)]
-    pub api_version: String,
-    #[expect(dead_code)]
-    pub kind: String,
-    #[expect(dead_code)]
-    pub metadata: serde_json::Value,
-    #[expect(dead_code)]
-    pub spec: serde_json::Value,
     pub status: BootcStatus,
 }
 
@@ -160,26 +152,6 @@ impl Bootc {
                 "Switching image failed with exit code: {:?}",
                 res.exit_code
             ))
-        }
-    }
-
-    // Should delete it if not used in healthchecks, because it is performed automatically by bootc
-    #[allow(dead_code)]
-    pub async fn rollback(&self) -> Result<()> {
-        info!("Rolling back to previous bootc deployment");
-        let args = vec!["rollback".to_string(), "--apply".to_string()];
-        let res = self.run_bootc_root(args).await?;
-
-        // Use helper to treat 137 as success
-        match self.handle_exit_code(res.exit_code) {
-            Ok(()) => {
-                info!("bootc rollback succeeded; reboot imminent");
-                Ok(())
-            }
-            Err(e) => {
-                error!(exit_code = ?res.exit_code, "bootc rollback failed");
-                Err(e)
-            }
         }
     }
 

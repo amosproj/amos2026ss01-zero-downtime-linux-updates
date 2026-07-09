@@ -1,19 +1,7 @@
-#![allow(dead_code)]
-
 use std::cell::RefCell;
 
 tokio::task_local! {
     pub static CURRENT_USER: RefCell<Option<String>>;
-}
-
-pub fn current_user() -> Option<String> {
-    CURRENT_USER
-        .try_with(|cell| cell.borrow().clone())
-        .unwrap_or(None)
-}
-
-pub fn current_user_or_unknown() -> String {
-    current_user().unwrap_or_else(|| "unknown".to_string())
 }
 
 #[cfg(test)]
