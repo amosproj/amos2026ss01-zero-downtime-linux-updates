@@ -225,16 +225,9 @@ _dev-deploy:
 	limactl shell $(DEV_VM) -- sudo systemctl restart orchestrator.service; \
 	echo ">>> Deployed. Tail logs: limactl shell $(DEV_VM) -- journalctl -u orchestrator.service -f"
 
-# e2e: spin up a disposable Lima VM, deploy the current orchestrator build
-# into it via dev-deploy, run the full scripts/tests/*.sh suite against it,
-# then delete the VM again so every run starts from a clean slate.
-e2e: ## Create a fresh Lima VM, deploy the local orchestrator build, run the e2e suite, then tear the VM down
-	@set -eu; \
-	echo ">>> Recreating Lima VM $(DEV_VM) from scratch"; \
-	limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; \
-	limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true; \
-	limactl create -y --name $(DEV_VM) dev-env/lima/edge-ipc.yaml; \
-	trap 'echo ">>> Deleting Lima VM $(DEV_VM)"; limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true' EXIT; \
+# The script recreates the Lima VM from scratch itself, so every run starts
+# from a clean slate; the VM is left around afterwards for post-mortem.
+e2e: ## Run the full e2e suite against a freshly recreated Lima VM
 	cd scripts && ./e2e_run_all.sh
 
 # ---------------------------------------------------------------------------

@@ -54,6 +54,11 @@ api() {
 }
 
 start_swtpm() {
+    # Kill any swtpm from a previous case still holding this socket: the new
+    # instance can't bind it, and the stale one keeps answering the next
+    # qemu's TPM chardev, delaying boot past lima's QMP-dial timeout.
+    pkill -f "swtpm socket.*${TPM_DIR}/swtpm-sock" 2>/dev/null || true
+
     swtpm socket --tpm2 -t -d \
         --tpmstate dir="${TPM_DIR}" \
         --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" \
@@ -63,4 +68,23 @@ start_swtpm() {
 stop_vm() {
     echo "Stopping Lima VM '${VM_NAME}'..."
     limactl stop -f "${VM_NAME}" 2>/dev/null || true
+}
+
+# Starts the VM non-interactively if it isn't already running, so that
+# `limactl shell` never hits its "Do you want to start the instance now?" prompt.
+ensure_vm_running() {
+    local status
+    status=$(limactl list --format '{{.Status}}' "${VM_NAME}" 2>/dev/null)
+    if [ "$status" != "Running" ]; then
+        echo "VM '${VM_NAME}' is not running (status: ${status:-unknown}); starting it..."
+        start_swtpm
+        QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
+            -chardev socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock \
+            -tpmdev emulator,id=tpm0,chardev=chrtpm \
+            -device tpm-tis,tpmdev=tpm0 \
+            -smbios type=1,uuid=${DEVICE_UUID},serial=${DEVICE_SERIAL} \
+            -smbios type=2,serial=${DEVICE_SERIAL}" \
+            limactl start --log-level warn "${VM_NAME}"
+        sleep 5
+    fi
 }

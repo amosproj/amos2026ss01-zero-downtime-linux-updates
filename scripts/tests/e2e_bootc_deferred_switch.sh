@@ -13,7 +13,7 @@ limactl shell "${VM_NAME}" -- sudo systemctl stop orchestrator.service
 sleep 2
 
 # Setup the deferred target assignment
-TARGET_UPGRADE_REF="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:commit-b64945e"
+TARGET_UPGRADE_REF="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:switch-2-tag"
 
 # Clean up old assignments first
 # TODO: I think it's better to test whether that's necessary too
@@ -28,19 +28,18 @@ api "/v1/os-assignments" POST '{"os_version_id": 4, "device_id": 1, "immediate":
 # Restart Orchestrator so it picks up the new config
 limactl shell "${VM_NAME}" -- sudo systemctl start orchestrator.service
 sleep 2
-limactl shell "${VM_NAME}" -- sudo journalctl -u orchestrator.service -n 100 --no-pager
 
 
-echo "--- Waiting for Orchestrator to detect, download, and stage the update ---"
+echo "--- Waiting for Orchestrator to detect, download, stage, and boot the update ---"
 
 APPLIED=false
-for i in $(seq 1 20); do
+for i in $(seq 1 45); do
     BOOTC_STATUS_JSON=$(limactl shell "${VM_NAME}" -- sudo bootc status --json 2>/dev/null)
     
     # limactl may temporarily fail if the host agent triggers an immediate reboot/restart sequence
     if [ $? -eq 0 ] && [ -n "$BOOTC_STATUS_JSON" ]; then
-        if echo "${BOOTC_STATUS_JSON}" | jq -e ".status.staged.image.image.image == \"${TARGET_UPGRADE_REF}\" or .status.booted.image.image.image == \"${TARGET_UPGRADE_REF}\"" > /dev/null; then
-            echo -e "${GREEN}Success: Verified state change! Update stage / applied.${NC}"
+        if echo "${BOOTC_STATUS_JSON}" | jq -e ".status.booted.image.image.image == \"${TARGET_UPGRADE_REF}\"" > /dev/null; then
+            echo -e "${GREEN}Success: Verified state change! Update is fully booted and applied.${NC}"
             echo "${BOOTC_STATUS_JSON}" | jq .
             APPLIED=true
             break
@@ -50,9 +49,6 @@ for i in $(seq 1 20); do
 done
 
 if [ "$APPLIED" = false ]; then
-    echo -e "${RED}FAILED: Switch of the OS state was not detected in bootc status.${NC}"
-    BOOTC_STATUS_JSON=$(limactl shell "${VM_NAME}" -- sudo bootc status --json 2>/dev/null)
+    echo -e "${RED}Failure: Target upgrade was not found in the 'booted' state within the timeout.${NC}"
     exit 1
 fi
-
-echo -e "${GREEN}Deferred Bootc Upgrade E2E test passed successfully!${NC}"
