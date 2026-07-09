@@ -1,0 +1,21 @@
+meta {
+  name: Record History
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/audit-logs/:table_name/:record_id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  table_name: devices
+  record_id: 1
+}
+
+docs {
+  `GET /audit-logs/{table_name}/{record_id}` — full change history of one
+  record, e.g. every modification ever made to device 1.
+}

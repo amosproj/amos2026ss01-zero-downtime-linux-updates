@@ -1,0 +1,15 @@
+meta {
+  name: App Configs
+  seq: 5
+}
+
+docs {
+  A config is the concrete deployable for an application: container image
+  reference + configuration (currently environment variables), targeted at
+  exactly one device **or** one group.
+
+  Configs are **immutable and versioned**: updating one creates a new row
+  (`version` + 1) and marks the old one `superseded_by` it, so history is
+  kept and rollback is possible. A device-specific config beats a group
+  config for the same application.
+}

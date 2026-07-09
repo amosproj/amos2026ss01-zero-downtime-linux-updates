@@ -1,0 +1,11 @@
+meta {
+  name: Reported State
+  seq: 9
+}
+
+docs {
+  The feedback half of the reconciliation loop: what devices *actually*
+  run, as reported by the orchestrator through the Device API
+  (`PUT /device/apps`, `PUT /device/os`, `PUT /device/ping`).
+  Compare with the assignments (target state) to see rollout progress.
+}

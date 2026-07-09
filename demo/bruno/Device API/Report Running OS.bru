@@ -1,0 +1,26 @@
+meta {
+  name: Report Running OS
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/device/os
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{deviceJwt}}
+}
+
+body:json {
+  {
+    "os_version_id": 1
+  }
+}
+
+docs {
+  `PUT /device/os` — report the OS version the device actually booted
+  into. Feeds *Reported OS Assignments*. Returns 201.
+}

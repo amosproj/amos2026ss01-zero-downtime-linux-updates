@@ -1,0 +1,24 @@
+meta {
+  name: Device API
+  seq: 3
+}
+
+docs {
+  # Device-facing API
+
+  The endpoints the on-device **orchestrator** calls, nested under
+  `{{baseUrl}}/device/…` (plus the unprotected `POST /register`). Included
+  for reference and manual testing — during a demo these are exercised by
+  the edge devices themselves.
+
+  All `/device/*` routes require a **device JWT**: a token containing
+  `"role": "device"` signed with the device's TPM-backed signing key
+  (registered during `POST /register`). A user JWT is rejected here, and a
+  device JWT is rejected on the user routes — set `{{deviceJwt}}` in the
+  environment if you have one.
+
+  Poll loop of the orchestrator: `PUT /ping` → `GET /os` (switch + reboot
+  if it differs from the booted image) → `GET /apps` (reconcile
+  containers) → `PUT /os`, `PUT /apps` (report actual state) →
+  `POST /logs` (ship journal + container logs).
+}

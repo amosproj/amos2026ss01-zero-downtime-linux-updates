@@ -1,0 +1,23 @@
+meta {
+  name: Create Tenant
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/tenants
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "AMOS Demo",
+    "description": "Demo tenant"
+  }
+}
+
+docs {
+  `POST /tenants` — create a tenant. `name` required, `description`
+  optional. Returns 201.
+}

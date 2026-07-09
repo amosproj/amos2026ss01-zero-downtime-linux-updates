@@ -1,0 +1,28 @@
+meta {
+  name: Update App Assignment
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/app-assignments/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "application_config_id": 2,
+    "device_id": 1,
+    "group_id": null
+  }
+}
+
+docs {
+  `PUT /app-assignments/{id}` — repoint an assignment (e.g. to a different
+  config version or target). Exactly one of `device_id` / `group_id`.
+}

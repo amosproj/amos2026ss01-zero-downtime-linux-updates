@@ -1,0 +1,40 @@
+meta {
+  name: 04 Register Edge 3
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/pending-device-registrations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "serial_number": "{{edge3Serial}}",
+    "endorsement_public_key": {{edge3EndorsementKey}}
+  }
+}
+
+vars:post-response {
+  pendingRegistrationId: res.body.id
+}
+
+docs {
+  `POST /pending-device-registrations` — allow-list edge 3 for
+  self-registration. The orchestrator on the device polls the server,
+  presents its TPM keys via `POST /register` (see *Device API*), and the
+  server accepts it because serial number + endorsement key match this
+  pending registration. Within ~a minute the device appears in `/devices`.
+
+  **Setup:** the demo operator provides the serial number and TPM
+  endorsement key for the unregistered edge. Put them into the environment
+  variables before the demo:
+
+  - `edge3Serial` — the serial number as-is.
+  - `edge3EndorsementKey` — the PEM key as a *JSON string* (the server
+    matches it byte-for-byte, including the trailing newline). If you were
+    handed a PEM file, convert it with `jq -Rs . < edge3-ek.pem` and paste
+    the entire quoted output (including the surrounding `"…"`).
+}

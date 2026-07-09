@@ -1,0 +1,25 @@
+meta {
+  name: List Audit Logs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/audit-logs
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~table_name: devices
+  ~record_id: 1
+  ~changed_by: 1
+  ~operation: INSERT
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /audit-logs` — list audit entries. Filters: `table_name`,
+  `record_id`, `changed_by` (user id), `operation`.
+}

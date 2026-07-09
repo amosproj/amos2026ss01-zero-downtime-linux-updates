@@ -1,0 +1,17 @@
+meta {
+  name: Device Registration
+  seq: 2
+}
+
+docs {
+  Devices are never handed credentials — they *prove* their identity:
+
+  1. An operator allow-lists the device here with its serial number and TPM
+     endorsement public key (**pending registration**).
+  2. The device's orchestrator calls `POST /register` (see *Device API*)
+     with its TPM keys; if serial + endorsement key match a pending
+     registration, the device record is created and the pending entry
+     consumed.
+  3. From then on the device authenticates with JWTs signed by its
+     TPM-backed signing key.
+}

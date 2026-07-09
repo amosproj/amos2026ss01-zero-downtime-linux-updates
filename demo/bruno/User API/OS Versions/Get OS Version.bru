@@ -1,0 +1,19 @@
+meta {
+  name: Get OS Version
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/os-versions/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+docs {
+  `GET /os-versions/{id}` — a single OS version by ID.
+}

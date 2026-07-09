@@ -1,0 +1,23 @@
+meta {
+  name: List Reported OS Assignments
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/reported-os-assignments
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~device_id: 1
+  ~os_version_id: 1
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /reported-os-assignments` — which OS version each device reports as
+  booted. Filters: `device_id`, `os_version_id`.
+}

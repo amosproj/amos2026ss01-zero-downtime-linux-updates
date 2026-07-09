@@ -1,0 +1,22 @@
+meta {
+  name: List Groups
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/groups
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~name: production
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /groups` — list groups, optionally filtered by `name`.
+  Shape: `{ id, name }`.
+}

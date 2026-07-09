@@ -1,0 +1,19 @@
+meta {
+  name: Delete App Config
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/app-configs/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 999
+}
+
+docs {
+  `DELETE /app-configs/{id}` — soft-delete a config version. Returns 204.
+}

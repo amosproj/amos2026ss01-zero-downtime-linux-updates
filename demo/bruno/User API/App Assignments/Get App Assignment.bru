@@ -1,0 +1,19 @@
+meta {
+  name: Get App Assignment
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/app-assignments/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+docs {
+  `GET /app-assignments/{id}` — a single assignment by ID.
+}

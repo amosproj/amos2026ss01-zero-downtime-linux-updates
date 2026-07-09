@@ -1,0 +1,29 @@
+meta {
+  name: List App Assignments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/app-assignments
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~application_config_id: 1
+  ~device_id: 1
+  ~group_id: 1
+  ~device_uuid: 019f4785-419a-7060-bc3c-d71c75099ac2
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /app-assignments` — list assignments. Filters:
+  `application_config_id`, `device_id`, `group_id`.
+
+  Special mode: `device_uuid` returns everything that applies to that
+  device — its direct assignments plus its group's (explicit
+  `device_id`/`group_id` params are ignored in this mode).
+}

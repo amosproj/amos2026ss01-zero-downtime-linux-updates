@@ -1,0 +1,19 @@
+meta {
+  name: Delete Group
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/groups/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 999
+}
+
+docs {
+  `DELETE /groups/{id}` — remove a group. Returns 204.
+}

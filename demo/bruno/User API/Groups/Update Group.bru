@@ -1,0 +1,25 @@
+meta {
+  name: Update Group
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/groups/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "name": "production-line-1-renamed"
+  }
+}
+
+docs {
+  `PUT /groups/{id}` — rename a group.
+}
