@@ -18,11 +18,9 @@ RUST_VERSION  ?= 1.95
 RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
 
 # settings for demo
-# SERVER_IP/SERVER_PORT compose the orchestrator's cloud_url (the /v1 prefix is
-# added automatically); VM_UUID/VM_SERIAL are the SMBIOS values the emulated
-# device presents (VM_UUID is its device id).
-SERVER_IP     ?= host.lima.internal
-SERVER_PORT   ?= 8080
+# CLOUD_URL is the orchestrator's cloud_url; VM_UUID/VM_SERIAL are the SMBIOS
+# values the emulated device presents (VM_UUID is its device id).
+CLOUD_URL     ?= http://host.lima.internal:8080/v1
 VM_UUID       ?= 00000000-0000-0000-0000-000000000001
 VM_SERIAL     ?= AMOS-TEST-001
 
@@ -243,12 +241,18 @@ e2e: ## Run the full e2e suite against a freshly recreated Lima VM
 # TimescaleDB, no tests. Prompts interactively for the VM name, device uuid,
 # device serial and cloud url, each with a default you can accept by pressing
 # enter.
-demo-edge: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB); prompts for VM name/device uuid/serial/cloud url
+demo-edge: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB); prompts for VM name/device uuid/serial/cloud url (skipped if stdin isn't a TTY)
 	@set -eu; \
-	printf "VM name [%s]: " "$(DEV_VM)"; read vm_name; vm_name=$${vm_name:-$(DEV_VM)}; \
-	printf "Device UUID [%s]: " "$(VM_UUID)"; read device_uuid; device_uuid=$${device_uuid:-$(VM_UUID)}; \
-	printf "Device serial [%s]: " "$(VM_SERIAL)"; read device_serial; device_serial=$${device_serial:-$(VM_SERIAL)}; \
-	printf "Cloud URL [http://%s:%s/v1]: " "$(SERVER_IP)" "$(SERVER_PORT)"; read cloud_url; cloud_url=$${cloud_url:-http://$(SERVER_IP):$(SERVER_PORT)/v1}; \
+	if [ -t 0 ]; then \
+	  printf "VM name [%s]: " "$(DEV_VM)"; read vm_name; \
+	  printf "Device UUID [%s]: " "$(VM_UUID)"; read device_uuid; \
+	  printf "Device serial [%s]: " "$(VM_SERIAL)"; read device_serial; \
+	  printf "Cloud URL [%s]: " "$(CLOUD_URL)"; read cloud_url; \
+	fi; \
+	vm_name=$${vm_name:-$(DEV_VM)}; \
+	device_uuid=$${device_uuid:-$(VM_UUID)}; \
+	device_serial=$${device_serial:-$(VM_SERIAL)}; \
+	cloud_url=$${cloud_url:-$(CLOUD_URL)}; \
 	echo ">>> Recreating Lima VM $$vm_name from scratch"; \
 	limactl stop $$vm_name -f >/dev/null 2>&1 || true; \
 	limactl delete $$vm_name -f >/dev/null 2>&1 || true; \
