@@ -82,7 +82,7 @@ pub trait PodmanContainer: PodmanImageInfo + Send + 'static {
     type LogHandle: PodmanLogHandle;
 
     async fn start(&mut self) -> anyhow::Result<()>;
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     async fn stop(&mut self) -> anyhow::Result<()>;
     async fn destroy(self) -> anyhow::Result<()>;
     async fn state(&self) -> anyhow::Result<PodmanContainerState>;

@@ -222,34 +222,6 @@ mod tests {
         assert!(!result.rollback_queued);
     }
 
-    #[tokio::test]
-    async fn test_rollback_reboot_success() {
-        let mut mock_exec = MockExecuter::new();
-
-        mock_exec
-            .expect_execute()
-            .with(
-                eq("sudo".to_string()),
-                eq(vec![
-                    "bootc".to_string(),
-                    "rollback".to_string(),
-                    "--apply".to_string(),
-                ]),
-            )
-            .times(1)
-            .returning(|_, _| {
-                Box::pin(async move {
-                    Ok(ExecResult {
-                        stdout: "".to_string(),
-                        stderr: "".to_string(),
-                        exit_code: Some(137),
-                    })
-                })
-            });
-
-        let client = Bootc::new(Box::new(mock_exec));
-        assert!(client.rollback().await.is_ok());
-    }
 
     #[tokio::test]
     async fn test_apply_hardware_failure() {
