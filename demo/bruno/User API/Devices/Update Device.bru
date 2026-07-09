@@ -1,0 +1,30 @@
+meta {
+  name: Update Device
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/devices/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "uuid": "019f4785-419a-7060-bc3c-d71c75099ac2",
+    "serial_number": "BIOS-SERIAL-1337-AMOS-TEST-VM",
+    "public_key": null,
+    "tenant_id": 1,
+    "group_id": null
+  }
+}
+
+docs {
+  `PUT /devices/{id}` — full replace; all fields required. For partial
+  changes (e.g. just moving a device into a group) prefer *Patch Device*.
+}

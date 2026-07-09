@@ -1,0 +1,26 @@
+meta {
+  name: Update Application
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/applications/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "name": "hello-world",
+    "description": "Heartbeat demo app (renamed)"
+  }
+}
+
+docs {
+  `PUT /applications/{id}` — replace name/description.
+}

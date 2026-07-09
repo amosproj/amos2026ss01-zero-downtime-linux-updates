@@ -1,0 +1,22 @@
+meta {
+  name: List OS Versions
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/os-versions
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /os-versions` — list registered OS versions. Shape:
+  `{ id, commit_hash, orchestrator_version, description, deleted_at,
+  superseded_by }`.
+}

@@ -249,7 +249,7 @@ demo-edge: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB
 	echo ">>> Recreating Lima VM $$vm_name from scratch"; \
 	limactl stop $$vm_name -f >/dev/null 2>&1 || true; \
 	limactl delete $$vm_name -f >/dev/null 2>&1 || true; \
-	limactl create -y --name $$vm_name dev-env/lima/edge-ipc.yaml; \
+	limactl create --name $$vm_name dev-env/lima/edge-ipc.yaml; \
 	cd scripts && \
 	  VM_NAME="$$vm_name" \
 	  DEVICE_UUID="$$device_uuid" \

@@ -1,0 +1,16 @@
+meta {
+  name: User API
+  seq: 2
+}
+
+docs {
+  # User-facing API
+
+  Everything an operator (or UI) calls, mounted at `{{baseUrl}}` (`…/v1`).
+  All requests require a **user JWT** — inherited from the collection, so
+  they work out of the box.
+
+  Grouped by resource; each request documents its parameters, body and
+  response. Target state flows *devices ← assignments ← configs/versions*,
+  and the device reports back into the `Reported State` resources.
+}

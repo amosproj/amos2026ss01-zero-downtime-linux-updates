@@ -1,0 +1,29 @@
+meta {
+  name: List Devices
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/devices
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~page: 1
+  ~page_size: 20
+  ~group_id: 1
+  ~tenant_id: 1
+  ~uuid: 019f4785-419a-7060-bc3c-d71c75099ac2
+  ~serial_number: BIOS-SERIAL-1337-AMOS-TEST-VM
+}
+
+docs {
+  `GET /devices` — list registered devices (paginated).
+
+  Optional filters: `group_id`, `tenant_id`, `uuid`, `serial_number`.
+
+  Device shape:
+  `{ id, uuid, serial_number, public_key, tenant_id, group_id }`
+}

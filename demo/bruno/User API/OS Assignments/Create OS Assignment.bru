@@ -1,0 +1,26 @@
+meta {
+  name: Create OS Assignment
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/os-assignments
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "os_version_id": 1,
+    "device_id": 1,
+    "group_id": null,
+    "immediate": true
+  }
+}
+
+docs {
+  `POST /os-assignments` — assign an OS version to a device or group.
+  Exactly one of `device_id` / `group_id` must be set; `immediate`
+  defaults to false. Returns 201.
+}

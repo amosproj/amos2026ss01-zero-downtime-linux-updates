@@ -1,0 +1,42 @@
+meta {
+  name: 09 Update App Config
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/app-configs/{{appConfigId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "device_id": {{demoDeviceId}},
+    "application_id": {{applicationId}},
+    "image": "{{appImage}}",
+    "config": {
+      "environment": {
+        "NAME": "AMOS v2 — updated live"
+      }
+    }
+  }
+}
+
+vars:post-response {
+  appConfigId: res.body.id
+}
+
+docs {
+  `PUT /app-configs/{id}` — roll out an application update. The server
+  never mutates a config in place: it creates a new, versioned config row
+  and marks the old one as superseded, so there is a full history and easy
+  rollback. The same call is used to ship a new image tag; here we change
+  the `NAME` environment variable so the update is visible in the logs.
+
+  **Watch the log stream tab:** the orchestrator restarts the container and
+  the app now prints `NAME = AMOS v2 — updated live`.
+
+  The response is the *new* config version; `{{appConfigId}}` is updated to
+  it, so re-sending this request keeps working.
+}

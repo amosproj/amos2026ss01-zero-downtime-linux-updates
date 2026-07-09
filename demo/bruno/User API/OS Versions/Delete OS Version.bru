@@ -1,0 +1,19 @@
+meta {
+  name: Delete OS Version
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/os-versions/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 999
+}
+
+docs {
+  `DELETE /os-versions/{id}` — soft-delete an OS version. Returns 204.
+}

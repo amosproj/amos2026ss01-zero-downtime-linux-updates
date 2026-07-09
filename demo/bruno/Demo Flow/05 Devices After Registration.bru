@@ -1,0 +1,24 @@
+meta {
+  name: 05 Devices After Registration
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/devices
+  body: none
+  auth: inherit
+}
+
+docs {
+  `GET /devices` again.
+
+  **Expect:** three devices now — edge 3 self-registered using its TPM
+  identity (watch its first logs arrive in the stream tab). Re-send until it
+  shows up; the orchestrator registers within its polling interval
+  (~a minute). If it takes longer, ask the demo operator to restart the
+  orchestrator on that edge.
+
+  The new device's `id` should match the `demoDeviceId` environment variable
+  (3 for a fresh run) — the remaining steps target it.
+}

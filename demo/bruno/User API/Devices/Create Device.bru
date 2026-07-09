@@ -1,0 +1,28 @@
+meta {
+  name: Create Device
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/devices
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "uuid": "00000000-0000-0000-0000-000000000000",
+    "serial_number": "MANUAL-SERIAL-0001",
+    "public_key": null,
+    "tenant_id": 1,
+    "group_id": null
+  }
+}
+
+docs {
+  `POST /devices` — create a device record manually. In normal operation
+  devices are created through the registration flow instead
+  (pending registration + `POST /register` from the device), which also
+  stores the TPM-backed `public_key`; use this only for testing.
+}

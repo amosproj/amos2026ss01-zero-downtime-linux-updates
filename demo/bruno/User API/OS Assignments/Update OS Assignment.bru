@@ -1,0 +1,29 @@
+meta {
+  name: Update OS Assignment
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/os-assignments/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "os_version_id": 2,
+    "device_id": 1,
+    "group_id": null,
+    "immediate": true
+  }
+}
+
+docs {
+  `PUT /os-assignments/{id}` — repoint an assignment to a different OS
+  version or target. Exactly one of `device_id` / `group_id`.
+}

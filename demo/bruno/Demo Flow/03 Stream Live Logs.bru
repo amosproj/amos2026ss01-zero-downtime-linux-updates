@@ -1,0 +1,36 @@
+meta {
+  name: 03 Stream Live Logs
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/logs/stream?level=info
+  body: none
+  auth: inherit
+}
+
+params:query {
+  level: info
+  ~device_id: {{demoDeviceId}}
+  ~application_id: 1
+  ~kind: device
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+docs {
+  `GET /logs/stream` — live SSE firehose of device and application logs.
+  Bruno renders the events as they arrive; **leave this running in its own
+  tab** for the rest of the demo.
+
+  - `level` is a *minimum severity* filter (`trace|debug|info|warn|error|fatal`).
+    Mid-demo trick: change it to `error`, re-send, and the noise disappears.
+  - Enable `device_id` / `kind` to narrow to one device or to
+    `device` vs `application` logs only.
+
+  Each event is JSON tagged with its kind, e.g.
+  `{"kind":"device","id":"…","time":"…","device_id":1,"level":"info","message":"…","source":"…"}`.
+}

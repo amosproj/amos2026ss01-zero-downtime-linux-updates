@@ -1,0 +1,23 @@
+meta {
+  name: List Reported App Assignments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/reported-app-assignments
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~device_id: 1
+  ~application_config_id: 1
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /reported-app-assignments` — which app config versions each device
+  reports as running. Filters: `device_id`, `application_config_id`.
+}

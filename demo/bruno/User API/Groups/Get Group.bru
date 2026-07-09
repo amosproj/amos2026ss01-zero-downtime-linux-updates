@@ -1,0 +1,19 @@
+meta {
+  name: Get Group
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/groups/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+docs {
+  `GET /groups/{id}` — a single group by ID.
+}

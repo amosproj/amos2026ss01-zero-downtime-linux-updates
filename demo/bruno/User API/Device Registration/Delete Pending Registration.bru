@@ -1,0 +1,20 @@
+meta {
+  name: Delete Pending Registration
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/pending-device-registrations/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+docs {
+  `DELETE /pending-device-registrations/{id}` — revoke an allow-list entry
+  before the device has used it. Returns 204 on success.
+}

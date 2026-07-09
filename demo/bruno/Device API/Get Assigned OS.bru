@@ -1,0 +1,24 @@
+meta {
+  name: Get Assigned OS
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/device/os
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{deviceJwt}}
+}
+
+docs {
+  `GET /device/os` — the OS version assigned to the calling device (its
+  first active assignment, direct or via group).
+
+  Response: `{ id, commit_hash, immediate }` — the orchestrator
+  `bootc switch`es to `commit_hash` if it differs from the booted image;
+  `immediate` decides whether to apply now or at the next window.
+}

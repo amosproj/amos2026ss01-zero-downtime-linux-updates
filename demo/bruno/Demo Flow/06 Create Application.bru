@@ -1,0 +1,30 @@
+meta {
+  name: 06 Create Application
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/applications
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "hello-world",
+    "description": "Heartbeat demo app — prints its environment and a counter"
+  }
+}
+
+vars:post-response {
+  applicationId: res.body.id
+}
+
+docs {
+  `POST /applications` — register the application in the catalog. This is
+  just metadata; the deployable artifact comes next as an *app config*
+  (container image + configuration).
+
+  The created `id` is captured as `{{applicationId}}` for step 07.
+}

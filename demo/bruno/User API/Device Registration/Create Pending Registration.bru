@@ -1,0 +1,34 @@
+meta {
+  name: Create Pending Registration
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/pending-device-registrations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "serial_number": "{{edge3Serial}}",
+    "endorsement_public_key": "-----BEGIN PUBLIC KEY-----\n…paste PEM with \\n escapes…\n-----END PUBLIC KEY-----\n"
+  }
+}
+
+docs {
+  `POST /pending-device-registrations` — allow-list a device. Returns 201
+  with the created entry.
+
+  The server later matches `serial_number` + `endorsement_public_key`
+  **byte-for-byte** (including the trailing newline) against what the
+  device sends in `POST /register`, so paste the PEM exactly as read from
+  the TPM:
+
+  ```
+  sudo tpm2_readpublic -c 0x81010001 -f pem -o /dev/stdout | openssl rsa -pubin
+  ```
+
+  (`| jq -Rs .` turns that into a ready-to-paste JSON string.)
+}

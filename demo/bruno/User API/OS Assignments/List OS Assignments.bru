@@ -1,0 +1,26 @@
+meta {
+  name: List OS Assignments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/os-assignments
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~os_version_id: 1
+  ~device_id: 1
+  ~group_id: 1
+  ~device_uuid: 019f4785-419a-7060-bc3c-d71c75099ac2
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /os-assignments` — list OS assignments (target state). Filters:
+  `os_version_id`, `device_id`, `group_id`; `device_uuid` resolves direct +
+  group assignments for that device.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Create App Config
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/app-configs
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "device_id": 1,
+    "group_id": null,
+    "application_id": 1,
+    "image": "{{appImage}}",
+    "config": {
+      "environment": {
+        "NAME": "AMOS"
+      }
+    }
+  }
+}
+
+docs {
+  `POST /app-configs` — create version 1 of a config. Exactly one of
+  `device_id` / `group_id` must be set; `image` is required; `config` is
+  optional (`{ environment: { KEY: VALUE, … } }`). Returns 201.
+}

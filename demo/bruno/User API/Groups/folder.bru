@@ -1,0 +1,11 @@
+meta {
+  name: Groups
+  seq: 11
+}
+
+docs {
+  Groups enable fleet-wide rollouts: app configs and OS assignments can
+  target a group instead of a single device, and every member inherits
+  them (device-specific configs win over group configs). Devices join a
+  group via `PATCH /devices/{id}` with `group_id`.
+}
