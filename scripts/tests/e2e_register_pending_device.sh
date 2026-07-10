@@ -32,5 +32,7 @@ echo "Restarting Orchestrator to make it register itself immediately..."
 limactl shell "${VM_NAME}" -- sudo systemctl restart orchestrator.service
 sleep 5
 
-limactl shell "${VM_NAME}" -- journalctl -u orchestrator.service --since "6 seconds ago" | \
+# `sudo`, because in lima's plain mode the VM's lima user is not in the
+# adm/systemd-journal groups, so an unprivileged journalctl prints nothing.
+limactl shell "${VM_NAME}" -- sudo journalctl -u orchestrator.service --since "6 seconds ago" | \
   grep "Successfully self-registered device"
