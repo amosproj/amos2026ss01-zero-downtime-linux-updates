@@ -58,6 +58,6 @@ async fn os_get_assigned(
 }
 
 async fn os_put_report(device_id: i32, os_version_id: i32) -> Result<(), sea_orm::DbErr> {
-    let _ = crate::api_v1::db::add_reported_os_assignment(os_version_id, device_id).await?;
+    crate::api_v1::db::add_reported_os_assignment(os_version_id, device_id).await?;
     Ok(())
 }
