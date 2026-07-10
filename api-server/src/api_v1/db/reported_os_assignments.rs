@@ -2,6 +2,8 @@ use crate::dtos;
 use amos_common::entities::ReportedOsAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::sea_query::OnConflict;
+use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
@@ -44,25 +46,33 @@ pub async fn get_reported_os_assignment(
         .map(|m| m.into_api()))
 }
 
-pub async fn add_reported_os_assignment(
-    os_version_id: i32,
-    device_id: i32,
-) -> Result<ReportedOsAssignment::Model, DbErr> {
+pub async fn add_reported_os_assignment(os_version_id: i32, device_id: i32) -> Result<(), DbErr> {
     let os_assignment = dtos::ReportedOsAssignment::ActiveModel {
         id: NotSet,
         os_version_id: Set(os_version_id),
         device_id: Set(device_id),
-        updated_at: NotSet, // updated_at is automatically set in before_save
+        updated_at: Set(chrono::Utc::now()),
     };
 
     let db = db!();
 
-    let new_os_assignment = os_assignment.insert(&db).await?;
+    dtos::ReportedOsAssignment::Entity::insert(os_assignment)
+        .on_conflict(
+            OnConflict::columns([
+                dtos::ReportedOsAssignment::Column::DeviceId,
+                dtos::ReportedOsAssignment::Column::OsVersionId,
+            ])
+            .update_column(dtos::ReportedOsAssignment::Column::UpdatedAt)
+            .to_owned(),
+        )
+        .exec(&db)
+        .await?;
+
     debug!(
-        "Inserted new reported OS version assignment: {:?}",
-        new_os_assignment
+        "Inserted new reported OS version assignment: device={} version={}",
+        device_id, os_version_id
     );
-    Ok(new_os_assignment.into_api())
+    Ok(())
 }
 
 pub async fn delete_reported_os_assignment(id: i32) -> Result<u64, DbErr> {

@@ -2,6 +2,8 @@ use crate::dtos;
 use amos_common::entities::ReportedApplicationAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::sea_query::OnConflict;
+use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
 };
@@ -48,22 +50,33 @@ pub async fn get_reported_application_assignment(
 pub async fn add_reported_application_assignment(
     application_config_id: i32,
     device_id: i32,
-) -> Result<ReportedApplicationAssignment::Model, DbErr> {
+) -> Result<(), DbErr> {
     let app_assignment = dtos::ReportedApplicationAssignment::ActiveModel {
         id: NotSet,
         application_config_id: Set(application_config_id),
         device_id: Set(device_id),
-        updated_at: NotSet, // updated_at is automatically set in before_save
+        updated_at: Set(chrono::Utc::now()),
     };
 
     let db = db!();
 
-    let new_app_assignment = app_assignment.insert(&db).await?;
+    dtos::ReportedApplicationAssignment::Entity::insert(app_assignment)
+        .on_conflict(
+            OnConflict::columns([
+                dtos::ReportedApplicationAssignment::Column::DeviceId,
+                dtos::ReportedApplicationAssignment::Column::ApplicationConfigId,
+            ])
+            .update_column(dtos::ReportedApplicationAssignment::Column::UpdatedAt)
+            .to_owned(),
+        )
+        .exec(&db)
+        .await?;
+
     debug!(
-        "Inserted new reported application assignment: {:?}",
-        new_app_assignment
+        "Upserted new reported application assignment: device={} config={}",
+        device_id, application_config_id
     );
-    Ok(new_app_assignment.into_api())
+    Ok(())
 }
 
 pub async fn delete_reported_application_assignment(id: i32) -> Result<u64, DbErr> {
