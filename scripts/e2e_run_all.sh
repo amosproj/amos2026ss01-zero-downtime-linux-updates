@@ -14,8 +14,10 @@ PASSED_COUNT=0
 readonly timescale_container="amos-test-timescaledb"
 readonly timescale_port=55433
 readonly timescale_url="postgres://app:4M0S@127.0.0.1:${timescale_port}/amos_timeseries"
-readonly script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly devcontainer_dir="$(cd "$script_dir/../.devcontainer" && pwd)"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly script_dir
+devcontainer_dir="$(cd "$script_dir/../.devcontainer" && pwd)"
+readonly devcontainer_dir
 
 # Color outputs
 GREEN='\033[0;32m'
