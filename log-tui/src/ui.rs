@@ -30,17 +30,27 @@ fn draw_sidebar(f: &mut Frame, app: &App, area: Rect) {
     f.render_stateful_widget(list, area, &mut state);
 }
 
+/// Hanging indent applied to wrapped continuation rows of a log entry.
+const CONT_INDENT: usize = 2;
+
 fn draw_logs(f: &mut Frame, app: &App, area: Rect) {
-    // Show the newest lines that fit inside the border.
-    let visible = area.height.saturating_sub(2) as usize;
-    let lines: Vec<Line> = app
-        .logs
-        .iter()
-        .rev()
-        .take(visible)
-        .rev()
-        .map(render_line)
-        .collect();
+    // Width/height available inside the border.
+    let inner_w = area.width.saturating_sub(2) as usize;
+    let inner_h = area.height.saturating_sub(2) as usize;
+
+    // Wrap entries into physical rows, newest last. Walk from the newest entry
+    // backwards and stop once we have enough rows to fill the pane.
+    let mut rows: Vec<Line> = Vec::new();
+    for e in app.logs.iter().rev() {
+        let mut entry = render_entry(e, inner_w);
+        entry.extend(std::mem::take(&mut rows));
+        rows = entry;
+        if rows.len() >= inner_h {
+            break;
+        }
+    }
+    let start = rows.len().saturating_sub(inner_h);
+    let visible: Vec<Line> = rows.split_off(start);
 
     let title = format!(
         "Logs — level:{}  device:{}",
@@ -48,7 +58,7 @@ fn draw_logs(f: &mut Frame, app: &App, area: Rect) {
         app.selected_device_label()
     );
     f.render_widget(
-        Paragraph::new(lines).block(Block::bordered().title(title)),
+        Paragraph::new(visible).block(Block::bordered().title(title)),
         area,
     );
 }
@@ -79,8 +89,11 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
-fn render_line(e: &LogEvent) -> Line<'static> {
-    let (time, level, message, source, tag) = match e {
+/// Render one log entry as one or more physical rows, wrapping the message to
+/// `width` cells. The first row carries the `time / level / [dev…]` prefix; any
+/// continuation rows are hanging-indented so they read as the same entry.
+fn render_entry(e: &LogEvent, width: usize) -> Vec<Line<'static>> {
+    let (time, level, mut body, source, tag) = match e {
         LogEvent::Device(m) => (
             m.time,
             m.level,
@@ -96,20 +109,108 @@ fn render_line(e: &LogEvent) -> Line<'static> {
             format!("[dev {}/app {}] ", m.device_id, m.application_id),
         ),
     };
-
-    let mut spans = vec![
-        Span::styled(format!("{} ", time.format("%H:%M:%S")), Style::new().dim()),
-        Span::styled(
-            format!("{:<5} ", level_str(level).to_uppercase()),
-            Style::new().fg(level_color(level)),
-        ),
-        Span::styled(tag, Style::new().dim()),
-        Span::raw(message),
-    ];
     if let Some(s) = source {
-        spans.push(Span::styled(format!(" ({s})"), Style::new().dim()));
+        body.push_str(&format!(" ({s})"));
     }
-    Line::from(spans)
+
+    let time_str = format!("{} ", time.format("%H:%M:%S"));
+    let level_str_up = format!("{:<5} ", level_str(level).to_uppercase());
+    let prefix_w = time_str.chars().count() + level_str_up.chars().count() + tag.chars().count();
+
+    let width = width.max(1);
+    let first_w = width.saturating_sub(prefix_w).max(1);
+    let cont_w = width.saturating_sub(CONT_INDENT).max(1);
+    let chunks = wrap_text(&body, first_w, cont_w);
+
+    let color = level_color(level);
+    let mut lines = Vec::with_capacity(chunks.len().max(1));
+    let first = chunks.first().cloned().unwrap_or_default();
+    lines.push(Line::from(vec![
+        Span::styled(time_str, Style::new().dim()),
+        Span::styled(level_str_up, Style::new().fg(color)),
+        Span::styled(tag, Style::new().dim()),
+        Span::raw(first),
+    ]));
+    for chunk in chunks.iter().skip(1) {
+        let mut s = " ".repeat(CONT_INDENT);
+        s.push_str(chunk);
+        lines.push(Line::from(Span::raw(s)));
+    }
+    lines
+}
+
+/// Greedy word-wrap on whitespace (collapsing runs of it). Words longer than a
+/// line are hard-split. The first line may have a different width than the rest
+/// (to account for the prefix). Treats one char as one cell — fine for logs.
+fn wrap_text(text: &str, first_width: usize, cont_width: usize) -> Vec<String> {
+    let first_width = first_width.max(1);
+    let cont_width = cont_width.max(1);
+    let mut out: Vec<String> = Vec::new();
+    let mut cur = String::new();
+
+    let limit_for = |line_idx: usize| if line_idx == 0 { first_width } else { cont_width };
+
+    for word in text.split_whitespace() {
+        let mut word = word.to_string();
+        loop {
+            let limit = limit_for(out.len());
+            let cur_len = cur.chars().count();
+            let sep = usize::from(!cur.is_empty());
+            let word_len = word.chars().count();
+
+            if cur_len + sep + word_len <= limit {
+                if !cur.is_empty() {
+                    cur.push(' ');
+                }
+                cur.push_str(&word);
+                break;
+            } else if cur.is_empty() {
+                // Word doesn't fit on an empty line: take what we can, recurse.
+                let head: String = word.chars().take(limit).collect();
+                out.push(head);
+                word = word.chars().skip(limit).collect();
+                if word.is_empty() {
+                    break;
+                }
+            } else {
+                // Flush the current line and retry the word on a fresh one.
+                out.push(std::mem::take(&mut cur));
+            }
+        }
+    }
+    if !cur.is_empty() || out.is_empty() {
+        out.push(cur);
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wrap_text;
+
+    #[test]
+    fn wraps_on_word_boundaries() {
+        // first line width 5, continuation width 10
+        let out = wrap_text("hello there world", 5, 10);
+        assert_eq!(out, vec!["hello", "there", "world"]);
+    }
+
+    #[test]
+    fn hard_splits_overlong_words() {
+        let out = wrap_text("abcdefghij", 4, 4);
+        assert_eq!(out, vec!["abcd", "efgh", "ij"]);
+    }
+
+    #[test]
+    fn empty_text_yields_one_empty_line() {
+        assert_eq!(wrap_text("", 8, 8), vec![String::new()]);
+    }
+
+    #[test]
+    fn packs_multiple_words_per_line() {
+        let out = wrap_text("a b c d e f", 5, 5);
+        assert_eq!(out, vec!["a b c", "d e f"]);
+    }
 }
 
 fn level_color(level: LogLevel) -> Color {
