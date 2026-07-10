@@ -20,7 +20,7 @@ AMOS_JWT="<dev jwt>" cargo run -p amos-log-tui -- \
 ```
 
 The JWT can also be passed with `--jwt`. Grab the token from
-`demo/bruno/environments/<env>.bru` (`jwt:` var).
+`api/bruno/environments/<env>.bru` (`jwt:` var).
 
 ### Flags
 
@@ -39,6 +39,7 @@ The JWT can also be passed with `--jwt`. Grab the token from
 | `0` / `1` / `2` / `3` | Min level: all / info / warn / error (reconnects the stream) |
 | `j` / `k` (or ↓ / ↑) | Select next / previous device (reconnects, filtered by `device_id`) |
 | `a` (or ←) | All devices (clear the device filter) |
+| `u` / `d` | Scroll up / down half a page (`d` back to 0 resumes live-follow) |
 | `c` | Clear the on-screen log buffer |
 | `q` / `Esc` / `Ctrl-C` | Quit |
 

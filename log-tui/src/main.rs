@@ -48,7 +48,7 @@ async fn run(terminal: &mut DefaultTerminal, client: Client, cli: Cli) -> Result
     let mut term_events = EventStream::new();
 
     loop {
-        terminal.draw(|f| ui::draw(f, &app))?;
+        terminal.draw(|f| ui::draw(f, &mut app))?;
 
         tokio::select! {
             maybe_msg = rx.recv() => {

@@ -3,11 +3,9 @@ use crate::client::level_str;
 use amos_common::entities::{LogEvent, LogLevel};
 use ratatui::{prelude::*, widgets::*};
 
-pub fn draw(f: &mut Frame, app: &App) {
-    let root =
-        Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(f.area());
-    let body =
-        Layout::horizontal([Constraint::Length(30), Constraint::Min(0)]).split(root[0]);
+pub fn draw(f: &mut Frame, app: &mut App) {
+    let root = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(f.area());
+    let body = Layout::horizontal([Constraint::Length(30), Constraint::Min(0)]).split(root[0]);
 
     draw_sidebar(f, app, body[0]);
     draw_logs(f, app, body[1]);
@@ -33,30 +31,40 @@ fn draw_sidebar(f: &mut Frame, app: &App, area: Rect) {
 /// Hanging indent applied to wrapped continuation rows of a log entry.
 const CONT_INDENT: usize = 2;
 
-fn draw_logs(f: &mut Frame, app: &App, area: Rect) {
+fn draw_logs(f: &mut Frame, app: &mut App, area: Rect) {
     // Width/height available inside the border.
     let inner_w = area.width.saturating_sub(2) as usize;
     let inner_h = area.height.saturating_sub(2) as usize;
+    app.viewport = inner_h; // let the key handler size a half-page step
 
     // Wrap entries into physical rows, newest last. Walk from the newest entry
-    // backwards and stop once we have enough rows to fill the pane.
+    // backwards, collecting enough to fill the pane plus the scroll offset.
+    let need = inner_h.saturating_add(app.scroll);
     let mut rows: Vec<Line> = Vec::new();
     for e in app.logs.iter().rev() {
         let mut entry = render_entry(e, inner_w);
         entry.extend(std::mem::take(&mut rows));
         rows = entry;
-        if rows.len() >= inner_h {
+        if rows.len() >= need {
             break;
         }
     }
-    let start = rows.len().saturating_sub(inner_h);
-    let visible: Vec<Line> = rows.split_off(start);
 
-    let title = format!(
+    // Clamp the scroll offset to what actually exists, then take the window.
+    let max_scroll = rows.len().saturating_sub(inner_h);
+    app.scroll = app.scroll.min(max_scroll);
+    let end = rows.len() - app.scroll;
+    let start = end.saturating_sub(inner_h);
+    let visible: Vec<Line> = rows[start..end].to_vec();
+
+    let mut title = format!(
         "Logs — level:{}  device:{}",
         app.min_level.map(level_str).unwrap_or("all"),
         app.selected_device_label()
     );
+    if app.scroll > 0 {
+        title.push_str(&format!("  ↑{} (u/d scroll)", app.scroll));
+    }
     f.render_widget(
         Paragraph::new(visible).block(Block::bordered().title(title)),
         area,
@@ -74,17 +82,15 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         Span::raw(" device  "),
         key("a"),
         Span::raw(" all  "),
+        key("u/d"),
+        Span::raw(" scroll  "),
         key("c"),
         Span::raw(" clear   "),
     ];
     spans.push(match &app.conn {
-        ConnState::Reconnecting => {
-            Span::styled("● reconnecting", Style::new().fg(Color::Yellow))
-        }
+        ConnState::Reconnecting => Span::styled("● reconnecting", Style::new().fg(Color::Yellow)),
         ConnState::Live => Span::styled("● live", Style::new().fg(Color::Green)),
-        ConnState::Error(e) => {
-            Span::styled(format!("● error: {e}"), Style::new().fg(Color::Red))
-        }
+        ConnState::Error(e) => Span::styled(format!("● error: {e}"), Style::new().fg(Color::Red)),
     });
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
@@ -148,7 +154,13 @@ fn wrap_text(text: &str, first_width: usize, cont_width: usize) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let mut cur = String::new();
 
-    let limit_for = |line_idx: usize| if line_idx == 0 { first_width } else { cont_width };
+    let limit_for = |line_idx: usize| {
+        if line_idx == 0 {
+            first_width
+        } else {
+            cont_width
+        }
+    };
 
     for word in text.split_whitespace() {
         let mut word = word.to_string();
