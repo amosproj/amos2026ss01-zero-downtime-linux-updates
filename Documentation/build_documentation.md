@@ -35,7 +35,7 @@ amos2026ss01-zero-downtime-linux-updates/
 │   │                         includes download manager module and security verification
 │   ├── Cargo.toml
 │   └── src/
-├── api-mock-server/        — Development mock server binary
+├── api-server/        — Development server binary
 │   ├── Cargo.toml
 │   └── src/
 └── bootc-build/            — Container image build files
@@ -102,7 +102,7 @@ cargo build
 
 Compiled binaries are placed in `target/debug/`:
 - `target/debug/amos-orchestrator`
-- `target/debug/amos-api-mock-server`
+- `target/debug/amos-api-server`
 
 ### Build in release mode (optimised, for deployment)
 
@@ -112,13 +112,13 @@ cargo build --release
 
 Compiled binaries are placed in `target/release/`:
 - `target/release/amos-orchestrator`
-- `target/release/amos-api-mock-server`
+- `target/release/amos-api-server`
 
 ### Build a specific crate only
 
 ```bash
 cargo build -p amos-orchestrator
-cargo build -p amos-api-mock-server
+cargo build -p amos-api-server
 ```
 
 ---
@@ -134,7 +134,7 @@ cargo test
 ### Run tests for a specific crate
 
 ```bash
-cargo test -p amos-api-mock-server
+cargo test -p amos-api-server
 cargo test -p amos-orchestrator
 cargo test -p amos-common
 ```
@@ -170,16 +170,16 @@ podman volume rm devcontainer_postgres_data
 
 **Alternatively for local development** an sqlite database can be used. For that, just define a sqlite connection string via the config or an environment variable when running the server, e.g.: `APP_DATABASE_URL="sqlite://db.sqlite?mode=rwc" cargo run ..."`
 
-### 1. Start the API mock server
+### 1. Start the API server
 
-The mock server simulates the Cloud API on `localhost:80`:
+The server simulates the Cloud API on `localhost:80`:
 
 ```bash
 # Requires port 80 — run with sudo or change to a high port (edit source if needed)
-sudo ./target/debug/amos-api-mock-server
+sudo ./target/debug/amos-api-server
 ```
 
-> **Note:** Port 80 requires root privileges. If you do not want to use `sudo`, edit `api-mock-server/src/main.rs` to bind to a high port (e.g. `8080`) and rebuild.
+> **Note:** Port 80 requires root privileges. If you do not want to use `sudo`, edit `api-server/src/main.rs` to bind to a high port (e.g. `8080`) and rebuild.
 
 Place any binary update artifacts you want to serve in an `assets/` directory next to the binary.
 
@@ -189,14 +189,14 @@ Place any binary update artifacts you want to serve in an `assets/` directory ne
 cp orchestrator/config.example.toml config.toml
 ```
 
-Edit `config.toml` to point at the mock server:
+Edit `config.toml` to point at the server:
 
 ```toml
 cloud_url = "http://localhost/v1"
 poll_interval_secs = 10
 ```
 
-> **Note:** `cloud_url` accepts both `http://` and `https://` schemas. For local development, pointing directly at the plain-HTTP mock server with `http://localhost` is the simplest setup.
+> **Note:** `cloud_url` accepts both `http://` and `https://` schemas. For local development, pointing directly at the plain-HTTP server with `http://localhost` is the simplest setup.
 
 ### 3. Run the Orchestrator
 

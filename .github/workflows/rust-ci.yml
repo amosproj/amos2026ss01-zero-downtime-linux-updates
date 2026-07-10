@@ -56,7 +56,7 @@ jobs:
       - run: cargo test --all-features
 
   # Release Build if a Tag is pushed
-  # https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-api-mock-server
+  # https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-api-server
   # https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-orchestrator
 
   build_binaries:
@@ -77,13 +77,13 @@ jobs:
       - name: Build Release Binaries
         run: >-
           cargo build --release --target x86_64-unknown-linux-gnu
-          -p amos-api-mock-server
+          -p amos-api-server
           -p amos-orchestrator
 
       - name: Stage Release Binaries
         run: |
           mkdir -p release-bin
-          cp target/x86_64-unknown-linux-gnu/release/amos-api-mock-server release-bin/
+          cp target/x86_64-unknown-linux-gnu/release/amos-api-server release-bin/
           cp target/x86_64-unknown-linux-gnu/release/amos-orchestrator release-bin/
 
       - name: Upload Binaries (Zipped)
@@ -92,10 +92,10 @@ jobs:
           name: binaries-zipped
           path: release-bin/*
 
-      - name: Upload Binary amos-api-mock-server (Unzipped)
+      - name: Upload Binary amos-api-server (Unzipped)
         uses: actions/upload-artifact@v7
         with:
-          path: release-bin/amos-api-mock-server
+          path: release-bin/amos-api-server
           archive: false
 
       - name: Upload Binary amos-orchestrator (Unzipped)

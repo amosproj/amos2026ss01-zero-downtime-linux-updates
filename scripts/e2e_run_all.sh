@@ -40,13 +40,13 @@ cleanup() {
     # is reported as a failure instead of "0 failed" masquerading as a pass.
     local rc=$?
     echo -e "\n${NC}=== Cleaning up background processes ==="
-    
+
     # Shut down the VM, also automatically terminates the backgrounded swtpm process
     stop_vm
 
-    # 2. Terminate the mock server process group on the host machine
+    # 2. Terminate the server process group on the host machine
     if [ -n "${SERVER_PID:-}" ]; then
-        echo "Stopping api-mock-server on host (PGID -${SERVER_PID})..."
+        echo "Stopping api-server on host (PGID -${SERVER_PID})..."
         kill -- "-${SERVER_PID}" 2>/dev/null || true
         wait "${SERVER_PID}" 2>/dev/null || true
     fi
@@ -139,7 +139,7 @@ podman run -d --name "$timescale_container" \
     docker.io/timescale/timescaledb:latest-pg18 >/dev/null
 
 echo "Waiting for TimescaleDB to be completely ready..."
-# Probe the TCP endpoint api-mock-server actually connects to: the postgres
+# Probe the TCP endpoint api-server actually connects to: the postgres
 # entrypoint first runs init scripts against a temporary Unix-socket-only
 # instance, so `podman exec ... psql` can report ready before the real
 # TCP-listening server has restarted into place.
@@ -156,27 +156,27 @@ for i in $(seq 1 120); do
 done
 
 echo "========================================="
-echo " Starting api-mock-server in Background "
+echo " Starting api-server in Background "
 echo "========================================="
 
 echo "Clearing stale server instances..."
-pkill -f amos-api-mock-server || true
+pkill -f amos-api-server || true
 sleep 0.5
 
-echo "Building amos-api-mock-server..."
-cargo build --manifest-path ../api-mock-server/Cargo.toml
+echo "Building amos-api-server..."
+cargo build --manifest-path ../api-server/Cargo.toml
 
-APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-mock-server -dd &
+APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-server -dd &
 SERVER_PID=$!
 
-echo "Waiting for mock server to bind to port ${PORT}..."
+echo "Waiting for server to bind to port ${PORT}..."
 MAX_ATTEMPTS=30
 for i in $(seq 1 ${MAX_ATTEMPTS}); do
     if curl -s -o /dev/null "http://127.0.0.1:${PORT}/v1/tenants"; then
-        echo "Mock server is up and listening."
+        echo "Server is up and listening."
         break
     fi
-    
+
     if [ "$i" -eq ${MAX_ATTEMPTS} ]; then
         echo "Error: Server did not become ready within timeout period." >&2
         exit 1
@@ -240,7 +240,7 @@ echo "========================================="
 
 for test_script in "${TEST_SUITE[@]}"; do
     echo -e "\n---> Executing Phase: ${test_script}"
-    
+
     if [ ! -x "$test_script" ]; then
         chmod +x "$test_script"
     fi
@@ -251,7 +251,7 @@ for test_script in "${TEST_SUITE[@]}"; do
     else
         echo -e "${RED}𐄂 FAILED: ${test_script}${NC}"
         ((FAILED_COUNT++))
-        
+
         # If seeding fails, stop immediately instead of cascading errors
         if [[ "$test_script" == *"seed_api"* ]]; then
             echo -e "${RED}Critical initialization failure in database seeding. Aborting matrix.${NC}"

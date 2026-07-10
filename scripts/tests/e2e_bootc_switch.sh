@@ -10,7 +10,7 @@ ensure_vm_running
 # Define the remote target upgrade reference image
 TARGET_UPGRADE_REF="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:switch-1-tag"
 
-# Seed the target upgrade assignment in the Mock API
+# Seed the target upgrade assignment in the API
 api "/v1/os-versions" POST "{\"commit_hash\": \"${TARGET_UPGRADE_REF}\", \"orchestrator_version\": \"0.1.0\", \"description\": \"Target GHCR Upgrade Image\"}" 201
 api "/v1/os-assignments" POST '{"os_version_id": 3, "device_id": 1, "immediate": true}' 201
 
