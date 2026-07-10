@@ -32,6 +32,7 @@ mod util;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -114,7 +115,7 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         config.log_max_buffer,
     );
 
-    let bootc = Bootc::new(Box::new(RealExecuter));
+    let bootc = Arc::new(Bootc::new(Box::new(RealExecuter)));
     let os_state = OsState::new(bootc.status().await?)
         .ok_or(anyhow::anyhow!("Could not retrieve current OS state"))?;
 
@@ -127,10 +128,13 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         .collect();
 
     let poll_interval = Duration::from_secs(config.poll_interval_secs as u64);
+    let deferred_timer = Duration::from_secs(config.deferred_switch_timer_secs);
+    let os_upgrade_in_progress = Arc::new(AtomicBool::new(false));
     let apps_task = tokio::spawn(run_apps_main_loop(
         apps,
         podman,
         api_client.clone(),
+        os_upgrade_in_progress.clone(),
         poll_interval,
         app_log_registry,
     ));
@@ -138,7 +142,9 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
         os_state,
         bootc,
         api_client.clone(),
+        os_upgrade_in_progress.clone(),
         poll_interval,
+        deferred_timer,
     ));
     let ping_task = tokio::spawn(run_ping_main_loop(api_client, Duration::from_secs(60)));
 
@@ -163,11 +169,29 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
 async fn self_check(cli: &Cli) -> anyhow::Result<()> {
     let config = OrchestratorConfig::load(cli.config.as_deref())?;
 
+    // TPM check
+    let mut signer = TpmSigner::new().context("Could not initialize the TPM")?;
+    signer
+        .read_endorsement_key()
+        .context("Could not read read endorsement key")?;
+    signer
+        .read_signing_key()
+        .context("Could not read read signing key")?;
+    signer
+        .sign_data("hello world")
+        .context("Could not sign test data")?;
+
+    // DMI check
+    hardware::read_device_uuid().context("Could not read device UUID")?;
+    hardware::read_serial_number().context("Could not read device serial number")?;
+
+    // Bootc check
     let bootc = Bootc::new(Box::new(RealExecuter));
     bootc.status().await?;
 
-    // TODO: Maybe check if container can start properly?
-    PodmanWrapper::connect(Path::new(&config.podman_path)).await?;
+    PodmanWrapper::connect(Path::new(&config.podman_path))
+        .await
+        .context("Could not connect to Podman socket")?;
 
     Ok(())
 }

@@ -192,5 +192,5 @@ the service starts cleanly even before you've deployed a dev binary.
 ## Troubleshooting
 
 - **Connection errors in the log:** the agent polls the cloud API at the
-  `cloud_url` in `config.toml` (by default the mock server on the host's port
-  8080). Start the mock server if you want successful polls.
+  `cloud_url` in `config.toml` (by default the server on the host's port
+  8080). Start the server if you want successful polls.

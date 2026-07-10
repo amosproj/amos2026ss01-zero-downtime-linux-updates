@@ -1,4 +1,4 @@
-.PHONY: setup setup-template setup-hooks help image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build demo-edge demo-server
+.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
@@ -81,6 +81,21 @@ setup-hooks: ## Install git hooks
 	@cp scripts/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
 	@chmod +x .git/hooks/prepare-commit-msg
 	@echo "  Git hooks installed."
+
+# Documentation website (rustdoc + mdBook + landing page). scripts/build-docs.sh
+# is the single source of truth for the build; CI (.github/workflows/docs.yml)
+# runs the same script, so local and published builds cannot drift.
+DOCS_PORT ?= 8000
+
+docs: ## Build the full documentation website (rustdoc + mdBook) into ./target/doc
+	scripts/build-docs.sh
+
+docs-book: ## Build only the mdBook prose (skips rustdoc; works where the TPM crate can't compile, e.g. macOS)
+	SKIP_RUSTDOC=1 scripts/build-docs.sh
+
+docs-serve: docs ## Build the full docs website and serve it locally (DOCS_PORT, default 8000)
+	@echo ">>> Serving docs at http://localhost:$(DOCS_PORT)/ (Ctrl-C to stop)"
+	@cd target/doc && python3 -m http.server $(DOCS_PORT)
 
 image: ARCH ?= $(HOST_ARCH)
 image: _image-build ## Build bootc disk image (qcow2 + raw) for host arch into ./dist
@@ -217,17 +232,9 @@ _dev-deploy:
 	limactl shell $(DEV_VM) -- sudo systemctl restart orchestrator.service; \
 	echo ">>> Deployed. Tail logs: limactl shell $(DEV_VM) -- journalctl -u orchestrator.service -f"
 
-# e2e: spin up a disposable Lima VM, deploy the current orchestrator build
-# into it via dev-deploy, run the full scripts/tests/*.sh suite against it,
-# then delete the VM again so every run starts from a clean slate.
-e2e: ## Create a fresh Lima VM, deploy the local orchestrator build, run the e2e suite, then tear the VM down
-	# FIXME: cargo build
-	@set -eu; \
-	echo ">>> Recreating Lima VM $(DEV_VM) from scratch"; \
-	limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; \
-	limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true; \
-	limactl create -y --name $(DEV_VM) dev-env/lima/edge-ipc.yaml; \
-	trap 'echo ">>> Deleting Lima VM $(DEV_VM)"; limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true' EXIT; \
+# The script recreates the Lima VM from scratch itself, so every run starts
+# from a clean slate; the VM is left around afterwards for post-mortem.
+e2e: ## Run the full e2e suite against a freshly recreated Lima VM
 	cd scripts && ./e2e_run_all.sh
 
 # demo-edge: like e2e, but with nothing on the host -- no mock server, no

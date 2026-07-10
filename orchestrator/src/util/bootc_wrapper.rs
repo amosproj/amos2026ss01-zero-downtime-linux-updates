@@ -147,7 +147,12 @@ impl Bootc {
 
         info!(?target, "Switching system image");
 
-        let args = vec!["switch".to_string(), "--retain".to_string(), target];
+        let args = vec![
+            "switch".to_string(),
+            "--retain".to_string(),
+            "--enforce-container-sigpolicy".to_string(),
+            target,
+        ];
 
         let res = self.run_bootc_root(args).await?;
 
@@ -163,6 +168,7 @@ impl Bootc {
         }
     }
 
+    // Should delete it if not used in healthchecks, because it is performed automatically by bootc
     #[allow(dead_code)]
     pub async fn rollback(&self) -> Result<()> {
         info!("Rolling back to previous bootc deployment");
@@ -212,24 +218,26 @@ mod tests {
             )
             .times(1)
             .returning(|_, _| {
-                Ok(ExecResult {
-                    stdout: r#"{
-                        "apiVersion": "org.containers.bootc/v1",
-                        "kind": "BootcHost",
-                        "metadata": {},
-                        "spec": {},
-                        "status": {
-                            "booted": {
-                                "ostree": { "checksum": "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443" },
-                                "image": null
-                            },
-                            "staged": null,
-                            "rollback": null,
-                            "rollbackQueued": false
-                        }
-                    }"#.to_string(),
-                    stderr: "".to_string(),
-                    exit_code: Some(0),
+                Box::pin(async move {
+                    Ok(ExecResult {
+                        stdout: r#"{
+                            "apiVersion": "org.containers.bootc/v1",
+                            "kind": "BootcHost",
+                            "metadata": {},
+                            "spec": {},
+                            "status": {
+                                "booted": {
+                                    "ostree": { "checksum": "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443" },
+                                    "image": null
+                                },
+                                "staged": null,
+                                "rollback": null,
+                                "rollbackQueued": false
+                            }
+                        }"#.to_string(),
+                        stderr: "".to_string(),
+                        exit_code: Some(0),
+                    })
                 })
             });
 
@@ -263,10 +271,12 @@ mod tests {
             )
             .times(1)
             .returning(|_, _| {
-                Ok(ExecResult {
-                    stdout: "".to_string(),
-                    stderr: "".to_string(),
-                    exit_code: Some(137),
+                Box::pin(async move {
+                    Ok(ExecResult {
+                        stdout: "".to_string(),
+                        stderr: "".to_string(),
+                        exit_code: Some(137),
+                    })
                 })
             });
 
@@ -290,10 +300,12 @@ mod tests {
             )
             .times(1)
             .returning(|_, _| {
-                Ok(ExecResult {
-                    stdout: "".to_string(),
-                    stderr: "No space left on device".to_string(),
-                    exit_code: Some(1),
+                Box::pin(async move {
+                    Ok(ExecResult {
+                        stdout: "".to_string(),
+                        stderr: "No space left on device".to_string(),
+                        exit_code: Some(1),
+                    })
                 })
             });
 
@@ -312,7 +324,8 @@ mod tests {
     #[tokio::test]
     async fn test_switch_success() {
         let mut mock_exec = MockExecuter::new();
-        let target_image = "quay.io/repo:latest";
+        let target_image =
+            "ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:commit-4b3a71d";
 
         mock_exec
             .expect_execute()
@@ -322,15 +335,18 @@ mod tests {
                     "bootc".to_string(),
                     "switch".to_string(),
                     "--retain".to_string(),
+                    "--enforce-container-sigpolicy".to_string(),
                     target_image.to_string(),
                 ]),
             )
             .times(1)
             .returning(|_, _| {
-                Ok(ExecResult {
-                    stdout: "success".to_string(),
-                    stderr: "".to_string(),
-                    exit_code: Some(0),
+                Box::pin(async move {
+                    Ok(ExecResult {
+                        stdout: "success".to_string(),
+                        stderr: "".to_string(),
+                        exit_code: Some(0),
+                    })
                 })
             });
 

@@ -1,4 +1,4 @@
-# OS Images & bootc
+# Fundamentals: OS Images & bootc
 
 A short primer on the image-based OS model this project is built on. It explains
 what a *bootc* image is, how it differs from a disk image, and — most importantly

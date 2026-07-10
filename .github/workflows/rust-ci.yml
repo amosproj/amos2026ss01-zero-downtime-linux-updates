@@ -56,10 +56,11 @@ jobs:
       - run: cargo test --all-features
 
   # Release Build if a Tag is pushed
-  release_build:
-    name: Release Build
-    # only run when a tag is pushed
-    if: github.ref_type == 'tag'
+  # https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-api-server
+  # https://nightly.link/amosproj/amos2026ss01-zero-downtime-linux-updates/workflows/rust-ci/main/amos-orchestrator
+
+  build_binaries:
+    name: Build Binaries & Upload as artifact
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -76,20 +77,46 @@ jobs:
       - name: Build Release Binaries
         run: >-
           cargo build --release --target x86_64-unknown-linux-gnu
-          -p amos-api-mock-server
+          -p amos-api-server
           -p amos-orchestrator
 
       - name: Stage Release Binaries
         run: |
           mkdir -p release-bin
-          cp target/x86_64-unknown-linux-gnu/release/amos-api-mock-server release-bin/
+          cp target/x86_64-unknown-linux-gnu/release/amos-api-server release-bin/
           cp target/x86_64-unknown-linux-gnu/release/amos-orchestrator release-bin/
 
-      - name: Upload Binaries
+      - name: Upload Binaries (Zipped)
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ github.ref_name }}-binaries
+          name: binaries-zipped
           path: release-bin/*
+
+      - name: Upload Binary amos-api-server (Unzipped)
+        uses: actions/upload-artifact@v7
+        with:
+          path: release-bin/amos-api-server
+          archive: false
+
+      - name: Upload Binary amos-orchestrator (Unzipped)
+        uses: actions/upload-artifact@v7
+        with:
+          path: release-bin/amos-orchestrator
+          archive: false
+
+  # Release Build if a Tag is pushed
+  release_build:
+    name: Release Build
+    # only run when a tag is pushed
+    if: github.ref_type == 'tag'
+    needs: build_binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Generate release notes
         if: startsWith(github.ref_name, 'sprint-') && contains(github.ref_name, '-release')
@@ -100,6 +127,12 @@ jobs:
         env:
           OUTPUT: RELEASE_NOTES.md
           GITHUB_REPO: ${{ github.repository }}
+
+      - name: Download Binaries Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: binaries-zipped
+          path: release-bin
 
       - name: Attach Binaries to GitHub Release
         if: startsWith(github.ref_name, 'sprint-') && contains(github.ref_name, '-release')

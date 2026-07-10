@@ -9,7 +9,6 @@ source ./tests/common_env.sh
 SERVER_PID=""
 FAILED_COUNT=0
 PASSED_COUNT=0
-TPM_DIR="/tmp/emulated_tpm"
 
 # TimescaleDB configurations
 readonly timescale_container="amos-test-timescaledb"
@@ -29,22 +28,27 @@ TEST_SUITE=(
     "tests/e2e_seed_api.sh"
     "tests/e2e_bootc_status.sh"
     "tests/e2e_app_deploy.sh"
-    "tests/e2e_bootc_upgrade.sh"
+    "tests/e2e_selfcheck.sh"
+    "tests/e2e_bootc_switch.sh"
+    "tests/e2e_bootc_deferred_switch.sh"
+    "tests/e2e_bootc_unsigned_deny.sh"
 )
 
 # This function executes immediately when the script finishes or hits an early abort
 cleanup() {
+    # Capture the script's exit code so an early abort (before any test ran)
+    # is reported as a failure instead of "0 failed" masquerading as a pass.
+    local rc=$?
     echo -e "\n${NC}=== Cleaning up background processes ==="
 
     limactl shell "${VM_NAME}" -- sudo systemctl stop orchestrator.service 2>/dev/null || true
 
     # Shut down the VM, also automatically terminates the backgrounded swtpm process
-    echo "Stopping Lima VM '${VM_NAME}'..."
-    limactl stop "${VM_NAME}" 2>/dev/null || true
+    stop_vm
 
-    # 2. Terminate the mock server process group on the host machine
+    # 2. Terminate the server process group on the host machine
     if [ -n "${SERVER_PID:-}" ]; then
-        echo "Stopping api-mock-server on host (PGID -${SERVER_PID})..."
+        echo "Stopping api-server on host (PGID -${SERVER_PID})..."
         kill -- "-${SERVER_PID}" 2>/dev/null || true
         wait "${SERVER_PID}" 2>/dev/null || true
     fi
@@ -60,7 +64,7 @@ cleanup() {
     echo -e " Total Failed: ${RED}${FAILED_COUNT}${NC}"
     echo "========================================="
 
-    if [ "${FAILED_COUNT}" -gt 0 ]; then
+    if [ "${FAILED_COUNT}" -gt 0 ] || [ "$rc" -ne 0 ]; then
         echo -e "${RED}=== E2E TEST HARNESS FAILED ===${NC}"
         exit 1
     else
@@ -71,6 +75,20 @@ cleanup() {
 trap cleanup EXIT
 
 echo "========================================="
+echo " Checking Required CLI Tools "
+echo "========================================="
+REQUIRED_TOOLS=(swtpm swtpm_setup limactl qemu-system-x86_64 podman pg_isready curl cargo make)
+MISSING_TOOLS=()
+for tool in "${REQUIRED_TOOLS[@]}"; do
+    command -v "$tool" >/dev/null 2>&1 || MISSING_TOOLS+=("$tool")
+done
+if [ "${#MISSING_TOOLS[@]}" -gt 0 ]; then
+    echo "Missing required CLI tools: ${MISSING_TOOLS[*]}" >&2
+    echo "On Debian/Ubuntu: sudo apt-get install -y swtpm swtpm-tools qemu-system-x86 podman postgresql-client curl cargo make" >&2
+    exit 1
+fi
+
+echo "========================================="
 echo " Starting TPM and VM "
 echo "========================================="
 
@@ -78,13 +96,29 @@ echo "Cleaning up any existing TPM state in ${TPM_DIR}..."
 rm -rf "${TPM_DIR}"
 
 echo "Initializing emulated TPM in ${TPM_DIR}..."
+# Wipe last run's TPM state first: create_tpm.sh uses swtpm_setup
+# --not-overwrite, which silently no-ops when state already exists in /tmp.
+# The VM is recreated fresh every run, so a stale TPM (still holding the
+# previous run's persistent signing key) must not survive with it.
+# Kill any leftover swtpm before wiping so it can't rewrite state on exit.
+pkill -f "swtpm socket.*${TPM_DIR}/swtpm-sock" 2>/dev/null || true
+rm -rf "$TPM_DIR"
 if ! ./create_tpm.sh "$TPM_DIR"; then
     echo "Could not create TPM. Aborting."
     exit 1
 fi
-swtpm socket --tpm2 -d --tpmstate dir="${TPM_DIR}" --ctrl type=unixio,path="${TPM_DIR}/swtpm-sock" --log level=20
 
+start_swtpm
 sleep 2
+
+# Recreate the VM from the template every run: the bootc switch tests
+# permanently change the instance disk's booted image (whose greenboot
+# service is disabled), so reusing the instance breaks the next run.
+echo "Recreating VM '${VM_NAME}' from template..."
+limactl stop -f "${VM_NAME}" 2>/dev/null || true
+limactl delete -f "${VM_NAME}" 2>/dev/null || true
+# The template's image location is relative to the repo root.
+(cd "$script_dir/.." && limactl create -y --name "${VM_NAME}" dev-env/lima/edge-ipc.yaml)
 
 echo "Booting VM '${VM_NAME}' with QEMU TPM arguments..."
 QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
@@ -95,7 +129,7 @@ QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
     -smbios type=2,serial=${DEVICE_SERIAL}" \
     limactl start "${VM_NAME}"
 
-sleep 5
+sleep 20
 
 echo "========================================="
 echo " Starting TimescaleDB Container "
@@ -110,14 +144,16 @@ podman run -d --name "$timescale_container" \
     docker.io/timescale/timescaledb:latest-pg18 >/dev/null
 
 echo "Waiting for TimescaleDB to be completely ready..."
-for i in $(seq 1 60); do
-    # Wait until the init script has finished: the app user and amos_timeseries DB must exist.
-    if podman exec -e PGPASSWORD=4M0S "$timescale_container" \
-            psql -U app -d amos_timeseries -c "SELECT 1" >/dev/null 2>&1; then
+# Probe the TCP endpoint api-server actually connects to: the postgres
+# entrypoint first runs init scripts against a temporary Unix-socket-only
+# instance, so `podman exec ... psql` can report ready before the real
+# TCP-listening server has restarted into place.
+for i in $(seq 1 120); do
+    if pg_isready -h 127.0.0.1 -p "$timescale_port" -U postgres >/dev/null 2>&1; then
         echo "TimescaleDB is fully initialized and ready."
         break
     fi
-    if [ "$i" -eq 60 ]; then
+    if [ "$i" -eq 120 ]; then
         echo "TimescaleDB did not become ready in time." >&2
         exit 1
     fi
@@ -125,21 +161,24 @@ for i in $(seq 1 60); do
 done
 
 echo "========================================="
-echo " Starting api-mock-server in Background "
+echo " Starting api-server in Background "
 echo "========================================="
 
 echo "Clearing stale server instances..."
-pkill -f amos-api-mock-server || true
+pkill -f amos-api-server || true
 sleep 0.5
 
-APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-mock-server -dd &
+echo "Building amos-api-server..."
+cargo build --manifest-path ../api-server/Cargo.toml
+
+APP_DATABASE_URL="sqlite::memory:" APP_TIMESCALE_DATABASE_URL="$timescale_url" setsid ./../target/debug/amos-api-server -dd &
 SERVER_PID=$!
 
-echo "Waiting for mock server to bind to port ${PORT}..."
+echo "Waiting for server to bind to port ${PORT}..."
 MAX_ATTEMPTS=30
 for i in $(seq 1 ${MAX_ATTEMPTS}); do
     if curl -s -o /dev/null "http://127.0.0.1:${PORT}/v1/tenants"; then
-        echo "Mock server is up and listening."
+        echo "Server is up and listening."
         break
     fi
 
@@ -153,11 +192,46 @@ done
 echo "========================================="
 echo " Ensuring VM Pre-requisites "
 echo "========================================="
+set -e
+
+# Ensure boot was successful
+echo "Checking for successful Greenboot orchestrator check"
+GREENBOOT_OK=0
+for i in $(seq 1 60); do
+    if limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service 2>/dev/null \
+            | grep -q "required script /etc/greenboot/check/required.d/10-orchestrator-check.sh success"; then
+        echo "Greenboot orchestrator check passed."
+        GREENBOOT_OK=1
+        break
+    fi
+    sleep 2
+done
+
+if [ "$GREENBOOT_OK" -ne 1 ]; then
+    echo "Greenboot orchestrator check did not succeed in time." >&2
+    limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service || true
+    exit 1
+fi
 # Ensure Podman API socket is running
+echo "Checking for running Podman socket"
+limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
+
+set +e
+
+echo "========================================="
+echo " Provisioning Cryptographic Policies "
+echo "========================================="
 (
     set -e
-    limactl shell "${VM_NAME}" -- sudo systemctl is-active podman.socket
-    echo "Podman socket is running"
+    root_dir="$(cd "$script_dir/.." && pwd)"
+
+    # cosign.pub already ships baked into /usr/share/pki/containers on every
+    # image (regardless of DEV_MODE), so only the policy itself needs forcing
+    # to the prod variant here.
+    limactl copy "$root_dir/container-policy.json" "${VM_NAME}":/tmp/policy.json
+    limactl shell "${VM_NAME}" -- sudo mv /tmp/policy.json /etc/containers/policy.json
+
+    echo "✓ Production container policy provisioned successfully inside writeable /etc."
 )
 
 echo "========================================="
