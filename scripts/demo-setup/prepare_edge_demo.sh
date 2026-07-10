@@ -15,15 +15,35 @@
 # the demo. Re-preparing a single run only recreates that run's VMs; the other
 # runs keep running undisturbed.
 #
-# Each run has its own API server, so the same device UUIDs/serial can be
-# reused across runs:
+# The story the data tells: our customer Weber builds food processing lines.
+# The tenant is one of Weber's customers, running a cheese slicing line. A
+# device is not a machine -- it is a standalone edge IPC in the line's control
+# cabinet, running containerized apps (a log collector, say) against the
+# machine next to it. So the fleet is three identical IPCs of the same model,
+# told apart by which machine on the line each one serves, listed here in the
+# order the cheese passes through. All three sit in one group, so
+# `GET /devices` reads like a production line and not like a lab.
+#
+# The API has no name field for devices, so an IPC's identity lives in its
+# serial number -- the string on the type plate inside the cabinet door, not
+# the serial of the machine it watches.
+#
+# Each run has its own API server, so the same devices can be reused across
+# runs:
 #
 #   cloud url : http://float-172-017-069-035.cc.rrze.net/<run>/v1
-#   edge 1    : 019f4785-419a-7060-bc3c-d71c75099ac2
-#   edge 2    : 019f4785-419a-777a-9dba-0a79ba5809ef
-#   edge 3    : 019f4785-419a-7aae-b79d-f0ad81510156
-#   serial    : BIOS-SERIAL-1337-AMOS-TEST-VM (all VMs; the server matches
-#               pending registrations on serial + TPM endorsement key)
+#   tenant    : Aldi Süd – Cheese Line Nürnberg
+#   group     : Slicing Line 2 – Cheese
+#   edge 1    : IPC at the weSLICE 6000 slicer         IPC427E-2024-0417
+#               019f4785-419a-7060-bc3c-d71c75099ac2
+#   edge 2    : IPC at the weLOAD 3000 infeed loader   IPC427E-2024-0208
+#               019f4785-419a-777a-9dba-0a79ba5809ef
+#   edge 3    : IPC at the weSCAN 2100 inline scanner  IPC427E-2025-0093
+#               019f4785-419a-7aae-b79d-f0ad81510156
+#
+# The server matches pending registrations on serial + TPM endorsement key, so
+# a shared serial would work too -- distinct ones just look real, and let this
+# script find a device again by serial after it has self-registered.
 #
 # Per run and edge this script:
 #   1. runs `make demo-edge` on the host (non-interactive without a TTY) with
@@ -32,8 +52,8 @@
 #      own swtpm) and points the orchestrator at the run's cloud URL,
 #   2. for the edges listed in REGISTER_EDGES (default "1 2"): reads the TPM
 #      endorsement key out of the Lima VM, creates a pending device
-#      registration on the run's API server and waits until the orchestrator
-#      has self-registered.
+#      registration on the run's API server, waits until the orchestrator has
+#      self-registered and moves the new device into the line's group.
 #
 # The host must already be prepared (repo + disk image) with
 # ./prepare_edge_vms.sh. Re-running this script recreates the Lima VMs with
@@ -53,9 +73,10 @@
 # curl, ssh + VPN as for prepare_edge_vms.sh.
 #
 # Overridable via env: HOST_VM (amos-edge-host),
-# API_BASE (http://float-172-017-069-035.cc.rrze.net), VM_SERIAL,
-# REGISTER_EDGES ("1 2"), OS_NETWORK (FAU-Intern), SSH_USER (debian),
-# SSH_OPTS, REPO_DIR (auto-detected if unset).
+# API_BASE (http://float-172-017-069-035.cc.rrze.net), VM_SERIAL (one serial
+# for every edge instead of the per-IPC ones), TENANT_NAME, TENANT_DESC,
+# GROUP_NAME, REGISTER_EDGES ("1 2"), OS_NETWORK (FAU-Intern),
+# SSH_USER (debian), SSH_OPTS, REPO_DIR (auto-detected if unset).
 
 set -euo pipefail
 
@@ -63,7 +84,14 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 
 HOST_VM="${HOST_VM:-amos-edge-host}"
 API_BASE="${API_BASE:-http://float-172-017-069-035.cc.rrze.net}"
-VM_SERIAL="${VM_SERIAL:-BIOS-SERIAL-1337-AMOS-TEST-VM}"
+# Empty by default: each edge brings its own serial (see serial_for_edge).
+# Setting it makes every edge share one serial, which the server accepts but
+# which makes devices indistinguishable by serial (so assign_to_group can then
+# only find the first of them).
+VM_SERIAL="${VM_SERIAL:-}"
+TENANT_NAME="${TENANT_NAME:-Aldi Süd – Cheese Line Nürnberg}"
+TENANT_DESC="${TENANT_DESC:-New slicing line in eastern Nürnberg, opening September 2026 to cover increased demand}"
+GROUP_NAME="${GROUP_NAME:-Slicing Line 2 – Cheese}"
 REGISTER_EDGES="${REGISTER_EDGES:-1 2}"
 OS_NETWORK="${OS_NETWORK:-FAU-Intern}"
 SSH_USER="${SSH_USER:-debian}"
@@ -77,7 +105,8 @@ log() { printf '\033[0;32m>>> %s\033[0m\n' "$*"; }
 warn() { printf '\033[0;33m!!! %s\033[0m\n' "$*" >&2; }
 die() { printf '\033[0;31mError: %s\033[0m\n' "$*" >&2; exit 1; }
 
-usage() { sed -n '2,59p' "$0" | sed 's/^# \{0,1\}//'; }
+# The comment block below the shebang, up to the first non-comment line.
+usage() { awk 'NR == 1 { next } !/^#/ { exit } { sub(/^# ?/, ""); print }' "$0"; }
 
 RUN_ARG="${1:-${AMOS_DEMO_RUN:-}}"
 [ -n "$RUN_ARG" ] || { usage; exit 2; }
@@ -115,6 +144,30 @@ uuid_for_edge() {
         2) echo 019f4785-419a-777a-9dba-0a79ba5809ef ;;
         3) echo 019f4785-419a-7aae-b79d-f0ad81510156 ;;
         *) return 1 ;;
+    esac
+}
+
+# The serial on the edge IPC's type plate -- one fleet, one model, so these
+# differ only in build year and unit number. Also the SMBIOS serial of the
+# edge's Lima VM, because that is what the orchestrator reports on registration.
+serial_for_edge() {
+    [ -z "$VM_SERIAL" ] || { echo "$VM_SERIAL"; return 0; }
+    case "$1" in
+        1) echo IPC427E-2024-0417 ;;
+        2) echo IPC427E-2024-0208 ;;
+        3) echo IPC427E-2025-0093 ;;
+        *) return 1 ;;
+    esac
+}
+
+# The machine each IPC is bolted next to and collects logs from, in the order
+# the cheese flows through the line.
+role_for_edge() {
+    case "$1" in
+        1) echo "IPC at the weSLICE 6000 slicer" ;;
+        2) echo "IPC at the weLOAD 3000 infeed loader" ;;
+        3) echo "IPC at the weSCAN 2100 inline scanner" ;;
+        *) echo "edge $1" ;;
     esac
 }
 
@@ -180,27 +233,57 @@ resolve_host() {
         || die "$HOST_VM has no disk image in dist/; run prepare_edge_vms.sh first"
 }
 
-# resolve_edge <n> -> sets LIMA_VM, EDGE_UUID (for the run in $RUN)
+# resolve_edge <n> -> sets LIMA_VM, EDGE_UUID, EDGE_SERIAL, EDGE_ROLE
 resolve_edge() {
     local n="$1"
     EDGE_UUID="$(uuid_for_edge "$n")" || die "no device UUID defined for edge $n"
+    EDGE_SERIAL="$(serial_for_edge "$n")" || die "no serial number defined for edge $n"
+    EDGE_ROLE="$(role_for_edge "$n")"
     LIMA_VM="${RUN}-edge-${n}"
 }
 
-boot_edge() { # uses LIMA_VM/EDGE_UUID set by resolve_edge, CLOUD_URL of $RUN
-    log "$LIMA_VM: running make demo-edge on $HOST_VM (uuid: $EDGE_UUID)"
+boot_edge() { # uses the EDGE_* vars set by resolve_edge, CLOUD_URL of $RUN
+    log "$LIMA_VM: running make demo-edge on $HOST_VM ($EDGE_ROLE, uuid: $EDGE_UUID)"
     # No TTY on this ssh call, so demo-edge skips its prompts and takes
     # DEV_VM/VM_UUID/VM_SERIAL/CLOUD_URL from the environment.
     host_ssh "cd '$HOST_REPO' && \
         DEV_VM='$LIMA_VM' \
         VM_UUID='$EDGE_UUID' \
-        VM_SERIAL='$VM_SERIAL' \
+        VM_SERIAL='$EDGE_SERIAL' \
         CLOUD_URL='$CLOUD_URL' \
         make demo-edge" 2>&1 | sed "s/^/[$LIMA_VM] /"
 }
 
-register_edge() { # uses LIMA_VM/EDGE_UUID set by resolve_edge
-    log "$LIMA_VM: reading TPM endorsement key from Lima VM"
+# The line the devices belong to -> sets GROUP_ID (for the run in $RUN).
+ensure_group() {
+    api GET "/v1/groups?name=$(jq -rn --arg n "$GROUP_NAME" '$n|@uri')"
+    [ "$RESP_CODE" = 200 ] || die "GET /v1/groups on $CLOUD_URL failed with $RESP_CODE: $RESP_BODY"
+    GROUP_ID="$(jq -r --arg n "$GROUP_NAME" 'first(.data[] | select(.name == $n) | .id) // empty' <<<"$RESP_BODY")"
+    [ -n "$GROUP_ID" ] && return 0
+
+    log "Creating group '$GROUP_NAME' on $CLOUD_URL"
+    api POST /v1/groups "$(jq -n --arg n "$GROUP_NAME" '{ name: $n }')"
+    [ "$RESP_CODE" = 201 ] || die "creating group failed with $RESP_CODE: $RESP_BODY"
+    GROUP_ID="$(jq -r .id <<<"$RESP_BODY")"
+}
+
+# A device self-registers without a group, so move it onto the line afterwards.
+# Cosmetic: never fail the demo prep over it.
+assign_to_group() { # assign_to_group <serial>
+    local device_id
+    api GET "/v1/devices?serial_number=$(jq -rn --arg s "$1" '$s|@uri')"
+    device_id="$(jq -r 'first(.data[].id) // empty' <<<"$RESP_BODY" 2>/dev/null)"
+    if [ "$RESP_CODE" != 200 ] || [ -z "$device_id" ]; then
+        warn "could not find device with serial $1 on $CLOUD_URL; leaving it ungrouped"
+        return 0
+    fi
+    api PATCH "/v1/devices/$device_id" "$(jq -n --argjson g "$GROUP_ID" '{ group_id: $g }')"
+    [ "$RESP_CODE" = 200 ] \
+        || warn "could not move device $device_id into '$GROUP_NAME' ($RESP_CODE): $RESP_BODY"
+}
+
+register_edge() { # uses the EDGE_* vars set by resolve_edge
+    log "$LIMA_VM: reading TPM endorsement key from Lima VM ($EDGE_ROLE)"
     local ek_file payload
     ek_file="$(mktemp)"
     # Keep the key in a file (not a variable): command substitution would strip
@@ -210,7 +293,7 @@ register_edge() { # uses LIMA_VM/EDGE_UUID set by resolve_edge
         || { rm -f "$ek_file"; die "$LIMA_VM: could not read endorsement key (is the Lima VM up?)"; }
     grep -q 'BEGIN PUBLIC KEY' "$ek_file" \
         || { rm -f "$ek_file"; die "$LIMA_VM: could not read endorsement key (is the Lima VM up?)"; }
-    payload="$(jq -n --arg sn "$VM_SERIAL" --rawfile ek "$ek_file" \
+    payload="$(jq -n --arg sn "$EDGE_SERIAL" --rawfile ek "$ek_file" \
         '{ serial_number: $sn, endorsement_public_key: $ek }')"
     rm -f "$ek_file"
 
@@ -220,12 +303,14 @@ register_edge() { # uses LIMA_VM/EDGE_UUID set by resolve_edge
     # The list endpoints wrap results in a page envelope, so count .data --
     # `jq length` on the envelope object would count its keys, never zero.
     if [ "$(jq '.data | length' <<<"$RESP_BODY")" -eq 0 ]; then
-        log "Creating demo tenant on $CLOUD_URL"
-        api POST /v1/tenants '{ "name": "AMOS Demo", "description": "Demo tenant" }'
+        log "Creating tenant '$TENANT_NAME' on $CLOUD_URL"
+        api POST /v1/tenants "$(jq -n --arg n "$TENANT_NAME" --arg d "$TENANT_DESC" \
+            '{ name: $n, description: $d }')"
         [ "$RESP_CODE" = 201 ] || die "creating tenant failed with $RESP_CODE: $RESP_BODY"
     fi
+    ensure_group
 
-    log "$LIMA_VM: creating pending device registration (serial: $VM_SERIAL)"
+    log "$LIMA_VM: creating pending device registration (serial: $EDGE_SERIAL)"
     api POST /v1/pending-device-registrations "$payload"
     [ "$RESP_CODE" = 201 ] || die "creating pending registration failed with $RESP_CODE: $RESP_BODY"
 
@@ -239,7 +324,8 @@ register_edge() { # uses LIMA_VM/EDGE_UUID set by resolve_edge
         printf '    waiting for %s to self-register...\n' "$LIMA_VM"
         sleep 5; waited=$((waited + 5))
     done
-    log "$LIMA_VM: registered with $CLOUD_URL"
+    assign_to_group "$EDGE_SERIAL"
+    log "$LIMA_VM: registered with $CLOUD_URL as $EDGE_ROLE in '$GROUP_NAME'"
 }
 
 in_register_edges() {
@@ -269,7 +355,7 @@ for RUN in "${RUNS[@]}"; do
             if in_register_edges "$n"; then
                 register_edge
             else
-                log "$LIMA_VM: left unregistered (demo device; register live with: $0 $RUN --register-only $n)"
+                log "$LIMA_VM: $EDGE_ROLE left unregistered (demo device; register live with: $0 $RUN --register-only $n)"
             fi
         else
             register_edge
