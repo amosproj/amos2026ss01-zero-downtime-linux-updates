@@ -217,7 +217,9 @@ register_edge() { # uses LIMA_VM/EDGE_UUID set by resolve_edge
     # A registered device is assigned to the first tenant, so make sure one exists.
     api GET /v1/tenants
     [ "$RESP_CODE" = 200 ] || die "GET /v1/tenants on $CLOUD_URL failed with $RESP_CODE: $RESP_BODY"
-    if [ "$(jq length <<<"$RESP_BODY")" -eq 0 ]; then
+    # The list endpoints wrap results in a page envelope, so count .data --
+    # `jq length` on the envelope object would count its keys, never zero.
+    if [ "$(jq '.data | length' <<<"$RESP_BODY")" -eq 0 ]; then
         log "Creating demo tenant on $CLOUD_URL"
         api POST /v1/tenants '{ "name": "AMOS Demo", "description": "Demo tenant" }'
         [ "$RESP_CODE" = 201 ] || die "creating tenant failed with $RESP_CODE: $RESP_BODY"
