@@ -9,12 +9,16 @@
 #   ./scripts/demo_api.sh GET  /v1/devices/1/summary
 #   ./scripts/demo_api.sh POST /v1/applications '{ "name": "hello", "description": "x" }'
 #
-# The path may be given with or without the leading /v1.
+# The path is used as-is (no /v1 auto-prefixing), so pass the full path,
+# e.g. /run1/v1/devices.
 
 set -euo pipefail
 
 cd "$(dirname "$0")"
 source ./tests/common_env.sh
+
+PORT=80
+HOST_SERVER_URL="${DEMO_API_URL:-http://float-172-017-069-035.cc.rrze.net:${PORT}}"
 
 method="${1:-}"
 path="${2:-}"
@@ -26,11 +30,9 @@ if [ -z "$method" ] || [ -z "$path" ]; then
     exit 2
 fi
 
-# Accept paths with or without the /v1 prefix, and with or without a leading /.
 case "$path" in
-    /v1/*) ;;
-    /*)    path="/v1${path}" ;;
-    *)     path="/v1/${path}" ;;
+    /*) ;;
+    *)  path="/${path}" ;;
 esac
 
 url="${HOST_SERVER_URL}${path}"
