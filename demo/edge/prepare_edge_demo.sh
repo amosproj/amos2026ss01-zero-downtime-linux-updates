@@ -135,8 +135,8 @@ done
 
 # Dev JWT for the mock API server (exports JWT; everything else it sets is
 # harmless here).
-# shellcheck source=../tests/common_env.sh
-source "$script_dir/../tests/common_env.sh"
+# shellcheck source=../../scripts/tests/common_env.sh
+source "$script_dir/../../scripts/tests/common_env.sh"
 
 uuid_for_edge() {
     case "$1" in

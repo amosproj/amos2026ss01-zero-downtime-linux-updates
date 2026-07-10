@@ -13,11 +13,16 @@ get {
 docs {
   `GET /devices` again.
 
-  **Expect:** three devices now — edge 3 self-registered using its TPM
-  identity (watch its first logs arrive in the stream tab). Re-send until it
-  shows up; the orchestrator registers within its polling interval
-  (~a minute). If it takes longer, ask the demo operator to restart the
-  orchestrator on that edge.
+  **Expect:** three devices now — the scanner IPC self-registered using its
+  TPM identity, and the line is complete (watch its first logs arrive in the
+  stream tab). Re-send until it shows up; the orchestrator registers within
+  its polling interval (~a minute). If it takes longer, ask the demo operator
+  to restart the orchestrator on that edge.
+
+  A device self-registers *without* a group, so the scanner arrives with no
+  `group_id` while the other two sit in `Slicing Line 2 – Cheese`. Move it
+  onto the line with `PATCH /devices/{id}` (*User API → Devices*) if you want
+  the fleet to read cleanly.
 
   The new device's `id` should match the `demoDeviceId` environment variable
   (3 for a fresh run) — the remaining steps target it.
