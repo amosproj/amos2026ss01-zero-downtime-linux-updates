@@ -18,24 +18,45 @@ See [Hand-off to the PO](#4-hand-off-to-the-po) for how to produce 2 and 3.
   identical `amos-edge-backup` host can be prepared to fail over to.
 - **Each run has its own API server**, reachable at
   `<API_BASE>/<run>/v1`. Because each run is isolated, the same edge
-  UUIDs/serial are reused across runs — the server disambiguates devices by
+  identities are reused across runs — the server disambiguates devices by
   UUID + TPM endorsement key.
 - Per run, **edges 1 and 2 are pre-registered**; **edge 3 is left
   unregistered on purpose** — registering it live *is* the demo.
 
+### The story the data tells
+
+Our customer Weber builds food processing lines. The tenant is one of Weber's
+customers running a cheese slicing line.
+
+A device is **not** a machine: it is a standalone **edge IPC** in the line's
+control cabinet, running containerized apps — a log collector, say — against
+the machine next to it. So the fleet is three identical IPCs of the same
+model, told apart by which machine on the line each one serves, listed below
+in the order the cheese passes through. All three sit in one group, so
+`GET /devices` reads like a production line rather than a lab.
+
+Devices have no name field in the API, so an IPC's identity lives in its
+serial number — the string on the type plate inside the cabinet door, not the
+serial of the machine it watches.
+
 ### Fixed identities
 
-| | value |
-|---|---|
-| edge 1 UUID | `019f4785-419a-7060-bc3c-d71c75099ac2` |
-| edge 2 UUID | `019f4785-419a-777a-9dba-0a79ba5809ef` |
-| edge 3 UUID | `019f4785-419a-7aae-b79d-f0ad81510156` |
-| serial (all edges, all runs) | `BIOS-SERIAL-1337-AMOS-TEST-VM` |
+| edge | the IPC serves | IPC serial | UUID |
+|---|---|---|---|
+| 1 | weSLICE 6000 slicer | `IPC427E-2024-0417` | `019f4785-419a-7060-bc3c-d71c75099ac2` |
+| 2 | weLOAD 3000 infeed loader | `IPC427E-2024-0208` | `019f4785-419a-777a-9dba-0a79ba5809ef` |
+| 3 | weSCAN 2100 inline scanner | `IPC427E-2025-0093` | `019f4785-419a-7aae-b79d-f0ad81510156` |
+
+Tenant `Aldi Süd – Cheese Line Nürnberg`, group `Slicing Line 2 – Cheese`;
+both are created by `prepare_edge_demo.sh` if the run's API server has none,
+and are overridable via `TENANT_NAME` / `TENANT_DESC` / `GROUP_NAME`.
 
 The serial is the SMBIOS system/board serial injected via QEMU
 (`scripts/dev_vm_run.sh`); it is **not** the device UUID (that is a separate
-SMBIOS field). A shared serial is fine because pending registrations match on
-serial **+** endorsement key, and each edge has a distinct TPM key.
+SMBIOS field). Distinct serials are not strictly required — pending
+registrations match on serial **+** endorsement key, and each edge has a
+distinct TPM key — but they let the script find a device again after it has
+self-registered, in order to move it into the line's group.
 
 ## Prerequisites (on your machine)
 
