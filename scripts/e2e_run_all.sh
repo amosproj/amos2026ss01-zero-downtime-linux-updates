@@ -90,6 +90,9 @@ echo "========================================="
 echo " Starting TPM and VM "
 echo "========================================="
 
+echo "Cleaning up any existing TPM state in ${TPM_DIR}..."
+rm -rf "${TPM_DIR}"
+
 echo "Initializing emulated TPM in ${TPM_DIR}..."
 # Wipe last run's TPM state first: create_tpm.sh uses swtpm_setup
 # --not-overwrite, which silently no-ops when state already exists in /tmp.

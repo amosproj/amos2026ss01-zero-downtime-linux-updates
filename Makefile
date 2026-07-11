@@ -1,4 +1,4 @@
-.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build
+.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build demo-edge demo-server
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
@@ -16,6 +16,13 @@ RUST_VERSION  ?= 1.95
 # Per-arch suffix (-amd64 / -arm64) is appended at use site to keep cross-arch
 # builds from clobbering each other in podman's local storage.
 RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
+
+# settings for demo
+# CLOUD_URL is the orchestrator's cloud_url; VM_UUID/VM_SERIAL are the SMBIOS
+# values the emulated device presents (VM_UUID is its device id).
+CLOUD_URL     ?= http://host.lima.internal:8080/v1
+VM_UUID       ?= 00000000-0000-0000-0000-000000000001
+VM_SERIAL     ?= AMOS-TEST-001
 
 # Prebuilt disk image published by .github/workflows/disk-image.yml as an OCI
 # artifact (each tag bundles both <name>.raw.xz and <name>.qcow2.xz).
@@ -229,6 +236,45 @@ _dev-deploy:
 # from a clean slate; the VM is left around afterwards for post-mortem.
 e2e: ## Run the full e2e suite against a freshly recreated Lima VM
 	cd scripts && ./e2e_run_all.sh
+
+# demo-edge: like e2e, but with nothing on the host -- no mock server, no
+# TimescaleDB, no tests. Prompts interactively for the VM name, device uuid,
+# device serial and cloud url, each with a default you can accept by pressing
+# enter.
+demo-edge: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB); prompts for VM name/device uuid/serial/cloud url (skipped if stdin isn't a TTY)
+	@set -eu; \
+	if [ -t 0 ]; then \
+	  printf "VM name [%s]: " "$(DEV_VM)"; read vm_name; \
+	  printf "Device UUID [%s]: " "$(VM_UUID)"; read device_uuid; \
+	  printf "Device serial [%s]: " "$(VM_SERIAL)"; read device_serial; \
+	  printf "Cloud URL [%s]: " "$(CLOUD_URL)"; read cloud_url; \
+	fi; \
+	vm_name=$${vm_name:-$(DEV_VM)}; \
+	device_uuid=$${device_uuid:-$(VM_UUID)}; \
+	device_serial=$${device_serial:-$(VM_SERIAL)}; \
+	cloud_url=$${cloud_url:-$(CLOUD_URL)}; \
+	echo ">>> Recreating Lima VM $$vm_name from scratch"; \
+	limactl stop $$vm_name -f >/dev/null 2>&1 || true; \
+	limactl delete $$vm_name -f >/dev/null 2>&1 || true; \
+	limactl create -y --name $$vm_name dev-env/lima/edge-ipc.yaml; \
+	cd scripts && \
+	  VM_NAME="$$vm_name" \
+	  DEVICE_UUID="$$device_uuid" \
+	  DEVICE_SERIAL="$$device_serial" \
+	  CLOUD_URL="$$cloud_url" \
+	  ./dev_vm_run.sh
+
+# demo-server: same full stack as e2e (mock cloud API + TimescaleDB + edge VM +
+# orchestrator), primed with a registered device, but instead of running the
+# test suite it leaves everything running so you can send your own API commands
+# (scripts/demo_api.sh) and watch the orchestrator react. Ctrl+C tears it down.
+demo-server: ## Bring up the full e2e stack, primed and left running for a live demo (send commands with scripts/demo_api.sh)
+	@set -eu; \
+	echo ">>> Recreating Lima VM $(DEV_VM) from scratch"; \
+	limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; \
+	limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true; \
+	limactl create -y --name $(DEV_VM) dev-env/lima/edge-ipc.yaml; \
+	cd scripts && ./demo_run.sh
 
 # ---------------------------------------------------------------------------
 # Installer ISO for bare-metal IPCs. The ISO embeds our bootc image and

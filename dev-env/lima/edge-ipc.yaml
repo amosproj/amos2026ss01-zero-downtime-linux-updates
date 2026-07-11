@@ -74,11 +74,22 @@ provision:
       systemctl restart orchestrator.service
 
   ### Config file setup
-  # Write config file the orchestrator reads.
+  # Write (default) config file the orchestrator reads.
   # `file:` is resolved relative to this YAML.
   - mode: data
-    path: /etc/amos/config.toml
+    path: /etc/amos/config.default.toml
     file: orchestrator-config.toml
+  # Only overwrite the orchestrator config if it does not contain "# LIMA-DO-NOT-OVERWRITE-THIS"
+  # or the file does not exist yet (which is caught by grep exiting >0 anyways).
+  # This is needed for cases where the orchestrator is run in a Lima-managed vm but the config file needs to be
+  # overwritten manually (and therefore should not be overwritten on the next boot by Lima/cloud-init).
+  - mode: system
+    script: |
+      #!/bin/bash
+      if ! grep "# LIMA-DO-NOT-OVERWRITE-THIS" /etc/amos/config.toml; then
+        cp /etc/amos/config.default.toml /etc/amos/config.toml
+        systemctl restart orchestrator.service
+      fi
 
   # ### Random fixes
   # # Prevent lima from installing random sh*t into the VM and therefore having
