@@ -107,7 +107,7 @@ pub async fn add_os_assignment(
     let db = db!();
 
     let new_os_assignment = os_assignment.insert(&db).await?;
-    log::debug!(
+    log::trace!(
         "Inserted new OS version assignment: {:?}",
         new_os_assignment
     );
@@ -151,7 +151,7 @@ pub async fn update_os_assignment(
     old_active.superseded_by = Set(Some(new_assignment.id));
     old_active.update(&db).await?;
 
-    log::debug!(
+    log::trace!(
         "Updated OS assignment via append-only: {:?}",
         new_assignment
     );

@@ -26,7 +26,7 @@ pub async fn upsert_user(claims: Claims) -> Result<dtos::user::Model, DbErr> {
         .exec_with_returning(&db)
         .await?;
 
-    log::debug!("Upserted user: {:?}", upserted_user);
+    log::trace!("Upserted user: {:?}", upserted_user);
 
     Ok(upserted_user)
 }

@@ -142,7 +142,7 @@ async fn add_application_assignment(
     let db = db!();
 
     let new_app_assignment = app_assignment.insert(&db).await?;
-    log::debug!(
+    log::trace!(
         "Inserted new application config assignment: {:?}",
         new_app_assignment
     );
@@ -181,7 +181,7 @@ pub async fn update_application_assignment(
     old_active.superseded_by = Set(Some(new_assignment.id));
     old_active.update(&db).await?;
 
-    log::debug!(
+    log::trace!(
         "Updated application assignment via append-only: {:?}",
         new_assignment
     );

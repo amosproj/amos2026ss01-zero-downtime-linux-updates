@@ -38,7 +38,7 @@ pub async fn add_pending_device_registration(
     let db = db!();
 
     let new_pending_device_registration = pending_device_registration.insert(&db).await?;
-    log::debug!(
+    log::trace!(
         "Inserted new pending device registration: {:?}",
         new_pending_device_registration
     );

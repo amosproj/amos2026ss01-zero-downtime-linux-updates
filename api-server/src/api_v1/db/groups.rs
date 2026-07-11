@@ -46,7 +46,7 @@ pub async fn add_group(name: String) -> Result<Group::Model, DbErr> {
     let db = db!();
 
     let new_group = group.insert(&db).await?;
-    log::debug!("Inserted group: {:?}", new_group);
+    log::trace!("Inserted group: {:?}", new_group);
 
     Ok(new_group.into_api())
 }
@@ -60,7 +60,7 @@ pub async fn update_group(id: i32, name: String) -> Result<Group::Model, DbErr> 
     let mut group: dtos::Group::ActiveModel = group.into();
     group.name = Set(name);
     let updated_group = group.update(&db).await?;
-    log::debug!("Updated group: {:?}", updated_group);
+    log::trace!("Updated group: {:?}", updated_group);
     Ok(updated_group.into_api())
 }
 

@@ -51,7 +51,7 @@ pub async fn add_application(
     let db = db!();
 
     let new_app = app.insert(&db).await?;
-    log::debug!("Inserted new application: {:?}", new_app);
+    log::trace!("Inserted new application: {:?}", new_app);
 
     Ok(new_app.into_api())
 }
@@ -70,7 +70,7 @@ pub async fn update_application(
     app.name = Set(name);
     app.description = Set(description);
     let updated_app = app.update(&db).await?;
-    log::debug!("Updated application: {:?}", updated_app);
+    log::trace!("Updated application: {:?}", updated_app);
     Ok(updated_app.into_api())
 }
 

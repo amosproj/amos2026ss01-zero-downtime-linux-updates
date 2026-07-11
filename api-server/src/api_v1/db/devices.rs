@@ -81,7 +81,7 @@ pub async fn add_device(
     let db = db!();
 
     let new_device = device.insert(&db).await?;
-    log::debug!("Inserted device: {:?}", new_device);
+    log::trace!("Inserted device: {:?}", new_device);
 
     Ok(new_device.into_api())
 }
@@ -106,7 +106,7 @@ pub async fn update_device(
     device.tenant_id = Set(tenant_id);
     device.group_id = Set(group_id);
     let updated_device = device.update(&db).await?;
-    log::debug!("Updated device: {:?}", updated_device);
+    log::trace!("Updated device: {:?}", updated_device);
     Ok(updated_device.into_api())
 }
 
@@ -143,7 +143,7 @@ pub async fn patch_device(
     }
 
     let updated_device = device.update(&db).await?;
-    log::debug!("Patched device: {:?}", updated_device);
+    log::trace!("Patched device: {:?}", updated_device);
     Ok(updated_device.into_api())
 }
 

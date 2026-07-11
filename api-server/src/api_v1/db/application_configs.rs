@@ -123,7 +123,7 @@ pub async fn add_application_config(
     let db = db!();
 
     let new_app_config = app_config.insert(&db).await?;
-    log::debug!("Inserted new application config: {:?}", new_app_config);
+    log::trace!("Inserted new application config: {:?}", new_app_config);
 
     Ok(new_app_config.into_api())
 }
@@ -168,7 +168,7 @@ pub async fn update_application_config(
     old_active.superseded_by = Set(Some(new_config.id));
     old_active.update(&db).await?;
 
-    log::debug!(
+    log::trace!(
         "Updated application config via append-only: {:?}",
         new_config
     );
