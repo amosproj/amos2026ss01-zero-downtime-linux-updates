@@ -72,11 +72,11 @@ async fn jwt_middleware(
                 Ok(next.run(req).await)
             }
             Err(device::DeviceTokenError::DeviceNotFound) => {
-                log::debug!("JWT rejected (device unknown)");
+                log::trace!("JWT rejected (device unknown)");
                 Err(StatusCode::IM_A_TEAPOT)
             }
             Err(err) => {
-                log::debug!("JWT rejected: {:?}", err);
+                log::trace!("JWT rejected: {:?}", err);
                 // Invalid or expired token — reject with 401
                 Err(StatusCode::UNAUTHORIZED)
             }
@@ -117,7 +117,7 @@ async fn jwt_middleware(
                     .await)
             }
             Err(err) => {
-                log::debug!("JWT rejected: {:?}", err);
+                log::trace!("JWT rejected: {:?}", err);
                 // Invalid or expired token — reject with 401
                 Err(StatusCode::UNAUTHORIZED)
             }
