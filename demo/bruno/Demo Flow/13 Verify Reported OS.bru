@@ -1,0 +1,24 @@
+meta {
+  name: 13 Verify Reported OS
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/reported-os-assignments?device_id={{demoDeviceId}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  device_id: {{demoDeviceId}}
+}
+
+docs {
+  `GET /reported-os-assignments` — after rebooting, the device reports the
+  OS version it actually booted into (via `PUT /device/os`).
+
+  **Expect:** an entry with `os_version_id` = `{{osVersionId}}`. Re-send
+  until it appears — download + reboot takes a few minutes depending on
+  image size. `02 Device Summaries` shows the same result fleet-wide.
+}

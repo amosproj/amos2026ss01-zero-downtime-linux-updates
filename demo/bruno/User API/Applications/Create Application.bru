@@ -1,0 +1,23 @@
+meta {
+  name: Create Application
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/applications
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "hello-world",
+    "description": "Heartbeat demo app"
+  }
+}
+
+docs {
+  `POST /applications` — add an application to the catalog. Body:
+  `{ name: string, description: string }`. Returns 201.
+}

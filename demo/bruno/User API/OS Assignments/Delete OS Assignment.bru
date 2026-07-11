@@ -1,0 +1,20 @@
+meta {
+  name: Delete OS Assignment
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/os-assignments/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 999
+}
+
+docs {
+  `DELETE /os-assignments/{id}` — remove an assignment (do this for
+  obsolete assignments when rolling out a newer one). Returns 204.
+}

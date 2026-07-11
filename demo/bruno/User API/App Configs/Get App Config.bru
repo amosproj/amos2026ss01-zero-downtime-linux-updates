@@ -1,0 +1,19 @@
+meta {
+  name: Get App Config
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/app-configs/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+docs {
+  `GET /app-configs/{id}` — a single config version by ID.
+}

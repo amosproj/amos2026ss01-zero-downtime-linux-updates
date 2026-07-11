@@ -1,0 +1,26 @@
+meta {
+  name: Device History
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/audit-logs/by-device/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+params:query {
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /audit-logs/by-device/{id}` — audit history for a device *including
+  related records* (its app and OS assignment changes), i.e. the full
+  story of what was rolled out to it and by whom.
+}

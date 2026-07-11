@@ -1,0 +1,22 @@
+meta {
+  name: List Pending Registrations
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/pending-device-registrations
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /pending-device-registrations` — devices that are allow-listed but
+  have not self-registered yet. Entries disappear once the device completes
+  `POST /register`.
+}

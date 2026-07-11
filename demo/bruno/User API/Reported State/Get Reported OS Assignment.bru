@@ -1,0 +1,19 @@
+meta {
+  name: Get Reported OS Assignment
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/reported-os-assignments/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+docs {
+  `GET /reported-os-assignments/{id}` — a single report by ID.
+}

@@ -1,0 +1,28 @@
+meta {
+  name: Patch Device
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/devices/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "group_id": 1
+  }
+}
+
+docs {
+  `PATCH /devices/{id}` — partial update; send only the fields to change
+  (`uuid`, `serial_number`, `public_key`, `tenant_id`, `group_id`).
+  Typical use: assign a device to a group so it inherits group-level app
+  configs and OS assignments.
+}

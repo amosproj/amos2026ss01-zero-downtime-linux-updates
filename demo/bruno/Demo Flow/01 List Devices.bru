@@ -1,0 +1,19 @@
+meta {
+  name: 01 List Devices
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/devices
+  body: none
+  auth: inherit
+}
+
+docs {
+  `GET /devices` — the registered fleet.
+
+  **Expect:** the two pre-registered edge devices (edge 1 and edge 2) with
+  their UUIDs, serial numbers and TPM public keys. Edge 3 is not here yet —
+  we register it live in step 04.
+}

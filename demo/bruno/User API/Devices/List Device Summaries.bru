@@ -1,0 +1,27 @@
+meta {
+  name: List Device Summaries
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/devices/summary
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~page: 1
+  ~page_size: 20
+  ~group_id: 1
+  ~tenant_id: 1
+  ~uuid: 019f4785-419a-7060-bc3c-d71c75099ac2
+  ~serial_number: BIOS-SERIAL-1337-AMOS-TEST-VM
+}
+
+docs {
+  `GET /devices/summary` — fleet dashboard in one call: per device its
+  identity, tenant and *reported* state.
+  Shape: `{ device, tenant, os_versions: [...], applications: [...] }`.
+  Same filters as `GET /devices`.
+}

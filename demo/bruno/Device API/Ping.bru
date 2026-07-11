@@ -1,0 +1,21 @@
+meta {
+  name: Ping
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/device/ping
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{deviceJwt}}
+}
+
+docs {
+  `PUT /device/ping` — aliveness signal; upserts the device's last-seen
+  timestamp (visible in *User API → Reported State → List Pings*).
+  Returns 201.
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Delete Application
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/applications/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 999
+}
+
+docs {
+  `DELETE /applications/{id}` — remove a catalog entry. Returns 204.
+}

@@ -1,0 +1,36 @@
+meta {
+  name: 12 Assign OS To Device
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/os-assignments
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "os_version_id": {{osVersionId}},
+    "device_id": {{demoDeviceId}},
+    "immediate": true
+  }
+}
+
+vars:post-response {
+  osAssignmentId: res.body.id
+}
+
+docs {
+  `POST /os-assignments` — the money shot: assign the new OS version to the
+  device. `immediate: true` tells the orchestrator to apply it right away
+  instead of waiting for a maintenance window.
+
+  **Watch the log stream tab:** the device downloads and stages the image
+  in the background, then reboots into it — the gap in the heartbeat logs
+  is the near-zero downtime.
+
+  Note: the device applies its *first* active assignment. If it already has
+  an older one, delete it first (*User API → OS Assignments*).
+}

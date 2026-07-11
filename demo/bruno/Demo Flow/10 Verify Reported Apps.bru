@@ -1,0 +1,24 @@
+meta {
+  name: 10 Verify Reported Apps
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/reported-app-assignments?device_id={{demoDeviceId}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  device_id: {{demoDeviceId}}
+}
+
+docs {
+  `GET /reported-app-assignments` — closes the loop: not what we *asked*
+  the device to run, but what the device itself *reports* it is running
+  (via `PUT /device/apps`).
+
+  **Expect:** an entry with the current `application_config_id`
+  (`{{appConfigId}}` after step 09).
+}

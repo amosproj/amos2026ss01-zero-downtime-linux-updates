@@ -1,0 +1,49 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{jwt}}
+}
+
+docs {
+  # AMOS Device Management API
+
+  Runnable documentation for the AMOS zero-downtime-update API served by
+  `api-server`. Open this folder as a collection in
+  [Bruno](https://www.usebruno.com/) (v2.x — SSE support is required for the
+  live log stream), pick an environment, and hit send.
+
+  ## Layout
+
+  - **Demo Flow** — the scripted live demo, ordered top to bottom. Start here.
+  - **User API** — every user-facing endpoint (`{{baseUrl}}/…`), grouped by
+    resource. Doubles as API reference.
+  - **Device API** — the endpoints the on-device orchestrator calls
+    (`{{baseUrl}}/device/…` + `POST /register`). Included for reference; they
+    require a device JWT (see below).
+
+  ## Authentication
+
+  Every route except `POST /register` requires `Authorization: Bearer <JWT>`.
+  The server distinguishes two token types:
+
+  - **User JWT** — RS512, verified against the public key in the server
+    config. The collection inherits `{{jwt}}` from the environment; the
+    bundled token is the long-lived dev JWT also used by the e2e scripts
+    (`scripts/tests/common_env.sh`).
+  - **Device JWT** — contains `"role": "device"` and is signed with the
+    device's TPM-backed signing key, so it can only be produced by a
+    registered device. Requests in *Device API* reference `{{deviceJwt}}`.
+
+  ## Conventions
+
+  - List endpoints are paginated: `?page=1&page_size=20` (page is 1-based,
+    page_size ≤ 200). Responses look like
+    `{ "page": 1, "page_size": 20, "total_items": n, "total_pages": n, "data": [...] }`.
+  - Log levels (lowercase on the wire, ascending severity):
+    `trace, debug, info, warn, error, fatal`. Where `level` is a filter it
+    means *minimum* severity.
+  - Timestamps are RFC 3339 / ISO 8601 UTC, e.g. `2026-07-09T12:00:00Z`.
+  - Errors are `{ "error": "<message>" }` with a matching HTTP status.
+}

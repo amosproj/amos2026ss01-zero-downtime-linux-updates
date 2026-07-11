@@ -1,0 +1,40 @@
+meta {
+  name: 07 Create App Config
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/app-configs
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "device_id": {{demoDeviceId}},
+    "application_id": {{applicationId}},
+    "image": "{{appImage}}",
+    "config": {
+      "environment": {
+        "NAME": "AMOS"
+      }
+    }
+  }
+}
+
+vars:post-response {
+  appConfigId: res.body.id
+}
+
+docs {
+  `POST /app-configs` — the concrete deployable: container image +
+  configuration (environment variables), targeted at one device
+  (`device_id`) or a whole group (`group_id`) — exactly one of the two.
+
+  hello-world prints its `NAME` environment variable, so the value chosen
+  here becomes visible in the application logs — which is how we'll *see*
+  the config update in step 09.
+
+  The created `id` is captured as `{{appConfigId}}`.
+}

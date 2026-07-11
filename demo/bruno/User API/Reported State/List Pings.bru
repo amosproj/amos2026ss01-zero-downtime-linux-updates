@@ -1,0 +1,21 @@
+meta {
+  name: List Pings
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/pings
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /pings` — last aliveness signal per device (upserted by
+  `PUT /device/ping`). A recent ping = device online.
+}

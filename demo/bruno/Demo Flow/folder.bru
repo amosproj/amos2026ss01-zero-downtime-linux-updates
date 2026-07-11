@@ -1,0 +1,40 @@
+meta {
+  name: Demo Flow
+  seq: 1
+}
+
+docs {
+  # Live demo script
+
+  Run the requests in this folder top to bottom. Responses feed the next
+  steps automatically (created IDs are captured into runtime variables), so
+  no copy-pasting is needed during the demo.
+
+  ## Before the demo
+
+  The demo operator prepares everything (API servers per run, edge VMs
+  booted, edges 1 + 2 registered — edge 3 stays unregistered on purpose;
+  registering it live *is* the demo) and hands you:
+
+  - which run to use → select the matching environment
+    (`demo-run1` / `demo-run2` / `demo-run3`),
+  - the serial number and TPM endorsement key of the unregistered edge →
+    put them into the `edge3Serial` and `edge3EndorsementKey` environment
+    variables (see the docs on *04 Register Edge 3* for the exact format).
+
+  (Behind the scenes this is `scripts/demo-setup/prepare_edge_vms.sh` +
+  `prepare_edge_demo.sh`.)
+
+  ## Story
+
+  1. **Fleet overview** (01–02): two devices are connected and reporting.
+  2. **Live logs** (03): open the SSE stream in its own tab and leave it
+     running — everything that follows shows up here in real time.
+  3. **Register a device** (04–05): create a pending registration; the edge
+     device proves possession of its TPM key and self-registers.
+  4. **Deploy + update an app** (06–10): push hello-world to the new device,
+     then roll out a config change and watch the logs pick it up.
+  5. **OS switch** (11–13): assign a new OS image; the device stages it,
+     reboots into it with near-zero downtime, and reports back.
+  6. **Audit trail** (14): every change made during the demo, who and when.
+}

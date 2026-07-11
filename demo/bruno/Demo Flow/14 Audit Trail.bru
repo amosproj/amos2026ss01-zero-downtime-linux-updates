@@ -1,0 +1,18 @@
+meta {
+  name: 14 Audit Trail
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/audit-logs/by-device/{{demoDeviceId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  `GET /audit-logs/by-device/{id}` — the closer: everything that happened
+  to the demo device during this session (registration, app config
+  versions, OS assignment), each entry with the change payload, the user
+  who made it (from the JWT) and a timestamp.
+}
