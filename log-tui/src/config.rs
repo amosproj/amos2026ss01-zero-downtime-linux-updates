@@ -12,7 +12,11 @@ use clap::Parser;
 )]
 pub struct Cli {
     /// Base URL of the user API, including the `/v1` prefix.
-    #[arg(long, env = "AMOS_BASE_URL", default_value = "http://localhost:8080/v1")]
+    #[arg(
+        long,
+        env = "AMOS_BASE_URL",
+        default_value = "http://localhost:8080/v1"
+    )]
     pub base_url: String,
 
     /// Bearer JWT for the user API (the long-lived dev token for the demo).
