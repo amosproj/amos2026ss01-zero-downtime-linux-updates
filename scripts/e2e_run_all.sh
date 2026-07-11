@@ -14,8 +14,10 @@ PASSED_COUNT=0
 readonly timescale_container="amos-test-timescaledb"
 readonly timescale_port=55433
 readonly timescale_url="postgres://app:4M0S@127.0.0.1:${timescale_port}/amos_timeseries"
-readonly script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly devcontainer_dir="$(cd "$script_dir/../.devcontainer" && pwd)"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly script_dir
+devcontainer_dir="$(cd "$script_dir/../.devcontainer" && pwd)"
+readonly devcontainer_dir
 
 # Color outputs
 GREEN='\033[0;32m'
@@ -192,11 +194,14 @@ echo " Ensuring VM Pre-requisites "
 echo "========================================="
 set -e
 
-# Ensure boot was successful
+# Ensure boot was successful.
+# `sudo`, because the VM runs in lima's plain mode (see dev-env/lima/edge-ipc.yaml),
+# which skips the boot script that puts the lima user into the adm/systemd-journal
+# groups. Without it journalctl only shows the user's own messages, i.e. nothing.
 echo "Checking for successful Greenboot orchestrator check"
 GREENBOOT_OK=0
 for i in $(seq 1 60); do
-    if limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service 2>/dev/null \
+    if limactl shell "${VM_NAME}" -- sudo journalctl --boot -u greenboot-healthcheck.service 2>/dev/null \
             | grep -q "required script /etc/greenboot/check/required.d/10-orchestrator-check.sh success"; then
         echo "Greenboot orchestrator check passed."
         GREENBOOT_OK=1
@@ -207,7 +212,7 @@ done
 
 if [ "$GREENBOOT_OK" -ne 1 ]; then
     echo "Greenboot orchestrator check did not succeed in time." >&2
-    limactl shell "${VM_NAME}" -- journalctl --boot -u greenboot-healthcheck.service || true
+    limactl shell "${VM_NAME}" -- sudo journalctl --boot -u greenboot-healthcheck.service || true
     exit 1
 fi
 # Ensure Podman API socket is running

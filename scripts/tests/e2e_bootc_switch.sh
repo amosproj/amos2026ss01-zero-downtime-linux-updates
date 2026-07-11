@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit
 source ./common_env.sh
 
 echo "=== Testing Bootc Switch & Apply Sequence ==="
@@ -29,7 +29,7 @@ echo "Polling live bootc status for immediate upgrade execution..."
 UPGRADED=false
 for i in $(seq 1 50); do
     BOOTC_STATUS_JSON=$(limactl shell "${VM_NAME}" -- sudo bootc status --json 2>/dev/null)
-    
+
     if [ $? -eq 0 ] && [ -n "$BOOTC_STATUS_JSON" ]; then
         if echo "${BOOTC_STATUS_JSON}" | jq -e ".status.booted.image.image.image == \"${TARGET_UPGRADE_REF}\"" > /dev/null; then
             echo -e "${GREEN}Success: Verified switch deployment! Target image is actively running as the booted system.${NC}"
