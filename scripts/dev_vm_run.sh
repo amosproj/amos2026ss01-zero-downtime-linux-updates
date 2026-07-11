@@ -22,7 +22,8 @@ set -euo pipefail
 : "${DEVICE_SERIAL:?DEVICE_SERIAL must be set}"
 : "${CLOUD_URL:?CLOUD_URL must be set}"
 
-readonly TPM_DIR="/tmp/emulated_tpm"
+# Per-VM state dir to support several edge VMs, each with its own swtpm on one host
+readonly TPM_DIR="${TPM_DIR:-/tmp/emulated_tpm/${VM_NAME}}"
 readonly swtpm_pidfile="${TPM_DIR}/swtpm.pid"
 
 GREEN='\033[0;32m'

@@ -21,3 +21,7 @@ reference and playground.
 Each demo run has its own API server (same host, different path segment) and
 its own environment file; for an additional run, duplicate one of the
 `environments/demo-run*.bru` files and change the run segment in `baseUrl`.
+
+Setting up the runs, edge VMs and the `edge3Serial` / `edge3EndorsementKey`
+hand-off is the **demo operator's** job — see
+[`scripts/demo-setup/README.md`](../../scripts/demo-setup/README.md).
