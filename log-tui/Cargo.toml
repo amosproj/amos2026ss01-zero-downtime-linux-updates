@@ -1,0 +1,19 @@
+[package]
+name = "amos-log-tui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+amos-common = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true, features = ["env"] }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+# reqwest is pinned per-crate in this workspace (see common/orchestrator); match it.
+reqwest = { version = "0.13.3", features = ["json", "stream"] }
+futures = "0.3"
+ratatui = "0.29"
+# ratatui 0.29 re-exports crossterm 0.28; add it directly to enable async EventStream.
+crossterm = { version = "0.28", features = ["event-stream"] }
+eventsource-stream = "0.2"

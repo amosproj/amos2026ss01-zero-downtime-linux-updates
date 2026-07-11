@@ -2,14 +2,16 @@
 
 Everything the **demo operator** does to bring a demo run into its start
 state and hand it off to the presenter (PO). The PO drives the actual demo
-from the Bruno collection in [`demo/bruno`](../../demo/bruno) and never needs
-any of the tooling here — they only need three things from you:
+from the Bruno collection in [`api/bruno`](../../api/bruno) and never needs
+any of the tooling here — they only need two things from you:
 
 1. **which run** to use (`run1` / `run2` / `run3` → Bruno env `demo-run1` …),
-2. the **serial number** of the edge left unregistered for the live demo,
-3. that edge's **TPM endorsement key**, as a ready-to-paste JSON string.
+2. the **TPM endorsement key** of the edge left unregistered for the live
+   demo, as a ready-to-paste JSON string. Its serial number is fixed and
+   already in the Bruno environments; the key is not, because every prepared
+   run boots the edges with a fresh emulated TPM.
 
-See [Hand-off to the PO](#4-hand-off-to-the-po) for how to produce 2 and 3.
+See [Hand-off to the PO](#4-hand-off-to-the-po) for how to produce 2.
 
 ## Layout of a demo
 
@@ -111,7 +113,7 @@ you re-prepare a run, **reset that run's API server first**.
 Confirm each run's API server shows its two pre-registered devices:
 
 ```bash
-source ../tests/common_env.sh   # exports $JWT (the shared dev token)
+source ../../scripts/tests/common_env.sh   # exports $JWT (the shared dev token)
 curl -s <API_BASE>/run1/v1/devices \
   -H "Authorization: Bearer $JWT" | jq '.data | length'   # expect 2
 ```
@@ -121,9 +123,8 @@ curl -s <API_BASE>/run1/v1/devices \
 ## 4. Hand-off to the PO
 
 Give the PO the **run name** (→ they pick the matching Bruno environment) and
-edge 3's **serial** + **endorsement key**. Produce the endorsement key as a
-JSON string (quotes included, trailing newline preserved — the server matches
-it byte-for-byte):
+edge 3's **endorsement key**. Produce the key as a JSON string (quotes
+included, trailing newline preserved — the server matches it byte-for-byte):
 
 ```bash
 HOST_IP=$(openstack server show amos-edge-host -f json -c addresses \
@@ -136,9 +137,9 @@ ssh debian@"$HOST_IP" \
    | openssl rsa -pubin 2>/dev/null" | jq -Rs .
 ```
 
-The PO pastes that output verbatim into the Bruno `edge3EndorsementKey`
-environment variable and the serial into `edge3Serial`, then runs
-*Demo Flow → 04 Register Edge 3*.
+The PO pastes that output verbatim — on a single line, surrounding quotes
+included — into the Bruno `edge3EndorsementKey` environment variable, then
+runs *Demo Flow → 04 Register Edge 3*.
 
 ### Alternative: register edge 3 yourself, live
 

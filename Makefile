@@ -1,4 +1,4 @@
-.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build demo-edge demo-server
+.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build demo-edge demo-server demo-logs
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
@@ -23,6 +23,15 @@ RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
 CLOUD_URL     ?= http://host.lima.internal:8080/v1
 VM_UUID       ?= 00000000-0000-0000-0000-000000000001
 VM_SERIAL     ?= AMOS-TEST-001
+
+# settings for the live log viewer (log-tui) -- see `demo-logs`. DEMO_API_URL /
+# DEMO_JWT / DEMO_DEVICE mirror the run1 Bruno environment
+# (api/bruno/environments/demo-run1.bru). The JWT is the public, long-lived dev
+# token used across the demo. Override any of them to point at another run, e.g.
+# `make demo-logs DEMO_API_URL=http://float-172-017-069-035.cc.rrze.net/run2/v1`.
+DEMO_API_URL  ?= http://float-172-017-069-035.cc.rrze.net/run1/v1
+DEMO_JWT      ?= eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik1hcmMgV2ViYmVyIiwiZXhwIjozMzMzNzg2MDc1Nn0.YLzANsYJj5TmCAURvMyUQSSeGk6fa8xrJhrbSrm999hMVxeYqTtT2c62dT7Ast9bdHENHWAPZD7OYWsOK2sCX-jqYfNFgmAmYxCtLaXMCVgIvqzOWf9miV8F5Zd8OaSnoaWbA7iXsICJ_kBYCP6zFdRQUoO-Evok4vtzH6Y5M1LyJtsy65NIpkpQt6DAZqf0s7818mrJdqpLp_L_1vqPq9QOrMen28lv_RNjWl5x9_lGhfw15TbGhfrE5mvmzsq6RW6M5Eun3CVGWXERqNzOqdVHo13BtmyRxLbJa8kP0r0qPubMfQf-bpAIVxG6oA5xbjytiEKQ8vfl1up6XBn429N_039-exEfv8EdZ35AjqLpLaSA4BM0RFurqZMse4ELJmNRPQLVMfrBDTf0yLB3USi0su3tFZRXQ6ND7cLpqL6PUYL0KrJZUiMwD8ZMSDBO7Rilh2thkhYp0EfBncIi5lI1gVlN5qSC51NJeDBRFPYnhH_-gwxecn1WzVILpiNki0E8euOpSTXgS2FNxlHhPfBevPodoBn8j-Vu0U9-8xmfqxZirGankWz4d00rthBn_B0IFKk0WFy742TW_Qs9NdAL9UnGJGwqYv88MtGo6vgfTwdE9WASkq4ubJ8GCvFmooKb9FrMGz_-9pS2RWRgO_kT_1PSD4bTMHQIMhC1eXs
+DEMO_DEVICE   ?= 3
 
 # Prebuilt disk image published by .github/workflows/disk-image.yml as an OCI
 # artifact (each tag bundles both <name>.raw.xz and <name>.qcow2.xz).
@@ -275,6 +284,16 @@ demo-server: ## Bring up the full e2e stack, primed and left running for a live 
 	limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true; \
 	limactl create -y --name $(DEV_VM) dev-env/lima/edge-ipc.yaml; \
 	cd scripts && ./demo_run.sh
+
+# demo-logs: launch the live log-tail TUI (log-tui) against a deployed demo API
+# server (the floating IP), authenticated with the long-lived dev JWT. This is a
+# read-only user-API client -- it doesn't touch the edge VMs or the local stack.
+demo-logs: ## Start the live log TUI against the demo API server (override DEMO_API_URL/DEMO_DEVICE for another run)
+	@echo ">>> log-tui -> $(DEMO_API_URL) (device $(DEMO_DEVICE))"
+	@cargo run -p amos-log-tui -- \
+		--base-url "$(DEMO_API_URL)" \
+		--jwt "$(DEMO_JWT)" \
+		--device "$(DEMO_DEVICE)"
 
 # ---------------------------------------------------------------------------
 # Installer ISO for bare-metal IPCs. The ISO embeds our bootc image and

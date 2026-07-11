@@ -1,7 +1,7 @@
 meta {
-  name: 08 Assign App To Device
+  name: 12 Assign App To Device
   type: http
-  seq: 8
+  seq: 12
 }
 
 post {
@@ -23,8 +23,8 @@ vars:post-response {
 
 docs {
   `POST /app-assignments` — mark the config as *desired state* for the
-  device. On its next poll the orchestrator pulls the image and starts the
-  container.
+  scanner IPC. On its next poll the orchestrator pulls the image and starts
+  the container.
 
   **Watch the log stream tab:** within ~a minute the pull/deploy messages
   and then the app's own output (`NAME = AMOS`, heartbeat counter) appear.
