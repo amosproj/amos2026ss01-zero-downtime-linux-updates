@@ -78,6 +78,7 @@ echo "========================================="
 # host-local mock server) so the orchestrator polls the external server instead.
 limactl shell "${VM_NAME}" -- sudo mkdir -p /etc/amos
 limactl shell "${VM_NAME}" -- sudo tee /etc/amos/config.toml >/dev/null <<EOF
+# LIMA-DO-NOT-OVERWRITE-THIS
 cloud_url = "${CLOUD_URL}"
 poll_interval_secs = 5
 EOF
