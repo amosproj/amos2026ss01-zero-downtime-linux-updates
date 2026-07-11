@@ -95,6 +95,20 @@ pub async fn add_os_assignment(
     group_id: Option<i32>,
     immediate: Option<bool>,
 ) -> Result<OsAssignment::Model, DbErr> {
+    let db = db!();
+
+    let mut old_query = dtos::OsAssignment::Entity::find()
+        .filter(dtos::OsAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::OsAssignment::Column::SupersededBy.is_null());
+
+    if let Some(did) = device_id {
+        old_query = old_query.filter(dtos::OsAssignment::Column::DeviceId.eq(did));
+    } else if let Some(gid) = group_id {
+        old_query = old_query.filter(dtos::OsAssignment::Column::GroupId.eq(gid));
+    }
+
+    let existing_assignments = old_query.all(&db).await?;
+
     let os_assignment = dtos::OsAssignment::ActiveModel {
         id: NotSet,
         os_version_id: Set(os_version_id),
@@ -105,13 +119,22 @@ pub async fn add_os_assignment(
         superseded_by: NotSet,
     };
 
-    let db = db!();
-
     let new_os_assignment = os_assignment.insert(&db).await?;
     debug!(
         "Inserted new OS version assignment: {:?}",
         new_os_assignment
     );
+
+    for old in existing_assignments {
+        let old_id = old.id;
+        let mut old_active: dtos::OsAssignment::ActiveModel = old.into();
+        old_active.superseded_by = Set(Some(new_os_assignment.id));
+        old_active.update(&db).await?;
+        debug!(
+            "Superseded old OS assignment {} with {}",
+            old_id, new_os_assignment.id
+        );
+    }
 
     Ok(new_os_assignment.into_api())
 }
