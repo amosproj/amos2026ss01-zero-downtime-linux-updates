@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::ReportedApplicationAssignment;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::OnConflict;
 use sea_orm::sea_query::prelude::chrono;
@@ -70,9 +69,10 @@ pub async fn add_reported_application_assignment(
         .exec(&db)
         .await?;
 
-    debug!(
+    log::trace!(
         "Upserted new reported application assignment: device={} config={}",
-        device_id, application_config_id
+        device_id,
+        application_config_id
     );
     Ok(())
 }

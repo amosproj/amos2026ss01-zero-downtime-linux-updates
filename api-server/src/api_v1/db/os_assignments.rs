@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::OsAssignment;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
@@ -108,7 +107,7 @@ pub async fn add_os_assignment(
     let db = db!();
 
     let new_os_assignment = os_assignment.insert(&db).await?;
-    debug!(
+    log::debug!(
         "Inserted new OS version assignment: {:?}",
         new_os_assignment
     );
@@ -152,7 +151,7 @@ pub async fn update_os_assignment(
     old_active.superseded_by = Set(Some(new_assignment.id));
     old_active.update(&db).await?;
 
-    debug!(
+    log::debug!(
         "Updated OS assignment via append-only: {:?}",
         new_assignment
     );

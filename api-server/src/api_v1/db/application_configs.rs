@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use crate::dtos;
 use amos_common::entities::{ApplicationConfig, ContainerConfigV1};
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
@@ -124,7 +123,7 @@ pub async fn add_application_config(
     let db = db!();
 
     let new_app_config = app_config.insert(&db).await?;
-    debug!("Inserted new application config: {:?}", new_app_config);
+    log::debug!("Inserted new application config: {:?}", new_app_config);
 
     Ok(new_app_config.into_api())
 }
@@ -169,7 +168,7 @@ pub async fn update_application_config(
     old_active.superseded_by = Set(Some(new_config.id));
     old_active.update(&db).await?;
 
-    debug!(
+    log::debug!(
         "Updated application config via append-only: {:?}",
         new_config
     );

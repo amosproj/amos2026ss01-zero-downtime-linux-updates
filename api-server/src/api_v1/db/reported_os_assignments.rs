@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::ReportedOsAssignment;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::OnConflict;
 use sea_orm::sea_query::prelude::chrono;
@@ -66,9 +65,10 @@ pub async fn add_reported_os_assignment(os_version_id: i32, device_id: i32) -> R
         .exec(&db)
         .await?;
 
-    debug!(
+    log::debug!(
         "Upserted new reported OS version assignment: device={} version={}",
-        device_id, os_version_id
+        device_id,
+        os_version_id
     );
     Ok(())
 }

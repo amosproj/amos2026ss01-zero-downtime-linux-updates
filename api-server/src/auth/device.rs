@@ -1,5 +1,4 @@
 use jsonwebtoken::{DecodingKey, TokenData, Validation, decode};
-use log::{trace, warn};
 use serde_json::Value;
 
 use crate::api_v1::db;
@@ -49,9 +48,10 @@ pub async fn validate_token(
         .public_key
         .ok_or(DeviceTokenError::MissingPublicKey)?;
     let device_pubkey_decoded = device_pubkey.replace("\\n", "\n");
-    trace!(
+    log::trace!(
         "Retrieved JWT pubkey for device {}: {}",
-        device_uuid, device_pubkey_decoded
+        device_uuid,
+        device_pubkey_decoded
     );
 
     let verified_token = decode::<Claims>(
@@ -64,7 +64,7 @@ pub async fn validate_token(
     // Allow some drift due to (missing) clock synchronization
     let difference_secs = verified_token.claims.exp - chrono::Utc::now().timestamp();
     if (difference_secs - 10) > MAX_TOKEN_LIFETIME {
-        warn!(
+        log::warn!(
             "Rejected device JWT due to too long lifetime: {} secs",
             difference_secs
         );

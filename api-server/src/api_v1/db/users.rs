@@ -1,6 +1,5 @@
 use crate::auth::user::Claims;
 use crate::dtos;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{DbErr, EntityTrait};
@@ -27,7 +26,7 @@ pub async fn upsert_user(claims: Claims) -> Result<dtos::user::Model, DbErr> {
         .exec_with_returning(&db)
         .await?;
 
-    debug!("Upserted user: {:?}", upserted_user);
+    log::debug!("Upserted user: {:?}", upserted_user);
 
     Ok(upserted_user)
 }

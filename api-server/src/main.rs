@@ -8,7 +8,6 @@ pub(crate) mod ts_migration;
 use axum::{Router, extract::Request, middleware as axum_middleware};
 mod audit_context;
 use config::get_config;
-use log::{debug, error, info};
 use std::path::PathBuf;
 use tokio::net::TcpListener;
 
@@ -40,10 +39,8 @@ async fn main() {
 
     env_logger::builder().filter_level(log_level).init();
 
-    info!("Started server...");
-
     let config = get_config(cli.config).unwrap_or_else(|err| {
-        error!("Failed to load config: {}", err);
+        log::error!("Failed to load config: {:?}", err);
         std::process::exit(1);
     });
 
@@ -51,7 +48,7 @@ async fn main() {
     api_v1::db::initialialize_db(config.database_url, config.audit)
         .await
         .unwrap_or_else(|err| {
-            error!("Failed to initialize database connection: {}", err);
+            log::error!("Failed to initialize database connection: {:?}", err);
             std::process::exit(1);
         });
 
@@ -59,7 +56,7 @@ async fn main() {
     api_v1::ts_db::initialize_timescale_db(config.timescale_database_url)
         .await
         .unwrap_or_else(|err| {
-            error!("Failed to initialize TimescaleDB connection: {}", err);
+            log::error!("Failed to initialize TimescaleDB connection: {:?}", err);
             std::process::exit(1);
         });
 
@@ -75,7 +72,7 @@ async fn main() {
                 let method = req.method().to_string();
                 let uri = req.uri().to_string();
                 let res = next.run(req).await;
-                debug!("{} {} -> {}", method, uri, res.status());
+                log::debug!("{} {} -> {}", method, uri, res.status());
                 res
             },
         ));
@@ -84,10 +81,10 @@ async fn main() {
     let listener = TcpListener::bind(&bind_address)
         .await
         .unwrap_or_else(|err| {
-            error!("Could not start server: {}", err);
+            log::error!("Could not start server: {:?}", err);
             std::process::exit(1);
         });
-    info!("Serving API on {}", bind_address);
+    log::info!("Serving API on {}", bind_address);
 
     axum::serve(listener, app).await.unwrap();
 }

@@ -6,7 +6,6 @@ use crate::util::device_jwt::DeviceJwtProvider;
 use anyhow::{Context, Result};
 use reqwest::{Method, StatusCode};
 use serde::Serialize;
-use tracing::{debug, info, warn};
 
 /// Type-safe API client.
 /// Handles proxies, base urls, authentication and filtering for the current device.
@@ -30,7 +29,7 @@ impl ApiClient {
 
         // Set proxy from config if necessary
         if let Some(proxy_url) = proxy {
-            info!("Using https proxy: {}", proxy_url);
+            tracing::info!("Using https proxy: {}", proxy_url);
             let proxy = match proxy_url {
                 http_proxy if http_proxy.starts_with("http://") => {
                     reqwest::Proxy::http(http_proxy)?
@@ -42,7 +41,7 @@ impl ApiClient {
             };
             cb = cb.proxy(proxy);
         } else {
-            debug!("No proxy set, using environment variables if available");
+            tracing::info!("No proxy set, using environment variables if available");
         }
 
         let client = cb.timeout(Duration::from_secs(30)).build()?;
@@ -155,7 +154,7 @@ impl ApiClient {
                 res.status()
             );
         }
-        info!("Successfully self-registered device");
+        tracing::info!("Successfully self-registered device");
 
         Ok(())
     }
@@ -188,7 +187,9 @@ impl ApiClient {
             .context(format!("Failed to reach server at {}", self.base_url))?;
 
         if res.status() == StatusCode::IM_A_TEAPOT {
-            warn!("Server indicated that it doesn't know this device, trying self-registration");
+            tracing::warn!(
+                "Server indicated that it doesn't know this device, trying self-registration"
+            );
             self.register_self().await?;
         }
 

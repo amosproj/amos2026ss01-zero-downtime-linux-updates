@@ -239,21 +239,24 @@ impl EventReceiver for LogEventReceiver {
     fn send(&self, event: LifecycleEvent) {
         match event {
             LifecycleEvent::StateChange(None, state) => {
-                info!("Application {} has state {:?}", self.app_name, state)
+                tracing::info!("Application {} has state {:?}", self.app_name, state)
             }
-            LifecycleEvent::StateChange(Some(old_state), new_state) => info!(
+            LifecycleEvent::StateChange(Some(old_state), new_state) => tracing::info!(
                 "Application {} changed state: {:?} -> {:?}",
-                self.app_name, old_state, new_state
+                self.app_name,
+                old_state,
+                new_state
             ),
             LifecycleEvent::StoppedUnexpectedly => {
-                warn!("Application {} stopped unexpectedly", self.app_name)
+                tracing::warn!("Application {} stopped unexpectedly", self.app_name)
             }
-            LifecycleEvent::FailureThresholdReached(failures) => warn!(
+            LifecycleEvent::FailureThresholdReached(failures) => tracing::warn!(
                 "Application {} seems to have trouble starting (encountered {} failures)",
-                self.app_name, failures
+                self.app_name,
+                failures
             ),
-            LifecycleEvent::AttemptingStart => debug!("Trying to start {}", self.app_name),
-            LifecycleEvent::FatalError(e) => error!("{:?}", e),
+            LifecycleEvent::AttemptingStart => tracing::debug!("Trying to start {}", self.app_name),
+            LifecycleEvent::FatalError(e) => tracing::error!("{:?}", e),
         }
     }
 }

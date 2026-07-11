@@ -4,7 +4,6 @@
 mod config;
 use anyhow::Context;
 use clap::Parser;
-use tracing::{debug, error, info};
 
 use crate::api_client::ApiClient;
 use crate::application::Application;
@@ -62,12 +61,12 @@ async fn main() {
 
     if cli.self_check {
         if let Err(e) = self_check(&cli).await {
-            error!("{:?}", e.context("Self check failed"));
+            tracing::error!("{:?}", e.context("Self check failed"));
             std::process::exit(1);
         }
     } else {
         if let Err(e) = run(&cli, logger).await {
-            error!("{:?}", e);
+            tracing::error!("{:?}", e);
             // Give the error we just logged (and anything buffered before
             // it) a chance to reach the cloud before the process exits.
             log_flusher.flush().await;
@@ -77,11 +76,9 @@ async fn main() {
 }
 
 async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
-    info!("Orchestrator starting ...");
-
     let config =
         OrchestratorConfig::load(cli.config.as_deref()).context("Could not load configuration")?;
-    debug!("Loaded config: {:?}", config);
+    tracing::info!("Loaded config: {:?}", config);
 
     let device_uuid = hardware::read_device_uuid()
         .context("Could not read device UUID from DMI (/sys/class/dmi/id/product_uuid)")?;
@@ -148,7 +145,7 @@ async fn run(cli: &Cli, logger: OrchestratorLogger) -> anyhow::Result<()> {
     ));
     let ping_task = tokio::spawn(run_ping_main_loop(api_client, Duration::from_secs(60)));
 
-    info!(
+    tracing::info!(
         version = VERSION,
         device_uuid = %device_uuid,
         serial_number = %serial_number,

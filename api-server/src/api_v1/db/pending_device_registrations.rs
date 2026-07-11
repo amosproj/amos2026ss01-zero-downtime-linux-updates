@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::PendingDeviceRegistration;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
@@ -39,7 +38,7 @@ pub async fn add_pending_device_registration(
     let db = db!();
 
     let new_pending_device_registration = pending_device_registration.insert(&db).await?;
-    debug!(
+    log::debug!(
         "Inserted new pending device registration: {:?}",
         new_pending_device_registration
     );

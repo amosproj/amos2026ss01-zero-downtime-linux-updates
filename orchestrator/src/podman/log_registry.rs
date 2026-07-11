@@ -6,7 +6,6 @@ use chrono::Utc;
 use futures_util::stream::BoxStream;
 use tokio::sync::mpsc;
 use tokio_stream::{StreamExt as _, StreamMap};
-use tracing::{debug, warn};
 
 use crate::api_client::ApiClient;
 
@@ -86,12 +85,12 @@ pub fn spawn_app_log_registry(
                 cmd = rx.recv() => {
                     match cmd {
                         Some(RegistryCommand::Add { application_id, name, stream }) => {
-                            debug!(application_id, "Registering application log stream");
+                            tracing::trace!(application_id, "Registering application log stream");
                             streams.insert(application_id, stream);
                             names.insert(application_id, name);
                         }
                         Some(RegistryCommand::Remove { application_id }) => {
-                            debug!(application_id, "Unregistering application log stream");
+                            tracing::trace!(application_id, "Unregistering application log stream");
                             streams.remove(&application_id);
                             names.remove(&application_id);
                             if let Some(mut buffer) = buffers.remove(&application_id) {
@@ -125,7 +124,7 @@ pub fn spawn_app_log_registry(
                             }
                         }
                         Err(e) => {
-                            warn!(application_id, error = %e, "Error reading container log stream");
+                            tracing::warn!(application_id, error = %e, "Error reading container log stream");
                         }
                     }
                 }
@@ -158,7 +157,7 @@ async fn flush_application_logs(
     {
         Ok(()) => buffer.clear(),
         Err(err) => {
-            warn!(
+            tracing::warn!(
                 application_id,
                 error = %err,
                 buffered = buffer.len(),
@@ -167,7 +166,7 @@ async fn flush_application_logs(
             if buffer.len() > max_buffer {
                 let drop_count = buffer.len() - max_buffer;
                 buffer.drain(..drop_count);
-                warn!(
+                tracing::warn!(
                     application_id,
                     dropped = drop_count,
                     "Dropped oldest application log entries due to buffer cap",

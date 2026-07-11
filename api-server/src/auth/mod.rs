@@ -12,7 +12,6 @@ use axum::{
     response::Response,
 };
 use jsonwebtoken::{TokenData, dangerous::insecure_decode, errors::ErrorKind};
-use log::{debug, error, trace};
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend};
 use serde_json::Value;
 use std::cell::RefCell;
@@ -64,7 +63,7 @@ async fn jwt_middleware(
 
     if is_device {
         // 4. Validate the token for a device
-        trace!("Received device JWT: {:?}", token_data);
+        log::trace!("Received device JWT: {:?}", token_data);
         match device::validate_token(token.to_owned(), token_data).await {
             Ok(claims) => {
                 // 5. Attach the claims to the request so handlers can use them
@@ -73,25 +72,25 @@ async fn jwt_middleware(
                 Ok(next.run(req).await)
             }
             Err(device::DeviceTokenError::DeviceNotFound) => {
-                debug!("JWT rejected (device unknown)");
+                log::debug!("JWT rejected (device unknown)");
                 Err(StatusCode::IM_A_TEAPOT)
             }
             Err(err) => {
-                debug!("JWT rejected: {:?}", err);
+                log::debug!("JWT rejected: {:?}", err);
                 // Invalid or expired token — reject with 401
                 Err(StatusCode::UNAUTHORIZED)
             }
         }
     } else {
         // 4. Validate the token for a user
-        trace!("Received user JWT: {:?}", token_data);
+        log::trace!("Received user JWT: {:?}", token_data);
         match user::validate_token(token, &jwt_config) {
             Ok(claims) => {
                 // 5. Upsert user into the database
                 let user = match db::upsert_user(claims.clone()).await {
                     Ok(user) => user,
                     Err(err) => {
-                        error!("Failed to upsert user into db: {:?}", err);
+                        log::warn!("Failed to upsert user into db: {:?}", err);
                         return Err(StatusCode::INTERNAL_SERVER_ERROR);
                     }
                 };
@@ -105,7 +104,7 @@ async fn jwt_middleware(
                 //    across requests.
                 let conn = db::DB.read().await.clone().unwrap();
                 if let Err(err) = set_pg_session_user(&conn, user.id).await {
-                    error!("Failed to set PG session user: {:?}", err);
+                    log::error!("Failed to set PG session user: {:?}", err);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
                 // 7. Attach the claims to the request so handlers can use them
@@ -118,7 +117,7 @@ async fn jwt_middleware(
                     .await)
             }
             Err(err) => {
-                debug!("JWT rejected: {:?}", err);
+                log::debug!("JWT rejected: {:?}", err);
                 // Invalid or expired token — reject with 401
                 Err(StatusCode::UNAUTHORIZED)
             }
@@ -128,7 +127,7 @@ async fn jwt_middleware(
 
 async fn set_pg_session_user(db: &DatabaseConnection, user_id: i32) -> Result<(), sea_orm::DbErr> {
     if db.get_database_backend() != DbBackend::Postgres {
-        debug!("Skipping PG session variable on non-Postgres backend");
+        log::trace!("Skipping PG session variable on non-Postgres backend");
         return Ok(());
     }
     let sql = format!("SET app.audit_user = '{}'", user_id);

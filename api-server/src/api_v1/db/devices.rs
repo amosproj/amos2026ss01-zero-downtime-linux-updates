@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::Device;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::Expr;
 use sea_orm::{
@@ -82,7 +81,7 @@ pub async fn add_device(
     let db = db!();
 
     let new_device = device.insert(&db).await?;
-    debug!("Inserted device: {:?}", new_device);
+    log::debug!("Inserted device: {:?}", new_device);
 
     Ok(new_device.into_api())
 }
@@ -107,7 +106,7 @@ pub async fn update_device(
     device.tenant_id = Set(tenant_id);
     device.group_id = Set(group_id);
     let updated_device = device.update(&db).await?;
-    debug!("Updated device: {:?}", updated_device);
+    log::debug!("Updated device: {:?}", updated_device);
     Ok(updated_device.into_api())
 }
 
@@ -144,7 +143,7 @@ pub async fn patch_device(
     }
 
     let updated_device = device.update(&db).await?;
-    debug!("Patched device: {:?}", updated_device);
+    log::debug!("Patched device: {:?}", updated_device);
     Ok(updated_device.into_api())
 }
 

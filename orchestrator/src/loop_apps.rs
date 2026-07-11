@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use amos_common::entities::ContainerConfigV1;
-use tracing::warn;
 
 use crate::api_client::ApiClient;
 use crate::application::Application;
@@ -31,12 +30,12 @@ pub async fn run_apps_main_loop(
         update_interval.tick().await;
 
         if os_upgrade_in_progress.load(Ordering::SeqCst) {
-            tracing::info!("Application update cycle frozen: OS upgrade operation is active.");
+            tracing::debug!("Application update cycle frozen: OS upgrade operation is active.");
             continue;
         }
 
         if let Err(e) = try_update(&mut apps, &mut podman, &api_client, &log_registry).await {
-            warn!("Failed to update applications: {:?}", e);
+            tracing::warn!("Failed to update applications: {:?}", e);
         }
     }
 }

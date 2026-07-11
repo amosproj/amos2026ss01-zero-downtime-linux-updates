@@ -2,8 +2,6 @@
 
 use std::{sync::Arc, time::Duration};
 
-use tracing::warn;
-
 use crate::api_client::ApiClient;
 
 /// Repeatedly send pings to the API to signal aliveness
@@ -16,7 +14,7 @@ pub async fn run_ping_main_loop(api_client: Arc<ApiClient>, interval: Duration) 
         update_interval.tick().await;
 
         if let Err(e) = api_client.send_ping(read_uptime_secs().await).await {
-            warn!("Aliveness report failed: {}", e);
+            tracing::debug!("Aliveness report failed: {}", e);
         }
     }
 }

@@ -14,7 +14,6 @@ use podman_api::{
         ContainerWaitOpts, ImagePruneOpts, PullOpts,
     },
 };
-use tracing::debug;
 
 use chrono::{DateTime, Utc};
 use futures_util::stream::BoxStream;
@@ -146,7 +145,7 @@ impl PodmanWrapper {
         let podman = podman_api::Podman::unix(socket_path);
 
         let status = podman.ping().await?;
-        debug!("Connected to Podman API {}", status.api_version);
+        tracing::trace!("Connected to Podman API {}", status.api_version);
 
         let mut instance = Self { podman };
         let containers = instance.list_containers().await?;
