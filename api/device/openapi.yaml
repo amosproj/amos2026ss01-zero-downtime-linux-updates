@@ -170,6 +170,18 @@ paths:
       tags:
         - other
       summary: Send aliveness signal
+      requestBody:
+        description: "As found in ```amos_common::device_api::ping::PutBody```. Optional; omit the body to ping without reporting uptime."
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uptime_secs:
+                  type: integer
+                  format: int64
+                  description: Device uptime in seconds
       responses:
         '200':
           description: Success
