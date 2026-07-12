@@ -34,11 +34,11 @@ REPORTED_VERSION_ID=$(echo "${REPORTED_STATUS}" | jq '.data[0].os_version_id // 
 
 echo "API server reports active device os_version_id is: '${REPORTED_VERSION_ID}'"
 
-# Validate that a version was reported and that it maps to 1
-if [ "${REPORTED_VERSION_ID}" = "1" ]; then
-    echo -e "${GREEN}Success: Device correctly reported its OS assignment state (mapped to baseline ID 1).${NC}"
+# Validate that a version was reported and that it maps to 2
+if [ "${REPORTED_VERSION_ID}" = "2" ]; then
+    echo -e "${GREEN}Success: Device correctly reported its OS assignment state (mapped to baseline ID 2).${NC}"
 else
-    echo -e "${RED}Failure: Device did not report version 1. Received: '${REPORTED_VERSION_ID}'${NC}"
+    echo -e "${RED}Failure: Device did not report version 2. Received: '${REPORTED_VERSION_ID}'${NC}"
     echo "Full response payload: ${REPORTED_STATUS}"
     exit 1
 fi
