@@ -152,11 +152,8 @@ impl Bootc {
             tracing::info!("Switching image complete");
             Ok(())
         } else {
-            tracing::error!(exit_code = ?res.exit_code, "Switching image failed");
-            Err(anyhow!(
-                "Switching image failed with exit code: {:?}",
-                res.exit_code
-            ))
+            tracing::trace!(exit_code = ?res.exit_code, "Switching image failed");
+            Err(anyhow!(res.stderr).context("Switching image failed"))
         }
     }
 
