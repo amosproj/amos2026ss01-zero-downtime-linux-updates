@@ -1,4 +1,4 @@
-.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build
+.PHONY: setup setup-template setup-hooks help docs docs-book docs-serve image image-amd64 image-arm64 image-clean _image-build pull-image pull-image-amd64 pull-image-arm64 _image-pull iso iso-amd64 iso-arm64 iso-clean _iso-build demo-edge demo-server demo-logs
 
 IMAGE         ?= localhost/amos-edge:dev
 DIST_DIR      ?= $(CURDIR)/dist
@@ -16,6 +16,22 @@ RUST_VERSION  ?= 1.95
 # Per-arch suffix (-amd64 / -arm64) is appended at use site to keep cross-arch
 # builds from clobbering each other in podman's local storage.
 RUST_BUILDER  ?= localhost/amos-rust-builder:$(RUST_VERSION)
+
+# settings for demo
+# CLOUD_URL is the orchestrator's cloud_url; VM_UUID/VM_SERIAL are the SMBIOS
+# values the emulated device presents (VM_UUID is its device id).
+CLOUD_URL     ?= http://host.lima.internal:8080/v1
+VM_UUID       ?= 00000000-0000-0000-0000-000000000001
+VM_SERIAL     ?= AMOS-TEST-001
+
+# settings for the live log viewer (log-tui) -- see `demo-logs`. DEMO_API_URL /
+# DEMO_JWT / DEMO_DEVICE mirror the run1 Bruno environment
+# (api/bruno/environments/demo-run1.bru). The JWT is the public, long-lived dev
+# token used across the demo. Override any of them to point at another run, e.g.
+# `make demo-logs DEMO_API_URL=http://float-172-017-069-035.cc.rrze.net/run2/v1`.
+DEMO_API_URL  ?= http://float-172-017-069-035.cc.rrze.net/run1/v1
+DEMO_JWT      ?= eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik1hcmMgV2ViYmVyIiwiZXhwIjozMzMzNzg2MDc1Nn0.YLzANsYJj5TmCAURvMyUQSSeGk6fa8xrJhrbSrm999hMVxeYqTtT2c62dT7Ast9bdHENHWAPZD7OYWsOK2sCX-jqYfNFgmAmYxCtLaXMCVgIvqzOWf9miV8F5Zd8OaSnoaWbA7iXsICJ_kBYCP6zFdRQUoO-Evok4vtzH6Y5M1LyJtsy65NIpkpQt6DAZqf0s7818mrJdqpLp_L_1vqPq9QOrMen28lv_RNjWl5x9_lGhfw15TbGhfrE5mvmzsq6RW6M5Eun3CVGWXERqNzOqdVHo13BtmyRxLbJa8kP0r0qPubMfQf-bpAIVxG6oA5xbjytiEKQ8vfl1up6XBn429N_039-exEfv8EdZ35AjqLpLaSA4BM0RFurqZMse4ELJmNRPQLVMfrBDTf0yLB3USi0su3tFZRXQ6ND7cLpqL6PUYL0KrJZUiMwD8ZMSDBO7Rilh2thkhYp0EfBncIi5lI1gVlN5qSC51NJeDBRFPYnhH_-gwxecn1WzVILpiNki0E8euOpSTXgS2FNxlHhPfBevPodoBn8j-Vu0U9-8xmfqxZirGankWz4d00rthBn_B0IFKk0WFy742TW_Qs9NdAL9UnGJGwqYv88MtGo6vgfTwdE9WASkq4ubJ8GCvFmooKb9FrMGz_-9pS2RWRgO_kT_1PSD4bTMHQIMhC1eXs
+DEMO_DEVICE   ?= 3
 
 # Prebuilt disk image published by .github/workflows/disk-image.yml as an OCI
 # artifact (each tag bundles both <name>.raw.xz and <name>.qcow2.xz).
@@ -225,17 +241,59 @@ _dev-deploy:
 	limactl shell $(DEV_VM) -- sudo systemctl restart orchestrator.service; \
 	echo ">>> Deployed. Tail logs: limactl shell $(DEV_VM) -- journalctl -u orchestrator.service -f"
 
-# e2e: spin up a disposable Lima VM, deploy the current orchestrator build
-# into it via dev-deploy, run the full scripts/tests/*.sh suite against it,
-# then delete the VM again so every run starts from a clean slate.
-e2e: ## Create a fresh Lima VM, deploy the local orchestrator build, run the e2e suite, then tear the VM down
+# The script recreates the Lima VM from scratch itself, so every run starts
+# from a clean slate; the VM is left around afterwards for post-mortem.
+e2e: ## Run the full e2e suite against a freshly recreated Lima VM
+	cd scripts && ./e2e_run_all.sh
+
+# demo-edge: like e2e, but with nothing on the host -- no mock server, no
+# TimescaleDB, no tests. Prompts interactively for the VM name, device uuid,
+# device serial and cloud url, each with a default you can accept by pressing
+# enter.
+demo-edge: ## Boot a fresh Lima VM with just the orchestrator (no mock server/DB); prompts for VM name/device uuid/serial/cloud url (skipped if stdin isn't a TTY)
+	@set -eu; \
+	if [ -t 0 ]; then \
+	  printf "VM name [%s]: " "$(DEV_VM)"; read vm_name; \
+	  printf "Device UUID [%s]: " "$(VM_UUID)"; read device_uuid; \
+	  printf "Device serial [%s]: " "$(VM_SERIAL)"; read device_serial; \
+	  printf "Cloud URL [%s]: " "$(CLOUD_URL)"; read cloud_url; \
+	fi; \
+	vm_name=$${vm_name:-$(DEV_VM)}; \
+	device_uuid=$${device_uuid:-$(VM_UUID)}; \
+	device_serial=$${device_serial:-$(VM_SERIAL)}; \
+	cloud_url=$${cloud_url:-$(CLOUD_URL)}; \
+	echo ">>> Recreating Lima VM $$vm_name from scratch"; \
+	limactl stop $$vm_name -f >/dev/null 2>&1 || true; \
+	limactl delete $$vm_name -f >/dev/null 2>&1 || true; \
+	limactl create --name $$vm_name dev-env/lima/edge-ipc.yaml; \
+	cd scripts && \
+	  VM_NAME="$$vm_name" \
+	  DEVICE_UUID="$$device_uuid" \
+	  DEVICE_SERIAL="$$device_serial" \
+	  CLOUD_URL="$$cloud_url" \
+	  ./dev_vm_run.sh
+
+# demo-server: same full stack as e2e (mock cloud API + TimescaleDB + edge VM +
+# orchestrator), primed with a registered device, but instead of running the
+# test suite it leaves everything running so you can send your own API commands
+# (scripts/demo_api.sh) and watch the orchestrator react. Ctrl+C tears it down.
+demo-server: ## Bring up the full e2e stack, primed and left running for a live demo (send commands with scripts/demo_api.sh)
 	@set -eu; \
 	echo ">>> Recreating Lima VM $(DEV_VM) from scratch"; \
 	limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; \
 	limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true; \
 	limactl create -y --name $(DEV_VM) dev-env/lima/edge-ipc.yaml; \
-	trap 'echo ">>> Deleting Lima VM $(DEV_VM)"; limactl stop $(DEV_VM) -f >/dev/null 2>&1 || true; limactl delete $(DEV_VM) -f >/dev/null 2>&1 || true' EXIT; \
-	cd scripts && ./e2e_run_all.sh
+	cd scripts && ./demo_run.sh
+
+# demo-logs: launch the live log-tail TUI (log-tui) against a deployed demo API
+# server (the floating IP), authenticated with the long-lived dev JWT. This is a
+# read-only user-API client -- it doesn't touch the edge VMs or the local stack.
+demo-logs: ## Start the live log TUI against the demo API server (override DEMO_API_URL/DEMO_DEVICE for another run)
+	@echo ">>> log-tui -> $(DEMO_API_URL) (device $(DEMO_DEVICE))"
+	@cargo run -p amos-log-tui -- \
+		--base-url "$(DEMO_API_URL)" \
+		--jwt "$(DEMO_JWT)" \
+		--device "$(DEMO_DEVICE)"
 
 # ---------------------------------------------------------------------------
 # Installer ISO for bare-metal IPCs. The ISO embeds our bootc image and

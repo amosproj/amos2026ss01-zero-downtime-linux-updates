@@ -1,0 +1,67 @@
+meta {
+  name: Demo Flow
+  seq: 1
+}
+
+docs {
+  # Live demo script
+
+  Run the requests in this folder top to bottom. Responses feed the next
+  steps automatically (created IDs are captured into runtime variables), so
+  no copy-pasting is needed during the demo.
+
+  ## The setting
+
+  Our customer Weber builds food processing lines. The tenant is one of
+  Weber's customers, `Aldi Süd – Cheese Line Nürnberg`, running a cheese
+  slicing line.
+
+  A device is **not** a machine: it is a standalone **edge IPC** in the
+  line's control cabinet, running containerized apps against the machine next
+  to it. The fleet is three identical IPCs of the same model, told apart by
+  which machine on the line each one serves — listed here in the order the
+  cheese passes through. All three sit in the group
+  `Slicing Line 2 – Cheese`, so `GET /devices` reads like a production line
+  rather than a lab.
+
+  Devices have no name field in the API, so an IPC's identity lives in its
+  serial number — the string on the type plate inside the cabinet door, not
+  the serial of the machine it watches.
+
+  | edge | the IPC serves | IPC serial |
+  |---|---|---|
+  | 1 | weSLICE 6000 slicer | `IPC427E-2024-0417` |
+  | 2 | weLOAD 3000 infeed loader | `IPC427E-2024-0208` |
+  | 3 | weSCAN 2100 inline scanner | `IPC427E-2025-0093` |
+
+  ## Before the demo
+
+  The demo operator prepares everything (API servers per run, edge VMs
+  booted, the slicer and loader IPCs registered — the scanner IPC stays
+  unregistered on purpose; registering it live *is* the demo) and hands you:
+
+  - which run to use → select the matching environment
+    (`demo-run1` / `demo-run2` / `demo-run3`),
+  - the TPM endorsement key of the scanner IPC → paste it into the
+    `edge3EndorsementKey` environment variable (see the docs on
+    *04 Register Edge 3* for the exact format). Each prepared run boots its
+    edges with a fresh emulated TPM, so this key changes every time and is
+    never pre-filled; `edge3Serial` is already set to the fixed serial above.
+
+  (Behind the scenes this is `demo/edge/prepare_edge_vms.sh` +
+  `prepare_edge_demo.sh`.)
+
+  ## Story
+
+  1. **Fleet overview** (01–02): the slicer and loader IPCs are connected and
+     reporting; the scanner IPC is missing from the line.
+  2. **Live logs** (03): open the SSE stream in its own tab and leave it
+     running — everything that follows shows up here in real time.
+  3. **Bring the scanner online** (04–05): create a pending registration; the
+     scanner IPC proves possession of its TPM key and self-registers.
+  4. **Deploy + update an app** (06–10): push hello-world to the scanner IPC,
+     then roll out a config change and watch the logs pick it up.
+  5. **OS switch** (11–13): assign a new OS image; the IPC stages it, reboots
+     into it with near-zero downtime, and reports back.
+  6. **Audit trail** (14): every change made during the demo, who and when.
+}

@@ -18,6 +18,23 @@ cpus: 2
 memory: "4GiB"
 disk: "20GiB"
 
+# Plain mode: no lima guest agent, no mounts, no port forwarding, no containerd.
+#
+# The guest agent never comes up reliably on this bootc image, so every
+# `limactl start` used to sit through its ~95s readiness timeout and then exit
+# non-zero with "FATA degraded" -- once per VM start, and the e2e self-check
+# test starts the VM five times. Nothing here needs the agent: `limactl shell`
+# and `limactl copy` are ssh/scp, no test uses the lima mounts, and the VM
+# reaches the host's api-server by dialing out rather than via port forwards.
+#
+# `plain` can only be set at `limactl create` time; `limactl start --plain` on
+# an existing instance warns and does nothing. Recreate the VM after changing it.
+#
+# Plain mode skips lima's non-essential boot scripts, one of which
+# (06-etc-hosts.sh) defines host.lima.internal. The provision script below
+# restores it, since orchestrator-config.toml points cloud_url at that name.
+plain: true
+
 images:
   # Local entries, populated either by `make image` (build locally) or by
   # `make pull-image` (download the prebuilt image from GHCR — see below).
@@ -28,7 +45,8 @@ images:
   - location: "dist/qcow2/disk.qcow2"
     arch: "x86_64"
 
-# default lima mounts
+# default lima mounts (ignored while `plain: true` is set above; kept so the
+# template still works if plain mode is ever turned off)
 mounts:
   - location: "~"
     writable: false
@@ -36,6 +54,23 @@ mounts:
     writable: true
 
 provision:
+  # Replacement for lima's 06-etc-hosts.sh, which plain mode skips (see `plain:`
+  # above). Without it host.lima.internal doesn't resolve and the orchestrator
+  # can't reach the api-server on the host.
+  #
+  # Lima's own script uses $LIMA_CIDATA_SLIRP_GATEWAY, but provisioning scripts
+  # are not allowed to reference LIMA_CIDATA variables (limactl warns). Read the
+  # default gateway instead: under qemu's user-mode networking that is the host
+  # (192.168.5.2), which is exactly what host.lima.internal should point at.
+  - mode: boot
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      gateway="$(ip -4 route show default | awk '{ print $3; exit }')"
+      test -n "$gateway"
+      sed -i '/host.lima.internal/d' /etc/hosts
+      printf '%s\thost.lima.internal\n' "$gateway" >> /etc/hosts
+
   ### Dev setup: make updating the orchestrator binary inside the VM easier
   # Redirect the orchestrator service's ExecStart to a writable path so we can
   # swap the binary on a live VM. Empty ExecStart= clears the unit's value
@@ -62,14 +97,34 @@ provision:
   # Reload the systemd daemon as a precaution, in case the drop-in for the
   # orchestrator service or eventual symlinking caused changes.
   - mode: system
-    script: "systemctl daemon-reload"
+    script: |
+      #!/bin/bash
+      # Configure container signature discovery
+      mkdir -p /etc/containers/registries.d
+
+      # Use printf to guarantee pure ASCII regular spaces and exact YAML indentation
+      printf "docker:\n  ghcr.io:\n    use-sigstore-attachments: true\n" > /etc/containers/registries.d/ghcr.yaml
+
+      systemctl daemon-reload
+      systemctl restart orchestrator.service
 
   ### Config file setup
-  # Write config file the orchestrator reads.
+  # Write (default) config file the orchestrator reads.
   # `file:` is resolved relative to this YAML.
   - mode: data
-    path: /etc/amos/config.toml
+    path: /etc/amos/config.default.toml
     file: orchestrator-config.toml
+  # Only overwrite the orchestrator config if it does not contain "# LIMA-DO-NOT-OVERWRITE-THIS"
+  # or the file does not exist yet (which is caught by grep exiting >0 anyways).
+  # This is needed for cases where the orchestrator is run in a Lima-managed vm but the config file needs to be
+  # overwritten manually (and therefore should not be overwritten on the next boot by Lima/cloud-init).
+  - mode: system
+    script: |
+      #!/bin/bash
+      if ! grep "# LIMA-DO-NOT-OVERWRITE-THIS" /etc/amos/config.toml; then
+        cp /etc/amos/config.default.toml /etc/amos/config.toml
+        systemctl restart orchestrator.service
+      fi
 
   # ### Random fixes
   # # Prevent lima from installing random sh*t into the VM and therefore having

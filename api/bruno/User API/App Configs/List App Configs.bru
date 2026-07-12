@@ -1,0 +1,32 @@
+meta {
+  name: List App Configs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/app-configs
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~application_id: 1
+  ~device_id: 1
+  ~group_id: 1
+  ~device_uuid: 019f4785-419a-7060-bc3c-d71c75099ac2
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /app-configs` — list configs. Filters: `application_id`,
+  `device_id`, `group_id`.
+
+  Special mode: `device_uuid` resolves the *effective* configs for that
+  device — its own configs plus its group's, with device-specific ones
+  superseding group ones per application.
+
+  Shape: `{ id, device_id, group_id, application_id, image, version,
+  config_version, config, deleted_at, superseded_by }`.
+}

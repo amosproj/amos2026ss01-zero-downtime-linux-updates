@@ -1,0 +1,41 @@
+meta {
+  name: 04 Register Edge 3
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/pending-device-registrations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "serial_number": "{{edge3Serial}}",
+    "endorsement_public_key": {{edge3EndorsementKey}}
+  }
+}
+
+vars:post-response {
+  pendingRegistrationId: res.body.id
+}
+
+docs {
+  `POST /pending-device-registrations` — allow-list the scanner IPC
+  (`IPC427E-2025-0093`, at the weSCAN 2100) for self-registration. The
+  orchestrator on the IPC polls the server, presents its TPM keys via
+  `POST /register` (see *Device API*), and the server accepts it because
+  serial number + endorsement key match this pending registration. Within
+  ~a minute the device appears in `/devices`.
+
+  **Setup:** `edge3Serial` is already set to the scanner IPC's fixed serial.
+  The demo operator hands you only its TPM endorsement key, because every
+  prepared run boots the edges with a fresh emulated TPM:
+
+  - `edge3EndorsementKey` — the PEM key as a *JSON string* (the server
+    matches it byte-for-byte, including the trailing newline). The operator
+    produces it with `jq -Rs .`; paste the entire quoted output (including
+    the surrounding `"…"`) on a single line. A multi-line PEM block, or one
+    without the trailing `\n`, will not match.
+}

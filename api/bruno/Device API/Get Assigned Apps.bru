@@ -1,0 +1,23 @@
+meta {
+  name: Get Assigned Apps
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/device/apps
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{deviceJwt}}
+}
+
+docs {
+  `GET /device/apps` — the effective app configs for the calling device
+  (own + group, device-specific wins per application). The orchestrator
+  reconciles running containers against this.
+
+  Response: `[ { id, application_id, image, config }, … ]`
+}

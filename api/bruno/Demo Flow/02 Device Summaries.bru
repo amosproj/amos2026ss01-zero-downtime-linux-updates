@@ -1,0 +1,20 @@
+meta {
+  name: 02 Device Summaries
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/devices/summary
+  body: none
+  auth: inherit
+}
+
+docs {
+  `GET /devices/summary` — reported state per device: which OS version and
+  which applications each device is actually running right now, plus its
+  tenant.
+
+  **Expect:** the slicer and loader IPCs alive and on the baseline OS
+  version, both under the tenant `Aldi Süd – Cheese Line Nürnberg`.
+}

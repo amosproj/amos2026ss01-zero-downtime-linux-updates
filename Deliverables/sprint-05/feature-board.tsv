@@ -6,7 +6,7 @@ OS Image creation of different versions	https://github.com/amosproj/amos2026ss01
 Setup demo review	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/57		Product Backlog		
 Refactor: Folder structure	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/59		Product Backlog		
 Signature verification of image delivery	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/49		Product Backlog		
-TPM-based Device Identity Verification in Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/38		Product Backlog		
+TPM-based Device Identity Verification in Mock Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/38		Product Backlog		
 Application Stack Controller	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/21	patridu	Sprint Backlog	3	
 Update Documentation and Architecture	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/43	KathiAurina	In Progress	3	
 Orchestrator check for update	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/45	uzantome	In Progress	3	
@@ -27,5 +27,5 @@ Setup shared dev environment	https://github.com/amosproj/amos2026ss01-zero-downt
 Signature Verification	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/19	IFrey	Feature Archive	2	1
 Setup DCO & CI Pipeline	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/14	KathiAurina, uzantome	Feature Archive	3	5
 Edge IPC Orchestrator	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/16	Jerry1098, moritz-reinel	Feature Archive	5	5
-API Protocoll & Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/15	patridu	Feature Archive	3	5
+API Protocoll & Mock Cloud	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/15	patridu	Feature Archive	3	5
 HTTPS Download Manager	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/18	Beambamacrys	Feature Archive	3	3

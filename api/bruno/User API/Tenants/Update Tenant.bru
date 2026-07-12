@@ -1,0 +1,26 @@
+meta {
+  name: Update Tenant
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/tenants/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "name": "AMOS Demo",
+    "description": "Updated description"
+  }
+}
+
+docs {
+  `PUT /tenants/{id}` — replace name/description.
+}

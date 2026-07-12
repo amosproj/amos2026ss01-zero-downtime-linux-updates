@@ -1,0 +1,37 @@
+meta {
+  name: Update App Config
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/app-configs/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "device_id": 1,
+    "group_id": null,
+    "application_id": 1,
+    "image": "{{appImage}}",
+    "config": {
+      "environment": {
+        "NAME": "AMOS v2"
+      }
+    }
+  }
+}
+
+docs {
+  `PUT /app-configs/{id}` — roll out a new config version (new image tag
+  and/or changed configuration). Creates a **new** row with `version` + 1,
+  marks `{id}` as superseded, and returns the new row — use its `id` from
+  the response for further updates. The device picks the new version up on
+  its next poll.
+}

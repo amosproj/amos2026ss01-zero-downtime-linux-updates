@@ -1,0 +1,22 @@
+meta {
+  name: List Applications
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/applications
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~name: hello-world
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /applications` — list catalog applications, optionally filtered by
+  `name`. Shape: `{ id, name, description }`.
+}

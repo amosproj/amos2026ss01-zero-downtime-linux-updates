@@ -1,0 +1,26 @@
+meta {
+  name: Report Running Apps
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/device/apps
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{deviceJwt}}
+}
+
+body:json {
+  [
+    { "application_config_id": 1 }
+  ]
+}
+
+docs {
+  `PUT /device/apps` — report which app config versions are actually
+  running. Feeds *Reported App Assignments*. Returns 201.
+}

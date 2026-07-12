@@ -34,6 +34,7 @@ RUN cargo build --package amos-orchestrator --release
 
 
 FROM quay.io/fedora/fedora-bootc:${FEDORA_VERSION}
+ARG DEV_MODE
 
 # Install following components:
 #  - greenboot: health checks after bootc switch
@@ -53,6 +54,9 @@ COPY --from=builder /workspace/target/release/amos-orchestrator /usr/libexec/amo
 COPY bootc-build/orchestrator.service /etc/systemd/system/orchestrator.service
 RUN systemctl enable orchestrator.service
 
+# Copy the config
+COPY bootc-build/orchestrator-config.toml /etc/amos/config.toml
+
 # Set up Greenboot for automatic rollback after broken OS updates
 RUN systemctl enable greenboot-healthcheck.service \
     && mkdir -p /etc/greenboot/check/required.d/
@@ -70,18 +74,16 @@ RUN systemctl enable podman.socket
 # (mutable, takes precedence — keeps both in sync via the image).
 # Key goes to /usr only so it cannot be replaced by a local root user.
 
-# FIXME TEMP: disabled signature check for vm testing
+RUN mkdir -p /usr/share/pki/containers /usr/share/containers
+COPY cosign.pub /usr/share/pki/containers/cosign.pub
+COPY container-policy.json     /usr/share/containers/policy.prod.json
+COPY container-policy.dev.json /usr/share/containers/policy.dev.json
+RUN set -eu; \
+    if [ "$DEV_MODE" = "true" ]; then src=policy.dev.json; touch /etc/amos-dev-image; \
+    else src=policy.prod.json; fi; \
+    cp /usr/share/containers/$src /usr/share/containers/policy.json; \
+    cp /usr/share/containers/$src /etc/containers/policy.json; \
+    rm /usr/share/containers/policy.prod.json /usr/share/containers/policy.dev.json
 
-# RUN mkdir -p /usr/share/pki/containers /usr/share/containers
-# COPY cosign.pub /usr/share/pki/containers/cosign.pub
-# COPY container-policy.json     /usr/share/containers/policy.prod.json
-# COPY container-policy.dev.json /usr/share/containers/policy.dev.json
-# RUN set -eu; \
-#     if [ "$DEV_MODE" = "true" ]; then src=policy.dev.json; touch /etc/amos-dev-image; \
-#     else src=policy.prod.json; fi; \
-#     cp /usr/share/containers/$src /usr/share/containers/policy.json; \
-#     cp /usr/share/containers/$src /etc/containers/policy.json; \
-#     rm /usr/share/containers/policy.prod.json /usr/share/containers/policy.dev.json
-
-# COPY bootc-build/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
-# RUN chmod 755 /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
+COPY bootc-build/greenboot/20-reject-dev-on-prod-update.sh /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh
+RUN chmod 755 /etc/greenboot/check/required.d/20-reject-dev-on-prod-update.sh

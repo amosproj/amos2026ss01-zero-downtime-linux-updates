@@ -1,0 +1,32 @@
+meta {
+  name: 06 Create OS Version
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/os-versions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "commit_hash": "{{osImage}}",
+    "orchestrator_version": "1.1.0",
+    "description": "Demo OS update — new system image"
+  }
+}
+
+vars:post-response {
+  osVersionId: res.body.id
+}
+
+docs {
+  `POST /os-versions` — register a new bootc system image in the catalog.
+  `commit_hash` is the image reference the device will `bootc switch` to;
+  set the `osImage` environment variable to the tag you want to demo
+  (must differ from what the device currently runs).
+
+  The created `id` is captured as `{{osVersionId}}` for step 07.
+}

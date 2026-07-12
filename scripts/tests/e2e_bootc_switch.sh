@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit
 source ./common_env.sh
 
 echo "=== Testing Bootc Switch & Apply Sequence ==="
 
+ensure_vm_running
+
 # Define the remote target upgrade reference image
-TARGET_UPGRADE_REF="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:commit-4b3a71d"
+TARGET_UPGRADE_REF="ghcr.io/amosproj/amos2026ss01-zero-downtime-linux-updates-system:switch-1-tag"
 
 # Seed the target upgrade assignment in the API
 api "/v1/os-versions" POST "{\"commit_hash\": \"${TARGET_UPGRADE_REF}\", \"orchestrator_version\": \"0.1.0\", \"description\": \"Target GHCR Upgrade Image\"}" 201
@@ -27,10 +29,10 @@ echo "Polling live bootc status for immediate upgrade execution..."
 UPGRADED=false
 for i in $(seq 1 50); do
     BOOTC_STATUS_JSON=$(limactl shell "${VM_NAME}" -- sudo bootc status --json 2>/dev/null)
-    
+
     if [ $? -eq 0 ] && [ -n "$BOOTC_STATUS_JSON" ]; then
-        if echo "${BOOTC_STATUS_JSON}" | jq -e ".status.staged.image.image.image == \"${TARGET_UPGRADE_REF}\" or .status.booted.image.image.image == \"${TARGET_UPGRADE_REF}\"" > /dev/null; then
-            echo -e "${GREEN}Success: Verified switch deployment! Target image matches live bootc status.${NC}"
+        if echo "${BOOTC_STATUS_JSON}" | jq -e ".status.booted.image.image.image == \"${TARGET_UPGRADE_REF}\"" > /dev/null; then
+            echo -e "${GREEN}Success: Verified switch deployment! Target image is actively running as the booted system.${NC}"
             echo "Current bootc status output:"
             echo "${BOOTC_STATUS_JSON}" | jq .
             UPGRADED=true
@@ -41,8 +43,6 @@ for i in $(seq 1 50); do
 done
 
 if [ "$UPGRADED" = false ]; then
-    echo -e "${RED}Failure: Target image '${TARGET_UPGRADE_REF}' was not found in staged or booted status after polling window.${NC}"
-    echo "Last captured bootc status:"
-    limactl shell "${VM_NAME}" -- sudo bootc status --json | jq .
+    echo -e "${RED}Failure: Target upgrade was not found in the 'booted' state within the timeout.${NC}"
     exit 1
 fi

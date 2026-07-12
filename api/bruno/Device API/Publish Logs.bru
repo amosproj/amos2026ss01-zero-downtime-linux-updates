@@ -1,0 +1,40 @@
+meta {
+  name: Publish Logs
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/device/logs
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{deviceJwt}}
+}
+
+params:query {
+  ~application_id: 1
+}
+
+body:json {
+  [
+    {
+      "time": "2026-07-09T12:00:00Z",
+      "level": "info",
+      "message": "hello from the edge",
+      "source": "manual-test"
+    }
+  ]
+}
+
+docs {
+  `POST /device/logs` — ship a batch of log lines. Without
+  `application_id` they are stored as **device logs**; with it, as
+  **application logs** for that app. `time` is optional (defaults to now),
+  `level` is one of `trace|debug|info|warn|error|fatal`.
+
+  Stored in TimescaleDB and fanned out live to `/logs/stream`
+  subscribers — a great way to make the demo stream tab blink. Returns 201.
+}

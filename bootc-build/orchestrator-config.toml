@@ -1,0 +1,4 @@
+# WARNING: EDIT THIS FILE WITH CAUTION - IT IS BAKED INTO THE ORCHESTRATOR IMAGE AND DEPLOYED WITH UPDATES!
+
+cloud_url = "https://api.example.com:443/v1"
+poll_interval_secs = 60

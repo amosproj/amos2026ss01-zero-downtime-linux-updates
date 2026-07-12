@@ -37,26 +37,19 @@ autopart --noswap --type=plain --fstype=ext4
 # DHCP on the first wired link. Set a hostname for the fleet.
 network --bootproto=dhcp --device=link --activate --onboot=on --hostname=edge-ipc-from-iso
 
-# Set root password "root"
-rootpw --iscrypted '$6$rlL4ROw6/Qg9wUxk$n8IpLmwgKFdXVNeTKcu7vMVCE5wHiiVs4ksUiOl/OsJvuvkyaPrhYORpZPc0gz5HNOogUY6zU87ssp1/EyF55.'
+# Disable root login
+rootpw --lock
 
 # Login user (moved here from [[customizations.user]] — see note above).
 # FIXME: change/remove for prod / secure deployment.
 # password "amos" hashed with `openssl passwd -6` — DEV ONLY, change for prod.
 user --name=amos --groups=wheel --iscrypted --password='$6$JW.H/UVKqa6P8hSz$h2KzR3dc7k8W9YEhtLzK1pFdlHWzKCEfyBgCLmIhDvWV3lKDGXRMfmoYiFpvFKSiyE/OqFzs4jhkV5NmzdmQQ1'
 
-# Reboot into the installed system when done.
-reboot
+# Poweroff into the installed system when done.
+poweroff
 
 %post --erroronfail
-# Seed the orchestrator config. On hardware there is no Lima NoCloud datasource,
-# so point it at the real cloud endpoint here (or bake it into the image).
-mkdir -p /etc/amos
-cat > /etc/amos/config.toml <<'EOF'
-# AMOS orchestrator config (hardware). EDIT cloud_url for your environment.
-cloud_url = "https://CHANGE-ME.example.com/v1"
-poll_interval_secs = 30
-EOF
-chmod 0644 /etc/amos/config.toml
+# TODO: Trigger a self check here? That way, problems with the TPM or hardware info would be caught
+#       immediately because the machine is not powering off
 %end
 """

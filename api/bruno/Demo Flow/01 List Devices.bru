@@ -1,0 +1,24 @@
+meta {
+  name: 01 List Devices
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/devices
+  body: none
+  auth: inherit
+}
+
+docs {
+  `GET /devices` — the registered fleet of the cheese slicing line.
+
+  **Expect:** two edge IPCs, both in the group `Slicing Line 2 – Cheese`,
+  with their UUIDs, serial numbers and TPM public keys:
+
+  - `IPC427E-2024-0417` — the IPC at the weSLICE 6000 slicer,
+  - `IPC427E-2024-0208` — the IPC at the weLOAD 3000 infeed loader.
+
+  The line's third IPC — `IPC427E-2025-0093` at the weSCAN 2100 inline
+  scanner — is not here yet. We bring it onto the line live in step 04.
+}

@@ -1,0 +1,24 @@
+meta {
+  name: Create OS Version
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/os-versions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "commit_hash": "{{osImage}}",
+    "orchestrator_version": "1.1.0",
+    "description": "New system image"
+  }
+}
+
+docs {
+  `POST /os-versions` — register a system image. `commit_hash` and
+  `orchestrator_version` are required, `description` optional. Returns 201.
+}

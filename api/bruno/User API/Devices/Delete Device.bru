@@ -1,0 +1,20 @@
+meta {
+  name: Delete Device
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/devices/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 999
+}
+
+docs {
+  `DELETE /devices/{id}` — remove a device. Returns 204 on success, 404 if
+  unknown.
+}

@@ -1,0 +1,22 @@
+meta {
+  name: List Tenants
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/tenants
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~name: AMOS
+  ~page: 1
+  ~page_size: 20
+}
+
+docs {
+  `GET /tenants` — list tenants, optionally filtered by `name`.
+  Shape: `{ id, name, description }`.
+}

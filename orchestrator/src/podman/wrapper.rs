@@ -397,9 +397,11 @@ impl super::PodmanContainer for PodmanWrapperContainer {
         current: super::PodmanContainerState,
     ) -> anyhow::Result<()> {
         use podman_api::models::ContainerStatus::*;
-        let all_conditions: [ContainerStatus; _] = [
-            Configured, Created, Dead, Exited, Paused, Removing, Restarting, Running,
-        ];
+        // Only states podman accepts as wait conditions: Configured, Dead and
+        // Restarting are not valid libpod states. The REST API doesn't reject
+        // them — any unknown condition makes wait return immediately instead
+        // of blocking, which hot-spun the lifecycle loop at 100% CPU.
+        let all_conditions: [ContainerStatus; _] = [Created, Exited, Paused, Removing, Running];
         self.container
             .wait(
                 &ContainerWaitOpts::builder()

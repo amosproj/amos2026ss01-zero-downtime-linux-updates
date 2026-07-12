@@ -1,0 +1,28 @@
+meta {
+  name: Update OS Version
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/os-versions/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "commit_hash": "{{osImage}}",
+    "orchestrator_version": "1.1.1",
+    "description": "Corrected metadata"
+  }
+}
+
+docs {
+  `PUT /os-versions/{id}` — update an OS version entry (supersedes the old
+  row, keeping history).
+}

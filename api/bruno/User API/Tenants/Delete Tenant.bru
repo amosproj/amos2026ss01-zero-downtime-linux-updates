@@ -1,0 +1,19 @@
+meta {
+  name: Delete Tenant
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/tenants/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 999
+}
+
+docs {
+  `DELETE /tenants/{id}` — remove a tenant. Returns 204.
+}

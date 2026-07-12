@@ -1,0 +1,14 @@
+meta {
+  name: OS Assignments
+  seq: 8
+}
+
+docs {
+  Declares which OS version a device or group *should* run. The
+  orchestrator compares against its booted image and performs a
+  `bootc switch` + reboot when they differ. `immediate: true` applies the
+  update right away instead of waiting for a maintenance window.
+
+  The device resolves its **first** active assignment, so delete obsolete
+  assignments when rolling out a new one.
+}

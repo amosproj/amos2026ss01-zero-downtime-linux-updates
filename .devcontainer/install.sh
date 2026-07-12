@@ -33,4 +33,5 @@ apt-get update -y
 apt-get install -y --no-install-recommends podman
 # for TPM stuff
 apt-get install -y --no-install-recommends libtss2-dev
+apt-get install -y --no-install-recommends pkg-config
 rm -rf /var/lib/apt/lists/*
