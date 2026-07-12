@@ -32,14 +32,6 @@ pub struct BootcImageInfo {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BootcStatusJsonWrapper {
-    #[expect(dead_code)]
-    pub api_version: String,
-    #[expect(dead_code)]
-    pub kind: String,
-    #[expect(dead_code)]
-    pub metadata: serde_json::Value,
-    #[expect(dead_code)]
-    pub spec: serde_json::Value,
     pub status: BootcStatus,
 }
 
@@ -168,26 +160,6 @@ impl Bootc {
         }
     }
 
-    // Should delete it if not used in healthchecks, because it is performed automatically by bootc
-    #[allow(dead_code)]
-    pub async fn rollback(&self) -> Result<()> {
-        info!("Rolling back to previous bootc deployment");
-        let args = vec!["rollback".to_string(), "--apply".to_string()];
-        let res = self.run_bootc_root(args).await?;
-
-        // Use helper to treat 137 as success
-        match self.handle_exit_code(res.exit_code) {
-            Ok(()) => {
-                info!("bootc rollback succeeded; reboot imminent");
-                Ok(())
-            }
-            Err(e) => {
-                error!(exit_code = ?res.exit_code, "bootc rollback failed");
-                Err(e)
-            }
-        }
-    }
-
     pub async fn apply(&self) -> Result<()> {
         let args = vec!["upgrade".to_string(), "--apply".to_string()];
         let res = self.run_bootc_root(args).await?;
@@ -253,35 +225,6 @@ mod tests {
             "029b843f50ab1dd56ecc4d3eabb94f1aace5d958794ae4c2c72a915ee1b10443"
         );
         assert!(!result.rollback_queued);
-    }
-
-    #[tokio::test]
-    async fn test_rollback_reboot_success() {
-        let mut mock_exec = MockExecuter::new();
-
-        mock_exec
-            .expect_execute()
-            .with(
-                eq("sudo".to_string()),
-                eq(vec![
-                    "bootc".to_string(),
-                    "rollback".to_string(),
-                    "--apply".to_string(),
-                ]),
-            )
-            .times(1)
-            .returning(|_, _| {
-                Box::pin(async move {
-                    Ok(ExecResult {
-                        stdout: "".to_string(),
-                        stderr: "".to_string(),
-                        exit_code: Some(137),
-                    })
-                })
-            });
-
-        let client = Bootc::new(Box::new(mock_exec));
-        assert!(client.rollback().await.is_ok());
     }
 
     #[tokio::test]
