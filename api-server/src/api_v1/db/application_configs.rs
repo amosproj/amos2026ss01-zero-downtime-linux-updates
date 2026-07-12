@@ -103,6 +103,32 @@ pub async fn add_application_config(
     image: String,
     config: Option<ContainerConfigV1>,
 ) -> Result<ApplicationConfig::Model, DbErr> {
+    let db = db!();
+
+    let mut old_query = dtos::ApplicationConfig::Entity::find()
+        .filter(dtos::ApplicationConfig::Column::ApplicationId.eq(application_id))
+        .filter(dtos::ApplicationConfig::Column::DeletedAt.is_null())
+        .filter(dtos::ApplicationConfig::Column::SupersededBy.is_null());
+
+    if let Some(did) = device_id {
+        old_query = old_query.filter(dtos::ApplicationConfig::Column::DeviceId.eq(did));
+    } else if let Some(gid) = group_id {
+        old_query = old_query.filter(dtos::ApplicationConfig::Column::GroupId.eq(gid));
+    }
+
+    let existing_configs = old_query.all(&db).await?;
+
+    let next_config_version = existing_configs
+        .first()
+        .map(|c| c.config_version)
+        .unwrap_or(1);
+    let next_version = existing_configs
+        .iter()
+        .map(|c| c.version)
+        .max()
+        .unwrap_or(0)
+        + 1;
+
     let config_json = config
         .map(|c| serde_json::to_string(&c))
         .transpose()
@@ -114,17 +140,26 @@ pub async fn add_application_config(
         group_id: Set(group_id),
         application_id: Set(application_id),
         image: Set(image),
-        config_version: Set(1),
+        config_version: Set(next_config_version),
         config: Set(config_json),
-        version: Set(1),
+        version: Set(next_version),
         deleted_at: NotSet,
         superseded_by: NotSet,
     };
 
-    let db = db!();
-
     let new_app_config = app_config.insert(&db).await?;
     debug!("Inserted new application config: {:?}", new_app_config);
+
+    for old in existing_configs {
+        let old_id = old.id;
+        let mut old_active: dtos::ApplicationConfig::ActiveModel = old.into();
+        old_active.superseded_by = Set(Some(new_app_config.id));
+        old_active.update(&db).await?;
+        debug!(
+            "Superseded old App config {} with {}",
+            old_id, new_app_config.id
+        );
+    }
 
     Ok(new_app_config.into_api())
 }
