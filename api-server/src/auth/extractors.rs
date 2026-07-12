@@ -30,16 +30,7 @@ where
 /// An Extractor to match only authenticated users.
 /// Use as middleware with [`axum::middleware::from_extractor`].
 /// Needs to be behind [`super::jwt_middleware`].
-/// Contains the user's ID and name.
-#[expect(dead_code)]
-pub struct AuthUser(pub UserData);
-
-pub struct UserData {
-    #[expect(dead_code)]
-    id: String,
-    #[expect(dead_code)]
-    name: String,
-}
+pub struct AuthUser;
 
 impl<S> FromRequestParts<S> for AuthUser
 where
@@ -54,10 +45,7 @@ where
         let claims = parts.extensions.get::<super::user::Claims>();
 
         match claims {
-            Some(c) => Ok(Self(UserData {
-                id: c.subject.clone(),
-                name: c.name.clone(),
-            })),
+            Some(_) => Ok(Self),
             None => Err(StatusCode::UNAUTHORIZED),
         }
     }

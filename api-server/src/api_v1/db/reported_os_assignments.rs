@@ -65,27 +65,6 @@ pub async fn add_reported_os_assignment(
     Ok(new_os_assignment.into_api())
 }
 
-#[allow(dead_code)]
-pub async fn update_reported_os_assignment(
-    id: i32,
-    os_version_id: i32,
-    device_id: i32,
-) -> Result<ReportedOsAssignment::Model, DbErr> {
-    let db = db!();
-    let os_assignment = dtos::ReportedOsAssignment::Entity::find_by_id(id)
-        .one(&db)
-        .await?
-        .ok_or(DbErr::RecordNotFound(
-            "ReportedOsAssignment not found".into(),
-        ))?;
-    let mut os_assignment: dtos::ReportedOsAssignment::ActiveModel = os_assignment.into();
-    os_assignment.os_version_id = Set(os_version_id);
-    os_assignment.device_id = Set(device_id);
-    let updated = os_assignment.update(&db).await?;
-    debug!("Updated reported OS version assignment: {:?}", updated);
-    Ok(updated.into_api())
-}
-
 pub async fn delete_reported_os_assignment(id: i32) -> Result<u64, DbErr> {
     let db = db!();
     let del = dtos::ReportedOsAssignment::Entity::delete_by_id(id)
