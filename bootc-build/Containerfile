@@ -54,6 +54,9 @@ COPY --from=builder /workspace/target/release/amos-orchestrator /usr/libexec/amo
 COPY bootc-build/orchestrator.service /etc/systemd/system/orchestrator.service
 RUN systemctl enable orchestrator.service
 
+# Copy the config
+COPY bootc-build/orchestrator-config.toml /etc/amos/config.toml
+
 # Set up Greenboot for automatic rollback after broken OS updates
 RUN systemctl enable greenboot-healthcheck.service \
     && mkdir -p /etc/greenboot/check/required.d/

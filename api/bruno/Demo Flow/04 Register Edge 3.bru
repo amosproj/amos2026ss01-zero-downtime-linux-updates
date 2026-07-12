@@ -22,19 +22,20 @@ vars:post-response {
 }
 
 docs {
-  `POST /pending-device-registrations` — allow-list edge 3 for
-  self-registration. The orchestrator on the device polls the server,
-  presents its TPM keys via `POST /register` (see *Device API*), and the
-  server accepts it because serial number + endorsement key match this
-  pending registration. Within ~a minute the device appears in `/devices`.
+  `POST /pending-device-registrations` — allow-list the scanner IPC
+  (`IPC427E-2025-0093`, at the weSCAN 2100) for self-registration. The
+  orchestrator on the IPC polls the server, presents its TPM keys via
+  `POST /register` (see *Device API*), and the server accepts it because
+  serial number + endorsement key match this pending registration. Within
+  ~a minute the device appears in `/devices`.
 
-  **Setup:** the demo operator provides the serial number and TPM
-  endorsement key for the unregistered edge. Put them into the environment
-  variables before the demo:
+  **Setup:** `edge3Serial` is already set to the scanner IPC's fixed serial.
+  The demo operator hands you only its TPM endorsement key, because every
+  prepared run boots the edges with a fresh emulated TPM:
 
-  - `edge3Serial` — the serial number as-is.
   - `edge3EndorsementKey` — the PEM key as a *JSON string* (the server
-    matches it byte-for-byte, including the trailing newline). If you were
-    handed a PEM file, convert it with `jq -Rs . < edge3-ek.pem` and paste
-    the entire quoted output (including the surrounding `"…"`).
+    matches it byte-for-byte, including the trailing newline). The operator
+    produces it with `jq -Rs .`; paste the entire quoted output (including
+    the surrounding `"…"`) on a single line. A multi-line PEM block, or one
+    without the trailing `\n`, will not match.
 }

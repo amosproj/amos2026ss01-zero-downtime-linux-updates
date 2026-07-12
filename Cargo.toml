@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["api-server", "common", "orchestrator", "sea-orm-timescale"]
+members = ["api-server", "common", "log-tui", "orchestrator", "sea-orm-timescale"]
 
 [workspace.dependencies]
 amos-api-server = { path = "api-server" }
