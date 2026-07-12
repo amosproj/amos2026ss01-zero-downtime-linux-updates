@@ -57,8 +57,10 @@ impl ApiClient {
     }
 
     // Sends device pings to the API to indicate the orchestrator is still running
-    pub async fn send_ping(&self) -> anyhow::Result<()> {
-        self.put("/device/ping", None as Option<()>).await
+    pub async fn send_ping(&self, uptime_secs: Option<i64>) -> anyhow::Result<()> {
+        let body =
+            uptime_secs.map(|uptime_secs| amos_common::device_api::ping::PutBody { uptime_secs });
+        self.put("/device/ping", body).await
     }
 
     /// Fetches the OS version assigned to this device from the API

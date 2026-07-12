@@ -21,18 +21,22 @@ pub async fn list_pings(page: u64, page_size: u64) -> Result<(Vec<Ping::Model>, 
     ))
 }
 
-pub async fn upsert_ping(device_id: i32) -> Result<(), DbErr> {
+pub async fn upsert_ping(device_id: i32, uptime_secs: Option<i64>) -> Result<(), DbErr> {
     let db = db!();
 
     let ping = dtos::Ping::ActiveModel {
         device_id: Set(device_id),
         reported_at: Set(chrono::Utc::now()),
+        uptime_secs: Set(uptime_secs),
     };
 
     dtos::Ping::Entity::insert(ping)
         .on_conflict(
             OnConflict::column(dtos::Ping::Column::DeviceId)
-                .update_column(dtos::Ping::Column::ReportedAt)
+                .update_columns([
+                    dtos::Ping::Column::ReportedAt,
+                    dtos::Ping::Column::UptimeSecs,
+                ])
                 .to_owned(),
         )
         .exec(&db)

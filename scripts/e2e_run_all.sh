@@ -28,6 +28,7 @@ NC='\033[0m'
 TEST_SUITE=(
     "tests/e2e_register_pending_device.sh"
     "tests/e2e_seed_api.sh"
+    "tests/e2e_ping_uptime.sh"
     "tests/e2e_bootc_status.sh"
     "tests/e2e_app_deploy.sh"
     "tests/e2e_selfcheck.sh"
