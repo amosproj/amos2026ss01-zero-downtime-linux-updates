@@ -11,8 +11,8 @@
 - [User documentation](./user_documentation.md)
 - [CI pipeline](./ci.md)
 - [Development environment](./Dev_Environment.md)
-  - [Local edge-device VM (Lima)](./dev-env/lima.md)
-  - [TPM debugging reference](./dev-env/tpm.md)
+  - [Local edge-device VM (Lima)](../dev-env/lima/README.md)
+  - [TPM debugging reference](../dev-env/tpm.md)
 
 # Design documents
 

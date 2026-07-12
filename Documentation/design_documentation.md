@@ -16,12 +16,10 @@ This document describes the software architecture, component design, and interna
 6. [Agent Event Loop](#agent-event-loop)
 7. [OS Update Loop](#os-update-loop)
 8. [Application Update Loop](#application-update-loop)
-9. [Security Module](#security-module)
-10. [Download Manager](#download-manager)
-11. [API Contract](#api-contract)
-12. [Configuration System](#configuration-system)
-13. [Inventory System](#inventory-system)
-14. [Crate Dependency Overview](#crate-dependency-overview)
+9. [API Contract](#api-contract)
+10. [Configuration System](#configuration-system)
+11. [Inventory System](#inventory-system)
+12. [Crate Dependency Overview](#crate-dependency-overview)
 
 ---
 
@@ -33,8 +31,6 @@ The system enables **zero-downtime OS and application updates** for Edge IPC dev
 2. Runs two concurrent polling loops — one for OS state, one for application container state.
 3. Compares current host state against a target state and triggers updates when they differ.
 4. Writes the device inventory to a local JSON file.
-
-> **Note:** The Cloud API integration, actual `bootc`/`rpm-ostree` update commands, and Podman container management are currently implemented as **placeholder stubs**. The reconciliation logic and data structures are in place; the external command calls will be wired in future sprints.
 
 ---
 
