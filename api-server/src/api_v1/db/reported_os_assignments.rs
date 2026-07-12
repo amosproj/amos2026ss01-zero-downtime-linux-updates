@@ -69,7 +69,7 @@ pub async fn add_reported_os_assignment(os_version_id: i32, device_id: i32) -> R
         .await?;
 
     debug!(
-        "Inserted new reported OS version assignment: device={} version={}",
+        "Upserted new reported OS version assignment: device={} version={}",
         device_id, os_version_id
     );
     Ok(())

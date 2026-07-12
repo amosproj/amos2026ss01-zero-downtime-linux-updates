@@ -8,7 +8,6 @@ mod m20260607_000001_add_users;
 mod m20260614_000001_add_audit_log;
 mod m20260616_000001_add_soft_delete_and_versioning;
 mod m20260624_000001_add_pending_device_registrations;
-mod m20260710_000001_add_reported_assignments_unique_index;
 
 pub struct Migrator;
 
@@ -23,7 +22,6 @@ impl MigratorTrait for Migrator {
             Box::new(m20260614_000001_add_audit_log::Migration),
             Box::new(m20260616_000001_add_soft_delete_and_versioning::Migration),
             Box::new(m20260624_000001_add_pending_device_registrations::Migration),
-            Box::new(m20260710_000001_add_reported_assignments_unique_index::Migration),
         ]
     }
 }
