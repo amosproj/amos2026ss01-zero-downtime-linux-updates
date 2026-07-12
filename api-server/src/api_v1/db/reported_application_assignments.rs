@@ -4,9 +4,7 @@ use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::OnConflict;
 use sea_orm::sea_query::prelude::chrono;
-use sea_orm::{
-    ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
 
 use super::db;
 
