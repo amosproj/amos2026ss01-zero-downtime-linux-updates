@@ -13,6 +13,7 @@ pub struct Model {
     pub device: HasOne<Device::Entity>,
 
     pub reported_at: DateTimeUtc,
+    pub uptime_secs: Option<i64>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -22,6 +23,7 @@ impl Model {
         amos_common::entities::Ping::Model {
             device_id: self.device_id,
             reported_at: self.reported_at,
+            uptime_secs: self.uptime_secs,
         }
     }
 }

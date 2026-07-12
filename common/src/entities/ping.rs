@@ -5,4 +5,5 @@ use serde::{Deserialize, Serialize};
 pub struct Model {
     pub device_id: i32,
     pub reported_at: DateTime<Utc>,
+    pub uptime_secs: Option<i64>,
 }
