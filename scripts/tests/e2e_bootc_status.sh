@@ -29,8 +29,8 @@ sleep 5
 echo "Verifying that the device reported its OS assignment upstream..."
 REPORTED_STATUS=$(curl -sS -H "Authorization: Bearer ${JWT}" "${HOST_SERVER_URL}/v1/reported-os-assignments?device_uuid=${DEVICE_UUID}")
 
-# Use jq to extract the exact os_version_id from the first record in the data array
-REPORTED_VERSION_ID=$(echo "${REPORTED_STATUS}" | jq '.data[0].os_version_id // empty')
+# Use jq to extract the exact os_version_id from the latest record in the data array
+REPORTED_VERSION_ID=$(echo "${REPORTED_STATUS}" | jq '[.data[]] | sort_by(.updated_at) | last | .os_version_id // empty')
 
 echo "API server reports active device os_version_id is: '${REPORTED_VERSION_ID}'"
 
