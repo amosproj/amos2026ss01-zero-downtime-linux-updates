@@ -35,7 +35,8 @@ pub async fn run_apps_main_loop(
         }
 
         if let Err(e) = try_update(&mut apps, &mut podman, &api_client, &log_registry).await {
-            tracing::warn!("Failed to update applications: {:?}", e);
+            // TODO: Moved from warn to debug for demo
+            tracing::debug!("Failed to update applications: {:?}", e);
         }
     }
 }
