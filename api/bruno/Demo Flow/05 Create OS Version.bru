@@ -1,7 +1,7 @@
 meta {
-  name: 06 Create OS Version
+  name: 05 Create OS Version
   type: http
-  seq: 6
+  seq: 5
 }
 
 post {
@@ -27,6 +27,6 @@ docs {
   `commit_hash` is the image reference the device will `bootc switch` to;
   set the `osImage` environment variable to the tag you want to demo
   (must differ from what the device currently runs).
-
+  
   The created `id` is captured as `{{osVersionId}}` for step 07.
 }

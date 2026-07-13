@@ -1,0 +1,18 @@
+meta {
+  name: 08 View Uptime
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/pings
+  body: none
+  auth: inherit
+}
+
+docs {
+  `GET /audit-logs/by-device/{id}` — the closer: everything that happened
+  to the scanner IPC during this session (registration, app config
+  versions, OS assignment), each entry with the change payload, the user
+  who made it (from the JWT) and a timestamp.
+}

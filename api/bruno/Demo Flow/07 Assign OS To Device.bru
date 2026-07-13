@@ -1,7 +1,7 @@
 meta {
   name: 07 Assign OS To Device
   type: http
-  seq: 07
+  seq: 7
 }
 
 post {
@@ -27,11 +27,11 @@ docs {
   scanner IPC. `immediate: true` tells the orchestrator to apply it right
   away instead of waiting for a maintenance window — on a real slicing line
   you would leave it out and let the update land in the next window.
-
+  
   **Watch the log stream tab:** the IPC downloads and stages the image in the
   background, then reboots into it — the gap in the heartbeat logs is the
   near-zero downtime, and the cheese keeps moving.
-
+  
   Note: the device applies its *first* active assignment. If it already has
   an older one, delete it first (*User API → OS Assignments*).
 }

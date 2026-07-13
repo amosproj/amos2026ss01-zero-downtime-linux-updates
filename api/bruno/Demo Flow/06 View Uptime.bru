@@ -1,11 +1,11 @@
 meta {
-  name: 09 Audit Trail
+  name: 06 View Uptime
   type: http
-  seq: 09
+  seq: 6
 }
 
 get {
-  url: {{baseUrl}}/audit-logs/by-device/{{demoDeviceId}}
+  url: {{baseUrl}}/pings
   body: none
   auth: inherit
 }

@@ -1,7 +1,7 @@
 meta {
-  name: 04 Register Edge 3
+  name: 03 Register Edge 3
   type: http
-  seq: 4
+  seq: 3
 }
 
 post {
@@ -28,11 +28,11 @@ docs {
   `POST /register` (see *Device API*), and the server accepts it because
   serial number + endorsement key match this pending registration. Within
   ~a minute the device appears in `/devices`.
-
+  
   **Setup:** `edge3Serial` is already set to the scanner IPC's fixed serial.
   The demo operator hands you only its TPM endorsement key, because every
   prepared run boots the edges with a fresh emulated TPM:
-
+  
   - `edge3EndorsementKey` — the PEM key as a *JSON string* (the server
     matches it byte-for-byte, including the trailing newline). The operator
     produces it with `jq -Rs .`; paste the entire quoted output (including
