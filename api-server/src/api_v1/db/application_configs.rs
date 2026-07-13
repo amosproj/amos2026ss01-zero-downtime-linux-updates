@@ -158,7 +158,8 @@ pub async fn add_application_config(
         old_active.update(&txn).await?;
         log::trace!(
             "Superseded old App config {} with {}",
-            old_id, new_app_config.id
+            old_id,
+            new_app_config.id
         );
     }
 

@@ -170,7 +170,8 @@ async fn add_application_assignment(
         old_active.update(&txn).await?;
         log::trace!(
             "Superseded old App assignment {} with {}",
-            old_id, new_app_assignment.id
+            old_id,
+            new_app_assignment.id
         );
     }
 

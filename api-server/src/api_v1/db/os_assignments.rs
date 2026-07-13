@@ -133,7 +133,8 @@ pub async fn add_os_assignment(
         old_active.update(&txn).await?;
         log::trace!(
             "Superseded old OS assignment {} with {}",
-            old_id, new_os_assignment.id
+            old_id,
+            new_os_assignment.id
         );
     }
 
