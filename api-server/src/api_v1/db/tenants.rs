@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::Tenant;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::Expr;
 use sea_orm::{
@@ -48,7 +47,7 @@ pub async fn add_tenant(name: String, description: Option<String>) -> Result<Ten
     let db = db!();
 
     let new_tenant = tenant.insert(&db).await?;
-    debug!("Inserted new tenant: {:?}", new_tenant);
+    log::trace!("Inserted new tenant: {:?}", new_tenant);
 
     Ok(new_tenant.into_api())
 }
@@ -67,7 +66,7 @@ pub async fn update_tenant(
     tenant.name = Set(name);
     tenant.description = Set(description);
     let updated_tenant = tenant.update(&db).await?;
-    debug!("Updated tenant: {:?}", updated_tenant);
+    log::trace!("Updated tenant: {:?}", updated_tenant);
     Ok(updated_tenant.into_api())
 }
 

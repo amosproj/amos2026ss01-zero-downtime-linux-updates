@@ -69,6 +69,7 @@ impl ActiveModelBehavior for ActiveModel {
 
 impl Model {
     pub fn into_api(self) -> amos_common::entities::ApplicationConfig::Model {
+        // TODO: Maybe return a HTTP error instead?
         let config: Option<ContainerConfigV1> =
             self.config
                 .as_ref()

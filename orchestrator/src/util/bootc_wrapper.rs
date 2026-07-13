@@ -1,7 +1,7 @@
 use crate::util::executer::*;
 use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
-use tracing::{error, info, instrument};
+use tracing::instrument;
 
 // Rudimentary representation of bootc status.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -137,7 +137,7 @@ impl Bootc {
     pub async fn switch(&self, image: &str) -> Result<()> {
         let target = self.image_to_bootc_target(image)?;
 
-        info!(?target, "Switching system image");
+        tracing::info!(?target, "Switching system image");
 
         let args = vec![
             "switch".to_string(),
@@ -149,14 +149,11 @@ impl Bootc {
         let res = self.run_bootc_root(args).await?;
 
         if res.exit_code == Some(0) {
-            info!("Switching image complete");
+            tracing::info!("Switching image complete");
             Ok(())
         } else {
-            error!(exit_code = ?res.exit_code, "Switching image failed");
-            Err(anyhow!(
-                "Switching image failed with exit code: {:?}",
-                res.exit_code
-            ))
+            tracing::trace!(exit_code = ?res.exit_code, "Switching image failed");
+            Err(anyhow!(res.stderr).context("Switching image failed"))
         }
     }
 

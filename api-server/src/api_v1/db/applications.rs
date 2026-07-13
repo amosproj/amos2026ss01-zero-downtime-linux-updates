@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::Application;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::Expr;
 use sea_orm::{
@@ -52,7 +51,7 @@ pub async fn add_application(
     let db = db!();
 
     let new_app = app.insert(&db).await?;
-    debug!("Inserted new application: {:?}", new_app);
+    log::trace!("Inserted new application: {:?}", new_app);
 
     Ok(new_app.into_api())
 }
@@ -71,7 +70,7 @@ pub async fn update_application(
     app.name = Set(name);
     app.description = Set(description);
     let updated_app = app.update(&db).await?;
-    debug!("Updated application: {:?}", updated_app);
+    log::trace!("Updated application: {:?}", updated_app);
     Ok(updated_app.into_api())
 }
 

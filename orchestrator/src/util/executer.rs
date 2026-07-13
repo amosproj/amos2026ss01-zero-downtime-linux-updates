@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
-use tracing::info;
 
 #[derive(Debug, Clone)]
 pub struct ExecResult {
@@ -48,7 +47,7 @@ impl Executer for RealExecuter {
                 res = stdout_reader.next_line(), if !stdout_done => {
                     match res {
                         Ok(Some(line)) => {
-                            info!(target: "bootc_subproc", "{}", line);
+                            tracing::trace!(target: "bootc_subproc", "{}", line);
                             captured_stdout.push_str(&line);
                             captured_stdout.push('\n');
                         }
@@ -58,7 +57,7 @@ impl Executer for RealExecuter {
                 res = stderr_reader.next_line(), if !stderr_done => {
                     match res {
                         Ok(Some(line)) => {
-                            info!(target: "bootc_subproc_err", "{}", line);
+                            tracing::trace!(target: "bootc_subproc_err", "{}", line);
                             captured_stderr.push_str(&line);
                             captured_stderr.push('\n');
                         }

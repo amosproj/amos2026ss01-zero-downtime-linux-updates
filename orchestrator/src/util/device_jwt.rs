@@ -4,7 +4,6 @@ use crate::util::tpm::TpmSigner;
 use amos_common::device_jwt::MAX_TOKEN_LIFETIME;
 
 use base64::Engine;
-use tracing::debug;
 
 const REFRESH_BEFORE: Duration = Duration::from_secs(30);
 
@@ -25,7 +24,7 @@ impl DeviceJwtProvider {
 
     pub fn token(&mut self, device_uuid: &str) -> anyhow::Result<&str> {
         if SystemTime::now() + REFRESH_BEFORE > self.expire_time {
-            debug!("Refreshing device JWT token");
+            tracing::debug!("Refreshing device JWT token");
 
             self.expire_time = SystemTime::now() + Duration::from_secs(MAX_TOKEN_LIFETIME as u64);
             self.current_token = self.create_signed_jwt(device_uuid, self.expire_time)?;

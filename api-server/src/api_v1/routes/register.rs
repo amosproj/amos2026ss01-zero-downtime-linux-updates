@@ -19,7 +19,7 @@ pub async fn post(Json(body): Json<amos_common::device_api::register::PostBody>)
     };
 
     if let Some(msg) = err_msg {
-        log::error!("Could not register device: {:?}", msg);
+        log::warn!("Could not register device: {}", msg);
         return StatusCode::BAD_REQUEST;
     }
 
@@ -72,7 +72,11 @@ async fn register_device(
     )
     .await?;
 
-    log::info!("New device registered successfully: {:?}", new_device);
+    log::info!(
+        "New device registered successfully: {}, SN: {}",
+        new_device.uuid,
+        new_device.serial_number
+    );
 
     let _ = active.delete(&crate::api_v1::db::db!()).await;
     Ok(())

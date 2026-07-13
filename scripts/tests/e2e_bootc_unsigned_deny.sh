@@ -31,7 +31,7 @@ sleep 6
 # Verify bootc/OS-specific signature denial in logs
 echo "Verifying log enforcement..."
 # Look specifically for bootc output failures regarding signature verification
-if limactl shell "${VM_NAME}" -- sudo journalctl -u orchestrator.service --since "10 seconds ago" | grep -i "bootc switch" -A 5 | grep -qE "signature|rejected|denied"; then
+if limactl shell "${VM_NAME}" -- sudo journalctl -u orchestrator.service --since "10 seconds ago" | grep -i "bootc switch" -A 10 | grep -qE "signature was required"; then
     echo -e "${GREEN}Log Check Passed: OS signature policy enforcement caught the violation.${NC}"
 else
     echo -e "${RED}Log Check Failed: Could not isolate bootc signature rejection logs!${NC}"

@@ -1,5 +1,4 @@
 use jsonwebtoken::{DecodingKey, Validation, decode, errors::ErrorKind};
-use log::trace;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -23,7 +22,7 @@ pub fn validate_token(
         &DecodingKey::from_rsa_pem(config.public_key.as_bytes())?,
         &Validation::new(jsonwebtoken::Algorithm::RS512),
     )?;
-    trace!("Extracted JWT data from request: {:?}", token_data);
+    log::trace!("Extracted JWT data from request: {:?}", token_data);
 
     let payload = token_data.claims;
 

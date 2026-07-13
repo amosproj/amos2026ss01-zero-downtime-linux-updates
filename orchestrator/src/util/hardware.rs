@@ -1,6 +1,5 @@
 use std::fs;
 
-use tracing::debug;
 use uuid::Uuid;
 
 const DMI_UUID_PATH: &str = "/sys/class/dmi/id/product_uuid";
@@ -39,7 +38,7 @@ fn read_dmi_field(path: &str, field_name: &str) -> anyhow::Result<String> {
             trimmed
         );
     }
-    debug!("Read DMI {} from {}: {}", field_name, path, trimmed);
+    tracing::trace!("Read DMI {} from {}: {}", field_name, path, trimmed);
     Ok(trimmed.to_owned())
 }
 

@@ -3,7 +3,6 @@ use std::str::FromStr as _;
 use anyhow::Result;
 use rsa::pkcs8::EncodePublicKey as _;
 use rsa::{BigUint, RsaPublicKey};
-use tracing::{debug, info};
 use tss_esapi::attributes::ObjectAttributesBuilder;
 use tss_esapi::handles::{KeyHandle, PersistentTpmHandle};
 use tss_esapi::interface_types::algorithm::{HashingAlgorithm, PublicAlgorithm};
@@ -34,7 +33,7 @@ impl TpmSigner {
         // /dev/tpmrm0 should be preferred over /dev/tpm0 as it is resource managed
         let tcti_config = TctiNameConf::from_str("device:/dev/tpmrm0")
             .or_else(|_| TctiNameConf::from_str("device:/dev/tpm0"))?;
-        debug!("Using tcti: {:?}", tcti_config);
+        tracing::trace!("Using tcti: {:?}", tcti_config);
         let mut ctx = Context::new(tcti_config)?;
 
         // Try loading the persistent signing key
@@ -48,7 +47,7 @@ impl TpmSigner {
 
             Err(tss_esapi::Error::Tss2Error(rc)) => match rc.kind() {
                 Some(tss_esapi::constants::response_code::Tss2ResponseCodeKind::Handle) => {
-                    info!("Signing key not present, starting initialization routine");
+                    tracing::debug!("Signing key not present, starting initialization routine");
 
                     create_signing_key(&mut ctx)?
                 }
@@ -157,7 +156,7 @@ pub fn create_signing_key(context: &mut Context) -> anyhow::Result<KeyHandle> {
     let primary_key = context.execute_with_nullauth_session(|ctx| {
         ctx.create_primary(Hierarchy::Owner, primary_pub, None, None, None, None)
     })?;
-    info!("Signing key created");
+    tracing::trace!("Signing key created");
 
     // ...persist it (tpm2_evictcontrol -C o -c key.ctx <handle>)
     let persistent_handle = PersistentTpmHandle::new(PERSISTENT_SIGNING_HANDLE)?;
@@ -168,7 +167,7 @@ pub fn create_signing_key(context: &mut Context) -> anyhow::Result<KeyHandle> {
             persistent_handle.into(),
         )
     })?;
-    info!("Signing key persisted at {:?}", PERSISTENT_SIGNING_HANDLE);
+    tracing::trace!("Signing key persisted at {:?}", PERSISTENT_SIGNING_HANDLE);
 
     Ok(primary_key.key_handle)
 }

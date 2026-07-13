@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::ApplicationAssignment;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::TransactionTrait;
 use sea_orm::sea_query::prelude::chrono;
@@ -158,7 +157,8 @@ async fn add_application_assignment(
     };
 
     let new_app_assignment = app_assignment.insert(&txn).await?;
-    debug!(
+
+    log::trace!(
         "Inserted new application config assignment: {:?}",
         new_app_assignment
     );
@@ -168,9 +168,10 @@ async fn add_application_assignment(
         let mut old_active: dtos::ApplicationAssignment::ActiveModel = old.into();
         old_active.superseded_by = Set(Some(new_app_assignment.id));
         old_active.update(&txn).await?;
-        debug!(
+        log::trace!(
             "Superseded old App assignment {} with {}",
-            old_id, new_app_assignment.id
+            old_id,
+            new_app_assignment.id
         );
     }
 
@@ -210,7 +211,7 @@ pub async fn update_application_assignment(
     old_active.superseded_by = Set(Some(new_assignment.id));
     old_active.update(&db).await?;
 
-    debug!(
+    log::trace!(
         "Updated application assignment via append-only: {:?}",
         new_assignment
     );

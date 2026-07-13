@@ -1,6 +1,5 @@
 use crate::dtos;
 use amos_common::entities::OsVersion;
-use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
@@ -56,7 +55,7 @@ pub async fn add_os_version(
     let db = db!();
 
     let new_os_version = os_version.insert(&db).await?;
-    debug!("Inserted new OS version: {:?}", new_os_version);
+    log::trace!("Inserted new OS version: {:?}", new_os_version);
 
     Ok(new_os_version.into_api())
 }
@@ -90,7 +89,7 @@ pub async fn update_os_version(
     old_active.superseded_by = Set(Some(new_version.id));
     old_active.update(&db).await?;
 
-    debug!("Updated OS version via append-only: {:?}", new_version);
+    log::trace!("Updated OS version via append-only: {:?}", new_version);
     Ok(new_version.into_api())
 }
 
