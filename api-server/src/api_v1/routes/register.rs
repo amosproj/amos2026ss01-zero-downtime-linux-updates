@@ -72,7 +72,11 @@ async fn register_device(
     )
     .await?;
 
-    log::info!("New device registered successfully: {}, SN: {}", new_device.uuid, new_device.serial_number);
+    log::info!(
+        "New device registered successfully: {}, SN: {}",
+        new_device.uuid,
+        new_device.serial_number
+    );
 
     let _ = active.delete(&crate::api_v1::db::db!()).await;
     Ok(())
