@@ -2,6 +2,7 @@ use crate::dtos;
 use amos_common::entities::ApplicationAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::TransactionTrait;
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
@@ -132,6 +133,7 @@ async fn add_application_assignment(
     group_id: Option<i32>,
 ) -> Result<ApplicationAssignment::Model, DbErr> {
     let db = db!();
+    let txn = db.begin().await?;
 
     let mut old_query = dtos::ApplicationAssignment::Entity::find()
         .filter(dtos::ApplicationAssignment::Column::ApplicationConfigId.eq(app_config_id))
@@ -144,7 +146,7 @@ async fn add_application_assignment(
         old_query = old_query.filter(dtos::ApplicationAssignment::Column::GroupId.eq(gid));
     }
 
-    let existing_assignments = old_query.all(&db).await?;
+    let existing_assignments = old_query.all(&txn).await?;
 
     let app_assignment = dtos::ApplicationAssignment::ActiveModel {
         id: NotSet,
@@ -155,7 +157,7 @@ async fn add_application_assignment(
         superseded_by: NotSet,
     };
 
-    let new_app_assignment = app_assignment.insert(&db).await?;
+    let new_app_assignment = app_assignment.insert(&txn).await?;
     debug!(
         "Inserted new application config assignment: {:?}",
         new_app_assignment
@@ -165,12 +167,14 @@ async fn add_application_assignment(
         let old_id = old.id;
         let mut old_active: dtos::ApplicationAssignment::ActiveModel = old.into();
         old_active.superseded_by = Set(Some(new_app_assignment.id));
-        old_active.update(&db).await?;
+        old_active.update(&txn).await?;
         debug!(
             "Superseded old App assignment {} with {}",
             old_id, new_app_assignment.id
         );
     }
+
+    txn.commit().await?;
 
     Ok(new_app_assignment.into_api())
 }

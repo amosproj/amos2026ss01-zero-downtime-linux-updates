@@ -4,6 +4,7 @@ use crate::dtos;
 use amos_common::entities::{ApplicationConfig, ContainerConfigV1};
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::TransactionTrait;
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter,
@@ -104,6 +105,7 @@ pub async fn add_application_config(
     config: Option<ContainerConfigV1>,
 ) -> Result<ApplicationConfig::Model, DbErr> {
     let db = db!();
+    let txn = db.begin().await?;
 
     let mut old_query = dtos::ApplicationConfig::Entity::find()
         .filter(dtos::ApplicationConfig::Column::ApplicationId.eq(application_id))
@@ -116,7 +118,7 @@ pub async fn add_application_config(
         old_query = old_query.filter(dtos::ApplicationConfig::Column::GroupId.eq(gid));
     }
 
-    let existing_configs = old_query.all(&db).await?;
+    let existing_configs = old_query.all(&txn).await?;
 
     let next_config_version = existing_configs
         .first()
@@ -147,19 +149,21 @@ pub async fn add_application_config(
         superseded_by: NotSet,
     };
 
-    let new_app_config = app_config.insert(&db).await?;
+    let new_app_config = app_config.insert(&txn).await?;
     debug!("Inserted new application config: {:?}", new_app_config);
 
     for old in existing_configs {
         let old_id = old.id;
         let mut old_active: dtos::ApplicationConfig::ActiveModel = old.into();
         old_active.superseded_by = Set(Some(new_app_config.id));
-        old_active.update(&db).await?;
+        old_active.update(&txn).await?;
         debug!(
             "Superseded old App config {} with {}",
             old_id, new_app_config.id
         );
     }
+
+    txn.commit().await?;
 
     Ok(new_app_config.into_api())
 }
