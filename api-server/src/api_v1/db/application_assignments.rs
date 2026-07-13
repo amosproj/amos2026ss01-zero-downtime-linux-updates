@@ -2,6 +2,7 @@ use crate::dtos;
 use amos_common::entities::ApplicationAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::TransactionTrait;
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
@@ -131,6 +132,22 @@ async fn add_application_assignment(
     device_id: Option<i32>,
     group_id: Option<i32>,
 ) -> Result<ApplicationAssignment::Model, DbErr> {
+    let db = db!();
+    let txn = db.begin().await?;
+
+    let mut old_query = dtos::ApplicationAssignment::Entity::find()
+        .filter(dtos::ApplicationAssignment::Column::ApplicationConfigId.eq(app_config_id))
+        .filter(dtos::ApplicationAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::ApplicationAssignment::Column::SupersededBy.is_null());
+
+    if let Some(did) = device_id {
+        old_query = old_query.filter(dtos::ApplicationAssignment::Column::DeviceId.eq(did));
+    } else if let Some(gid) = group_id {
+        old_query = old_query.filter(dtos::ApplicationAssignment::Column::GroupId.eq(gid));
+    }
+
+    let existing_assignments = old_query.all(&txn).await?;
+
     let app_assignment = dtos::ApplicationAssignment::ActiveModel {
         id: NotSet,
         application_config_id: Set(app_config_id),
@@ -140,13 +157,24 @@ async fn add_application_assignment(
         superseded_by: NotSet,
     };
 
-    let db = db!();
-
-    let new_app_assignment = app_assignment.insert(&db).await?;
+    let new_app_assignment = app_assignment.insert(&txn).await?;
     debug!(
         "Inserted new application config assignment: {:?}",
         new_app_assignment
     );
+
+    for old in existing_assignments {
+        let old_id = old.id;
+        let mut old_active: dtos::ApplicationAssignment::ActiveModel = old.into();
+        old_active.superseded_by = Set(Some(new_app_assignment.id));
+        old_active.update(&txn).await?;
+        debug!(
+            "Superseded old App assignment {} with {}",
+            old_id, new_app_assignment.id
+        );
+    }
+
+    txn.commit().await?;
 
     Ok(new_app_assignment.into_api())
 }

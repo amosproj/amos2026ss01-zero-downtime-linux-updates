@@ -2,6 +2,7 @@ use crate::dtos;
 use amos_common::entities::OsAssignment;
 use log::debug;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::TransactionTrait;
 use sea_orm::sea_query::prelude::chrono;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
@@ -95,6 +96,21 @@ pub async fn add_os_assignment(
     group_id: Option<i32>,
     immediate: Option<bool>,
 ) -> Result<OsAssignment::Model, DbErr> {
+    let db = db!();
+    let txn = db.begin().await?;
+
+    let mut old_query = dtos::OsAssignment::Entity::find()
+        .filter(dtos::OsAssignment::Column::DeletedAt.is_null())
+        .filter(dtos::OsAssignment::Column::SupersededBy.is_null());
+
+    if let Some(did) = device_id {
+        old_query = old_query.filter(dtos::OsAssignment::Column::DeviceId.eq(did));
+    } else if let Some(gid) = group_id {
+        old_query = old_query.filter(dtos::OsAssignment::Column::GroupId.eq(gid));
+    }
+
+    let existing_assignments = old_query.all(&txn).await?;
+
     let os_assignment = dtos::OsAssignment::ActiveModel {
         id: NotSet,
         os_version_id: Set(os_version_id),
@@ -105,13 +121,24 @@ pub async fn add_os_assignment(
         superseded_by: NotSet,
     };
 
-    let db = db!();
-
-    let new_os_assignment = os_assignment.insert(&db).await?;
+    let new_os_assignment = os_assignment.insert(&txn).await?;
     debug!(
         "Inserted new OS version assignment: {:?}",
         new_os_assignment
     );
+
+    for old in existing_assignments {
+        let old_id = old.id;
+        let mut old_active: dtos::OsAssignment::ActiveModel = old.into();
+        old_active.superseded_by = Set(Some(new_os_assignment.id));
+        old_active.update(&txn).await?;
+        debug!(
+            "Superseded old OS assignment {} with {}",
+            old_id, new_os_assignment.id
+        );
+    }
+
+    txn.commit().await?;
 
     Ok(new_os_assignment.into_api())
 }
