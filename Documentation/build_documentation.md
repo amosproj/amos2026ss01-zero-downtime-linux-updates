@@ -32,7 +32,7 @@ amos2026ss01-zero-downtime-linux-updates/
 │   ├── config.example.toml
 │   └── src/
 ├── common/                 — Shared library crate (amos-common)
-│   │                         includes download manager module and security verification
+│   │
 │   ├── Cargo.toml
 │   └── src/
 ├── api-server/        — Development server binary
@@ -57,10 +57,12 @@ amos2026ss01-zero-downtime-linux-updates/
 | `make` | any | Developer setup shortcuts |
 
 Additionally the tss2 library is needed for the LSP to work, as the `tss-esapi` crate still needs certain headers to be present that are not included with the crate. For installation, the package name depends on your distribution:
+
 - Debian(like): `libtss2-dev`
 - Fedora/RHEL: `tpm2-tss-devel`
 
 Optional (for full integration testing):
+
 - `podman` — container runtime
 - `bootc` — OS image tooling
 - `rpm-ostree` — OSTree management
@@ -83,6 +85,7 @@ make setup
 ```
 
 `make setup` configures:
+
 - A **commit message template** (conventional commits format).
 - A **Git hook** that automatically appends the DCO sign-off line to commit messages.
 
@@ -101,6 +104,7 @@ cargo build
 ```
 
 Compiled binaries are placed in `target/debug/`:
+
 - `target/debug/amos-orchestrator`
 - `target/debug/amos-api-server`
 
@@ -111,6 +115,7 @@ cargo build --release
 ```
 
 Compiled binaries are placed in `target/release/`:
+
 - `target/release/amos-orchestrator`
 - `target/release/amos-api-server`
 
@@ -144,8 +149,8 @@ cargo test -p amos-common
 | Crate | Tests |
 |-------|-------|
 | `amos-orchestrator` | CLI flag parsing (`--self-check`, `--config`, `--debug`) |
-| `amos-orchestrator` | Config validation (URL scheme, poll interval) |
-| `amos-common` | `CatalogResponse` JSON serialisation/deserialisation |
+| `amos-orchestrator` | App reconciliation logic (`ReconcileIterator` actions) |
+| `amos-common` | `device_api` models JSON serialization/deserialization (`os`, `apps`, `logs`, `register`) |
 
 ---
 
@@ -263,6 +268,15 @@ The `bootc-build/` directory contains the files needed to embed the Orchestrator
 | `bootc-build/Containerfile` | OCI image definition for the root container build |
 | `bootc-build/orchestrator.service` | systemd unit file bundled into the image |
 
+### Container Security & Signature Policies
+
+The project enforces image validation checks via container signature policies to secure the Edge IPC environment against untrusted code execution. These rules dictate how the host container engine (Podman) verifies image integrity before pulling or staging updates.
+
+The mechanism switches between two structural configuration files depending on your build target:
+
+- `container-policy.json` (Production Default): Configures a locked-down profile. It sets the default behavior to reject all unconfigured registries and mandates that all container updates are strictly signed (sigstoreSigned) using the cryptographic public key stored at `/usr/share/pki/containers/cosign.pub`.
+- `container-policy.dev.json` (Development Override): Provides a permissive fallback for local loop validation. While it maintains strict signature checking for official remote GHCR layers, it introduces exceptions (insecureAcceptAnything) for `localhost/amos-edge images and native containers-storage flows to enable rapid local debugging.
+
 ### Build the container image
 
 ```bash
@@ -290,9 +304,59 @@ The project uses GitHub Actions. Workflows are defined under `.github/workflows/
 
 Changelogs are auto-generated from conventional commits using [`git-cliff`](https://github.com/orhun/git-cliff) (configured in `cliff.toml`).
 
-
----
-
 ## Environment Variables Reference
 
 > See [User Documentation — Configuration](user_documentation.md#configuration) for the full environment variable reference.
+
+---
+
+## Subsystem Deep Dives
+
+### Application Log Aggregation & Backpressure
+
+The Orchestrator centralizes container log collection via an asynchronous multiplexing registry task.
+
+- **Timestamp Extraction:** Containers are tailed with runtime-enforced timestamps. The ingestion pipeline strips the RFC3339-nano prefix applied by the container engine to preserve the exact execution time, falling back to local time only if the log line lacks a valid prefix.
+- **Flushing and Batching:** To minimize network overhead, logs are grouped into batches (`log_max_batch`) and pushed periodically (`log_flush_interval_secs`).
+- **Memory Protection (Backpressure):** If connection to the Cloud API fails, logs are buffered in memory up to a hard cap (`log_max_buffer`). When the buffer fills completely, backpressure is enforced by evicting the oldest log lines first, preventing edge device out-of-memory (OOM) faults.
+
+### Subprocess Execution & Lifecycle Exit Codes
+
+Operating system updates (`bootc`) and system-level actions are safely wrapped inside an isolated command execution layer.
+
+- **Stream Deadlocks:** The executer drains `stdout` and `stderr` streams concurrently using asynchronous line loops. This ensures that fast-exiting processes do not leave unread data in system buffers, avoiding truncated logs.
+- **Reboot Imminence (Exit Code 137):** Processes terminated without a clean status return or killed by system signals return exit code `137`. During OS upgrade and rollback phases, code `137` is explicitly intercepted and handled as a successful transaction, indicating that the system engine is dropping execution to perform an immediate hardware reboot.
+
+### Hardware Identity & TPM 2.0 Security
+
+The system binds device identity and authorization tokens directly to physical (or emulated) hardware primitives.
+
+#### Hardware Identity Paths
+
+The Orchestrator validates identity via DMI/SMBIOS tables using the following files:
+
+- Primary Unique Identifier: `/sys/class/dmi/id/product_uuid`
+- Fallback Identifier: `/sys/class/dmi/id/board_serial` (utilized to accommodate specific university reference hardware constraints).
+
+> Note: String validation rules automatically reject generic OEM placeholders such as "Not Specified" or "To Be Filled By O.E.M.".
+
+#### Cryptographic Architecture & Handle Allocation
+
+Device security relies on a TPM 2.0 interface communicating over `/dev/tpmrm0`. Cryptographic operations adhere to the following layout:
+
+| Asset / Operation | Primitive Details | TPM Handle / Path Constraint |
+| --- | --- | --- |
+| **Endorsement Key (EK)** | RSA Public Key extraction | `0x8101_0001` (Read directly via reference convention) |
+| **Device Signing Key** | 2048-bit RSA (Owner hierarchy) | `0x8100_A038` (Created and persisted if missing) |
+| **Data Signing Scheme** | RSASSA-PKCS1-v1_5 + SHA256 | Handled in an isolated Null-Auth session |
+
+#### Proactive JWT Management
+
+Cloud API interactions require a Device JWT signed by the TPM. To maintain an uninterrupted connection state, the system employs a proactive refresh window: token validity is re-evaluated during every cycle, and a new signed JWT is requested exactly `30 seconds` prior to token expiration (`REFRESH_BEFORE`), preventing request drops caused by clock drift.
+
+### Cross-Loop Interlocking (OS Upgrade Freeze)
+
+To prevent container mutations or log shipping corruption while the host system undergoes structural upgrades, the Orchestrator employs a thread-safe synchronization state (`os_upgrade_in_progress: Arc<AtomicBool>`).
+
+- **Behavior:** Whenever an OS update is being actively applied (either immediately or following the expiration of a deferred timer), this atomic flag is flipped to `true`.
+- **Impact:** The application reconciliation loop instantly freezes its execution cycle, printing a diagnostic freeze message and bypassing any container creation, modification, or teardown tasks until the system initiates its hardware reboot.

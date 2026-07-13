@@ -24,11 +24,12 @@ This document explains how to install, configure, and operate the **Orchestrator
 
 ## Overview
 
-The **Orchestrator** is a background agent that runs on each Edge IPC. It periodically compares the desired state of the OS and application containers against the host's current state and is designed to trigger updates when they differ.
+The **Orchestrator** is a background daemon running on Edge IPC nodes. It coordinates real-time state enforcement for operating system images and application workloads using native `bootc` and `podman` abstractions.
 
 ```
-Orchestrator  ──►  OS Update Loop   (compares OS state, calls placeholder update)
-              ──►  App Update Loop  (reconciles container state, calls placeholder fns)
+Orchestrator  ──►  OS Update Loop   (Monitors OS image targets, manages deferred reboots)
+              ──►  App Update Loop  (Calculates and drives real container mutations)
+              ──►  Aliveness Loop   (Maintains continuous device heartbeats)
 ```
 
 ---
@@ -37,9 +38,9 @@ Orchestrator  ──►  OS Update Loop   (compares OS state, calls placeholder 
 
 | Requirement | Notes |
 |-------------|-------|
-| Linux | Any distro; rpm-ostree/bootc compatible OS recommended for future update support |
-| `bootc` | Optional — used for inventory collection (`bootc status`); update commands not yet wired |
-| `podman` | Optional — used for inventory collection (`podman ps`); container management not yet wired |
+| Linux | rpm-ostree/bootc compatible OS recommended for future update support |
+| `bootc` | Used for updates (`bootc switch`) |
+| `podman` | Used for container management |
 | Network access to Cloud API | HTTPS required (see Configuration) |
 | Rust toolchain | Only needed if building from source |
 
@@ -80,11 +81,17 @@ cp orchestrator/config.example.toml config.toml
 
 All config values can be overridden with environment variables prefixed `APP_`:
 
-| Environment variable | Config key | Description |
-|----------------------|------------|-------------|
-| `APP_CLOUD_URL` | `cloud_url` | Cloud API base URL |
-| `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | Poll frequency in seconds |
-| `https_proxy` | — | HTTPS proxy URL (reqwest default) |
+### Configuration Options
+
+| Environment Variable | Config Key | Default / Type | Description |
+|----------------------|------------|----------------|-------------|
+| `APP_CLOUD_URL` | `cloud_url` | String (Required) | Base URL for the cloud management endpoints |
+| `APP_PODMAN_PATH` | `podman_path` | String | Path locating the Podman socket connection interface |
+| `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | u64 | Target evaluation loop frequency |
+| `APP_LOG_FLUSH_INTERVAL_SECS` | `log_flush_interval_secs`| u64 | Delay between log database shipping cycles |
+| `APP_LOG_MAX_BATCH` | `log_max_batch` | usize | Maximum log items grouped in a single payload |
+| `APP_LOG_MAX_BUFFER` | `log_max_buffer` | usize | Maximum log items retained during network outages |
+| `APP_DEFERRED_SWITCH_TIMER_SECS`| `deferred_switch_timer_secs`| u64 | Grace time allowed before non-immediate OS updates trigger a reboot |
 
 > **Note:** `APP_CONFIG_FILE` is special — it selects *which* config file to load (see precedence above) rather than overriding a value. The `--config` flag takes precedence over it.
 
@@ -195,4 +202,7 @@ For application containers, use `podman` to switch back to the previous image ta
 
 ### API Reference
 
-Link to open API here.
+For a complete technical breakdown of the network communication protocols, data models, and active endpoints, please refer to the OpenAPI specification files:
+
+* [Device User API Reference](./DeviceApi/openapi_user.yaml)
+* [Full Device API Specification](./DeviceApi/openapi.yaml)

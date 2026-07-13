@@ -1,6 +1,6 @@
 # Design Documentation
 
-## Zero-Downtime Linux Updates — Software Architecture 
+## Zero-Downtime Linux Updates — Software Architecture
 
 This document describes the software architecture, component design, and internal data flows of the Zero-Downtime Linux Updates project.
 
@@ -19,7 +19,6 @@ This document describes the software architecture, component design, and interna
 9. [API Contract](#api-contract)
 10. [Configuration System](#configuration-system)
 11. [Inventory System](#inventory-system)
-12. [Crate Dependency Overview](#crate-dependency-overview)
 
 ---
 
@@ -27,7 +26,7 @@ This document describes the software architecture, component design, and interna
 
 The system enables **zero-downtime OS and application updates** for Edge IPC devices. Each device runs an **Orchestrator** agent that:
 
-1. Reads configuration and collects a local device inventory on startup.
+1. Reads configuration on startup.
 2. Runs two concurrent polling loops — one for OS state, one for application container state.
 3. Compares current host state against a target state and triggers updates when they differ.
 4. Writes the device inventory to a local JSON file.
@@ -45,6 +44,7 @@ see [architecture.md](architecture.md)
 ### `amos-orchestrator` (binary crate)
 
 The main agent running on each Edge IPC. Responsible for:
+
 - Reading configuration on startup
 - Collecting the device inventory
 - Spawning and managing two asynchronous update loops (OS and apps)
@@ -57,6 +57,7 @@ The main agent running on each Edge IPC. Responsible for:
 ### `amos-common` (library crate)
 
 Shared code used by both the orchestrator and the server:
+
 - `api` module — defines the `CatalogResponse` and `CatalogResponseEntry` types (serializable to/from JSON)
 - `util` module — Base64 newtype with serde support
 - `download_manager` module — HTTP client construction, catalog polling, and artifact downloading
@@ -77,29 +78,36 @@ A lightweight Axum-based HTTP server used during development and testing to simu
 
 ```
 orchestrator/src/
-├── main.rs           — CLI parsing, startup, spawns async tasks
-├── config_loader.rs  — TOML + env-var config loading and validation
-├── state.rs          — AgentState, OsState, AppState (shared async state)
-├── os_tree.rs        — OS update polling loop (bootc / rpm-ostree)
-├── apps.rs           — Application container update loop (Podman)
-├── inventory.rs      — Device inventory collection and JSON serialization
-└── healthcheck.rs    — Self-check logic (config + inventory validation)
+├── main.rs           — CLI parsing, hardware detection, task initialization
+├── config.rs         — TOML + env-var config mapping (OrchestratorConfig)
+├── api_client.rs     — Type-safe client handling JWT auth, pings, logs, and state reports
+├── application.rs    — Individual application lifecycle control loop and container wrapping
+├── logging.rs        — Global tracing initialization, journald capturing, and API log shipping
+├── loop_apps.rs      — Application state reconciliation loop (via Podman)
+├── loop_os.rs        — OS upgrade coordination loop (via bootc wrapper)
+├── loop_ping.rs      — High-frequency aliveness tracking heartbeat loop
+├── podman/           — Podman connection wrapper and log registry pipelines
+└── util/             — low-level executer, hardware identity, and TPM 2.0 handlers
 ```
 
 ---
 
 ## Key Data Structures
 
-### `AgentState`
+### `OrchestratorConfig` (Configuration)
 
-Shared state across all async tasks. Protected by `Arc<Mutex<>>`.
+Parsed dynamically from files and environment variables into a structured configuration state.
 
 ```rust
-pub struct AgentState {
-    pub self_version: String,           // binary version from Cargo.toml
-    pub config: Settings,               // loaded config
-    pub os_state: Arc<Mutex<OsState>>,  // current OS state
-    pub apps_state: Arc<Mutex<Vec<AppState>>>, // current app container states
+pub struct OrchestratorConfig {
+    pub cloud_url: String,
+    pub https_proxy: Option<String>,
+    pub podman_path: String,
+    pub poll_interval_secs: u64,
+    pub log_flush_interval_secs: u64,
+    pub log_max_batch: usize,
+    pub log_max_buffer: usize,
+    pub deferred_switch_timer_secs: u64,
 }
 ```
 
@@ -107,19 +115,25 @@ pub struct AgentState {
 
 ```rust
 pub struct OsState {
-    pub update_pending: bool,                    // update staged but not yet rebooted
-    pub running_ostree_commit: String,           // current booted commit/image tag
-    pub update_ostree_commit: Option<String>,    // target commit/image if update available
+    pub update_pending: bool,
+    pub booted_checksum: String,
+    pub booted_image_ref: Option<String>,
+    pub staged_checksum: Option<String>,
+    pub staged_image_ref: Option<String>,
+    pub countdown_started: bool,
 }
 ```
 
 ### `AppState`
 
 ```rust
-pub struct AppState {
-    pub app_id: String,   // Podman image name
-    pub version: String,  // image tag
-    pub updating: bool,   // update currently in progress
+pub struct Application {
+    pub image_reference: String,
+    pub image_digest: String,
+    pub application_id: i32,
+    pub application_config_id: Option<i32>,
+    pub lifecycle_loop: tokio::task::JoinHandle<()>,
+    pub delete_notifier: Arc<tokio::sync::Notify>,
 }
 ```
 
@@ -127,19 +141,23 @@ pub struct AppState {
 
 ```rust
 pub struct Settings {
-    pub cloud_url: String,         // Cloud API base URL (must be https://)
-    pub poll_interval_secs: u32,   // polling interval in seconds
+    pub database_url: String,
+    pub timescale_database_url: String,
+    pub http_port: u16,
+    pub jwt: JwtConfig,
+    pub audit: AuditConfig,
 }
 ```
 
 ### `CatalogResponseEntry` (API)
 
 ```rust
-pub struct CatalogResponseEntry<'a> {
-    pub name: &'a str,         // "os" or app name
-    pub version: &'a str,      // semantic version string
-    pub url: &'a str,          // image URL or download path
-    pub signature: Base64<'a>, // ed25519 signature of the artifact
+pub struct ApiClient {
+    client: reqwest::Client,
+    base_url: String,
+    device_uuid: String,
+    serial_number: String,
+    jwt_provider: tokio::sync::Mutex<DeviceJwtProvider>,
 }
 ```
 
@@ -150,93 +168,48 @@ pub struct CatalogResponseEntry<'a> {
 ```mermaid
 flowchart TD
     A[Start: main] --> B[Parse CLI flags]
-    B --> C[Load config\nTOML + env vars]
-    C --> D[Collect & save inventory]
-    D --> E[Read initial OS state]
-    E --> F[Read initial App state]
-    F --> G[Create AgentState\nshared Arc/Mutex]
-    G --> H[Spawn OS update loop\ntokio::spawn]
-    G --> I[Spawn App update loop\ntokio::spawn]
-    H & I --> J[Await SIGINT / Ctrl-C]
+    B --> C[Load configuration\nOrchestratorConfig]
+    C --> D[Initialize TPM Signer & Read DMI Hardware Identity]
+    D --> E[Connect to Podman Socket & Collect OS State]
+    E --> F[Spawn Log Shipper & App Log Registry]
+    F --> G[Spawn OS Update Loop\ntokio::spawn]
+    F --> H[Spawn App Update Loop\ntokio::spawn]
+    F --> I[Spawn Aliveness Ping Loop\ntokio::spawn]
+    G & H & I --> J[Await SIGINT / Ctrl-C / Task Failure]
 ```
 
 ---
 
 ## OS Update Flow
 
-```mermaid
-flowchart TD
-    A[Tick: poll_interval_secs] --> B[GET /v1/os-assignments\nfrom Cloud API]
-    B --> C[Run: bootc status / rpm-ostree status]
-    C --> D{running_commit\n== target_commit?}
-    D -- yes --> E[No-op: already up to date]
-    D -- no --> F[Trigger OS update command\nbootc upgrade or rpm-ostree rebase]
-    F --> G[OS stages new image\nnext boot uses new image]
-    E --> A
-    G --> A
-```
+The OS tracking subsystem utilizes the `/device/os` API endpoint and communicates with `bootc` to manage image deployments.
+
+1. **Evaluation:** Compares the active `booted_checksum` or `booted_image_ref` against the target state `commit_hash`.
+2. **Immediate Execution:** If the API specifies `immediate: true`, the application loops are locked via `os_upgrade_in_progress`, and the system executes a direct `bootc switch` followed by `bootc apply` to trigger an instant hardware reboot.
+3. **Deferred Execution:** If `immediate: false`, the system fetches and stages the new container image layer. It then spawns a background countdown thread matching `deferred_switch_timer_secs`. When the timer expires, it locks container updates and calls `bootc apply` to complete the deployment.
 
 ---
 
 ## Application Update Loop
 
-> **Current status:** The reconciliation scaffold is implemented in `apps.rs`. Target and host app states are currently **hardcoded stub values**. The container management functions (`create_container`, `update_container`, `delete_container`) are **placeholders** — they accept arguments but perform no operations.
+The application update loop matches host states against cloud assignments using an automated, type-safe state machine.
 
-The loop:
-1. Ticks every `poll_interval_secs`.
-2. Fetches a target app state (stub: one app `data_collector` at `v1.0.2`).
-3. Fetches the current host app state (stub: same app at `v1.0.1`).
-4. Updates the shared `apps_state` with the host state.
-5. Reconciles differences:
-   - App in target but not running → `create_container()` (placeholder)
-   - App running with wrong version → `update_container()` (placeholder)
-   - App running but not in target → `delete_container()` (placeholder)
-   - App up to date → no-op
-
----
-
-## Security Module
-
-The `security-module` module provides one public async function:
-
-```rust
-pub async fn verify_signature(
-    file_path: &Path,
-    signature_bytes: &[u8],
-    public_key_bytes: &[u8],
-) -> bool
-```
-
-- Algorithm: **Ed25519** (via `ed25519-dalek` crate)
-- Reads the file from disk asynchronously and verifies the provided signature against the provided public key.
-- Returns `false` (never panics) if the file cannot be read, the key bytes are malformed, or the signature does not match.
+1. Ticks regularly according to the configured `poll_interval_secs`.
+2. Checks the `os_upgrade_in_progress` barrier flag; if an OS update is processing, the cycle skips.
+3. Fetches the target array from `/device/apps` and sorts both the current applications and target definitions by image reference names.
+4. Executes a `ReconcileIterator` pass to determine structural differences:
+   - **Missing from Host:** Invokes `Application::launch_from_image` to trigger image pulling and container execution.
+   - **Mismatched Digest / Config ID:** Shuts down the current container instance cleanly via its `Notify` handle, purges the older deployment, and launches the updated variant.
+   - **Orphaned on Host:** Demolishes unassigned active container environments.
+5. Invokes `podman.prune_images()` automatically to release storage volumes occupied by stale image layers.
 
 ---
 
 ## Rollback & Error Recovery
 
-> **Future sprint:** Rollback and error recovery logic is not yet implemented in the Orchestrator.
-
-The OS inventory already tracks rollback availability (`bootc_status.rollback`, `bootc_status.rollback_queued`), providing a data foundation for future rollback triggers. Planned behaviour:
-
-- **OS rollback:** If a `bootc upgrade` or `rpm-ostree rebase` fails, the Orchestrator will call `bootc rollback` / `rpm-ostree rollback` and report the failure to the Cloud API.
+- **OS rollback:** If a `bootc switch` fails, bootc will rollback automatically.
 - **App rollback:** If a container update fails, the previous image will be re-pulled.
 - **Retry logic:** Failed updates will be retried with exponential backoff before a rollback is triggered.
-
----
-
-## Download Manager
-
-> **Current status:** The Download Manager is a standalone module in `amos-common`. It is **not yet called** by the Orchestrator's update loops (which currently use hardcoded stubs instead).
-
-Located in `common/src/download_manager.rs`. Provides:
-
-| Function | Description |
-|----------|-------------|
-| `build_http_client(config)` | Creates a `reqwest::Client`, optionally configuring an HTTPS proxy |
-| `download_update(client, entry, config)` | Streams an artifact to disk as `update_<name>_<version>.bin` |
-
-The HTTPS proxy can be set in `Config.https_proxy` or via the `https_proxy` environment variable (reqwest default).
 
 ---
 
@@ -253,19 +226,3 @@ Built-in defaults
 ```
 
 > See [User Documentation — Configuration](user_documentation.md#configuration) for all available keys, defaults, and constraints.
-
----
-
-## Crate Dependency Overview
-
-```
-workspace
-├── amos-orchestrator (bin)
-│   └── amos-common (lib)
-│       └── reqwest, serde, serde_json, tokio, futures-util
-│   └── clap, config, ed25519-dalek, env_logger, log, anyhow, tokio
-│
-└── amos-api-server (bin)
-    └── amos-common (lib)
-    └── axum, tower-http, tokio
-```
