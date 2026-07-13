@@ -90,7 +90,7 @@ async fn jwt_middleware(
                 let user = match db::upsert_user(claims.clone()).await {
                     Ok(user) => user,
                     Err(err) => {
-                        log::warn!("Failed to upsert user into db: {:?}", err);
+                        log::error!("Failed to upsert user into db: {:?}", err);
                         return Err(StatusCode::INTERNAL_SERVER_ERROR);
                     }
                 };

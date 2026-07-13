@@ -59,6 +59,12 @@ async fn main() {
     let cli = Cli::parse();
     let (logger, log_flusher) = OrchestratorLogger::init(cli.debug);
 
+    let mode_name = match cli.self_check {
+        true => "self-check",
+        _ => "normal",
+    };
+    tracing::info!("Starting orchestrator in {} mode...", mode_name);
+
     if cli.self_check {
         if let Err(e) = self_check(&cli).await {
             tracing::error!("{:?}", e.context("Self check failed"));

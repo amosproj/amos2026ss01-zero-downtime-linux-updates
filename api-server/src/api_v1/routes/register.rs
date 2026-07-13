@@ -63,7 +63,7 @@ async fn register_device(
         }
     };
 
-    crate::api_v1::db::add_device(
+    let new_device = crate::api_v1::db::add_device(
         uuid,
         Some(signing_pubkey),
         serial_number,
@@ -71,6 +71,8 @@ async fn register_device(
         None,
     )
     .await?;
+
+    log::info!("New device registered successfully: {}, SN: {}", new_device.uuid, new_device.serial_number);
 
     let _ = active.delete(&crate::api_v1::db::db!()).await;
     Ok(())

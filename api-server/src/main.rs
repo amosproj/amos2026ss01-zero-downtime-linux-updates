@@ -38,6 +38,7 @@ async fn main() {
     }
 
     env_logger::builder().filter_level(log_level).init();
+    log::info!("Starting server...");
 
     let config = get_config(cli.config).unwrap_or_else(|err| {
         log::error!("Failed to load config: {:?}", err);

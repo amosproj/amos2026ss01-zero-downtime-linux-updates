@@ -31,7 +31,7 @@ pub async fn run_os_main_loop(
         )
         .await
         {
-            tracing::warn!("{:?}", e.context("OS update cycle failed"));
+            tracing::error!("{:?}", e.context("OS update cycle failed"));
         }
     }
 }
