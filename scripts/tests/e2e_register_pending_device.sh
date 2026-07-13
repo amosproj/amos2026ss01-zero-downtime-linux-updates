@@ -8,14 +8,14 @@ source ./tests/common_env.sh
 
 echo "=== Setting up Edge IPC for automatic onboarding ==="
 
-device_ensorsement_key=$(limactl shell "${VM_NAME}" -- \
+device_endorsement_key=$(limactl shell "${VM_NAME}" -- \
   sudo tpm2_readpublic -c 0x81010001 -f pem -o /dev/stdout | openssl rsa -pubin 2>/dev/null | sed -z 's/\n/\\n/g'
 )
 
 payload=$(cat <<EOF
 {
   "serial_number": "${DEVICE_SERIAL}",
-  "endorsement_public_key": "${device_ensorsement_key}"
+  "endorsement_public_key": "${device_endorsement_key}"
 }
 EOF
 )
