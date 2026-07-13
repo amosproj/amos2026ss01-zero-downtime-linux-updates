@@ -319,8 +319,8 @@ register_edge() { # uses the EDGE_* vars set by resolve_edge
     log "$LIMA_VM: restarting orchestrator and waiting for self-registration"
     host_ssh "limactl shell '$LIMA_VM' -- sudo systemctl restart orchestrator.service"
     local waited=0
-    while ! host_ssh "limactl shell '$LIMA_VM' -- journalctl -u orchestrator.service --since=-5min | grep -q 'Successfully self-registered device'"; do
-        [ "$waited" -lt "$REGISTER_TIMEOUT" ] || die "$LIMA_VM did not self-register within ${REGISTER_TIMEOUT}s (check on $HOST_VM: limactl shell $LIMA_VM -- journalctl -u orchestrator.service)"
+    while ! host_ssh "limactl shell '$LIMA_VM' -- sudo journalctl -u orchestrator.service --since=-5min | grep -q 'Successfully self-registered device'"; do
+        [ "$waited" -lt "$REGISTER_TIMEOUT" ] || die "$LIMA_VM did not self-register within ${REGISTER_TIMEOUT}s (check on $HOST_VM: limactl shell $LIMA_VM -- sudo journalctl -u orchestrator.service)"
         printf '    waiting for %s to self-register...\n' "$LIMA_VM"
         sleep 5; waited=$((waited + 5))
     done
