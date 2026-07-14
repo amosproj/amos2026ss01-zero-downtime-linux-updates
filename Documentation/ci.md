@@ -93,8 +93,7 @@ gh auth login
 ### Listing & dispatching
 
 Only workflows that declare a `workflow_dispatch:` trigger can be run manually.
-In this repo that's **four**: `container-orchestrator.yml`, `disk-image.yml`,
-`iso-image.yml`, and `docs.yml`.
+In this repo that's **seven**: `applications.yml`, `container-orchestrator.yml`, `disk-image.yml`, `docs.yml`, `iso-image.yml`, `docker.yaml`, `release.yaml`
 
 ```bash
 gh workflow list                              # all workflows

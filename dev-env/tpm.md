@@ -1,4 +1,22 @@
-# tpm2-tools reference for TPM debugging
+## General TPM Lifecycle Flow
+
+The TPM acts as the cryptographic root of trust for device onboarding and ongoing runtime API authentication. The architecture follows a four-stage lifecycle:
+
+### 1. Hardware Provisioning (Endorsement Key)
+Every target device (or emulated vTPM) is initialized with a unique, permanent **Endorsement Key (EK)** factory-burned or generated into the TPM ecosystem. This key resides securely inside the TPM and its public portion is accessible via the persistent handle `0x81010001`.
+
+### 2. Administrative Pre-Authorization
+Before a physical device is allowed to connect to the cloud, an administrator or onboarding script extracts the device's unique Serial Number and its TPM Endorsement Public Key. This identity pairing is submitted to the backend via the administrative `POST /v1/pending-device-registrations` endpoint, placing the device into a "trusted pending" state.
+
+### 3. Device Self-Registration
+Upon its first boot, the edge device orchestrator generates a new, localized **Operational Signing Key Pair** inside its own TPM. The device then hits the public `/register` endpoint, presenting its hardware identity (EK) along with its new Operational Public Key. The server verifies the EK against the pending registrations database and saves the device's Operational Public Key.
+
+### 4. Runtime JWT Authentication
+For all subsequent operational API interactions (e.g., polling for updates, streaming logs):
+* **Device-Side:** The orchestrator generates a JWT containing a `"role": "device"` claim and requests the local TPM to sign the token using its internal Operational Signing Key.
+* **Server-Side:** The backend auth middleware intercepts the request, detects the device role, retrieves the matching public key from the database, and cryptographically verifies the signature via RS256.
+
+## tpm2-tools reference for TPM debugging
 
 For debugging the vTPM inside the edge ipc VM (or the real hardware), here are some commands for working with the TPM.
 

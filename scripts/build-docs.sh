@@ -69,6 +69,9 @@ echo ">>> Adding SwaggerUI"
 cp "$SCRIPT_DIR/swagger-ui.html" "$OUT_DIR/swagger-ui.html"
 cp api/device/openapi.yaml "$OUT_DIR/device_api.yaml"
 
+cp "$SCRIPT_DIR/swagger-ui-user.html" "$OUT_DIR/swagger-ui-user.html"
+cp Documentation/DeviceApi/openapi_user.yaml "$OUT_DIR/openapi_user.yaml"
+
 # cargo leaves a lock file in the output dir; it must not ship in the artifact.
 rm -f "$OUT_DIR/.lock"
 

@@ -1,0 +1,945 @@
+openapi: 3.1.0
+info:
+  title: AMOS Zero Downtime Linux Update - User-facing API
+  description: |-
+    This is the administrative, user-facing part of the API.
+    It provides endpoints for operators to manage applications, 
+    deployments, auditing, logs, and device configurations.
+  version: 1.0.0
+externalDocs:
+  description: The code is in our GitHub repository
+  url: https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates
+tags:
+  - name: applications
+    description: Manage base applications
+  - name: app-configs
+    description: Manage configurations and images for applications
+  - name: app-assignments
+    description: Assign applications to specific devices or groups
+  - name: auditing
+    description: Access to system audit logs
+  - name: logs
+    description: Query and stream historic and real-time logs
+  - name: devices
+    description: Manage devices and view their summaries
+paths:
+  # --- Applications ---
+  /applications:
+    get:
+      tags: [applications]
+      summary: List all applications
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: name
+          schema: { type: string }
+          description: Filter by application name
+      responses:
+        "200":
+          description: A paginated list of applications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedApplications"
+    post:
+      tags: [applications]
+      summary: Create a new application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+      responses:
+        "201":
+          description: Application created successfully
+
+  /applications/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [applications]
+      summary: Get an application by ID
+      responses:
+        "200":
+          description: Application details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "404":
+          description: Application not found
+    put:
+      tags: [applications]
+      summary: Replace an application by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+      responses:
+        "200":
+          description: Application updated successfully
+    delete:
+      tags: [applications]
+      summary: Delete an application by ID
+      responses:
+        "204":
+          description: Application deleted
+
+  # --- Application Configs ---
+  /app-configs:
+    get:
+      tags: [app-configs]
+      summary: List application configurations
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: application_id
+          schema: { type: integer }
+        - in: query
+          name: device_id
+          schema: { type: integer }
+        - in: query
+          name: group_id
+          schema: { type: integer }
+        - in: query
+          name: device_uuid
+          schema: { type: string }
+          description: Resolves effective configs for a device, superseding group configs.
+      responses:
+        "200":
+          description: A paginated list of application configurations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAppConfigs"
+    post:
+      tags: [app-configs]
+      summary: Create a new application configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationConfigCreate"
+      responses:
+        "201":
+          description: Configuration created successfully
+
+  /app-configs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [app-configs]
+      summary: Get an application configuration by ID
+      responses:
+        "200":
+          description: Application configuration details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationConfig"
+        "404":
+          description: Configuration not found
+    put:
+      tags: [app-configs]
+      summary: Replace an application configuration by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationConfigCreate"
+      responses:
+        "200":
+          description: Configuration updated successfully
+    delete:
+      tags: [app-configs]
+      summary: Delete an application configuration by ID
+      responses:
+        "204":
+          description: Configuration deleted
+
+  # --- Application Assignments ---
+  /app-assignments:
+    get:
+      tags: [app-assignments]
+      summary: List all application assignments
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: application_config_id
+          schema: { type: integer }
+        - in: query
+          name: device_id
+          schema: { type: integer }
+        - in: query
+          name: group_id
+          schema: { type: integer }
+        - in: query
+          name: device_uuid
+          schema: { type: string }
+      responses:
+        "200":
+          description: A paginated list of application assignments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAppAssignments"
+    post:
+      tags: [app-assignments]
+      summary: Create an application assignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationAssignmentCreate"
+      responses:
+        "201":
+          description: Assignment created successfully
+
+  /app-assignments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [app-assignments]
+      summary: Get an application assignment by ID
+      responses:
+        "200":
+          description: Application assignment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAssignment"
+    put:
+      tags: [app-assignments]
+      summary: Replace an application assignment by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationAssignmentCreate"
+      responses:
+        "200":
+          description: Assignment updated
+    delete:
+      tags: [app-assignments]
+      summary: Delete an application assignment by ID
+      responses:
+        "204":
+          description: Assignment deleted
+
+  # --- Devices ---
+  /devices:
+    get:
+      tags: [devices]
+      summary: List all registered devices
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: group_id
+          schema: { type: integer }
+        - in: query
+          name: tenant_id
+          schema: { type: integer }
+        - in: query
+          name: uuid
+          schema: { type: string }
+        - in: query
+          name: serial_number
+          schema: { type: string }
+      responses:
+        '200':
+          description: A paginated list of devices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDevices'
+    post:
+      tags: [devices]
+      summary: Manually create a device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCreate'
+      responses:
+        '201':
+          description: Device created successfully
+
+  /devices/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [devices]
+      summary: Get a device by ID
+      responses:
+        '200':
+          description: Device details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+    put:
+      tags: [devices]
+      summary: Replace a device by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCreate'
+      responses:
+        '200':
+          description: Device updated
+    patch:
+      tags: [devices]
+      summary: Update a device by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCreate'
+      responses:
+        '200':
+          description: Device patched
+    delete:
+      tags: [devices]
+      summary: Delete a device by ID
+      responses:
+        '204':
+          description: Device deleted
+
+  /devices/summary:
+    get:
+      tags: [devices]
+      summary: List device summaries (reported state)
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: A paginated list of device summaries
+          
+  /devices/{id}/summary:
+    get:
+      tags: [devices]
+      summary: Get a single device summary (reported state)
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Device summary details
+
+  # --- Tenants ---
+  /tenants:
+    get:
+      tags: [tenants]
+      summary: List all tenants
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: name
+          schema: { type: string }
+      responses:
+        '200':
+          description: A paginated list of tenants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTenants'
+                
+  # --- Groups ---
+  /groups:
+    get:
+      tags: [groups]
+      summary: List all groups
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: name
+          schema: { type: string }
+      responses:
+        '200':
+          description: A paginated list of groups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGroups'
+    post:
+      tags: [groups]
+      summary: Create a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupCreate'
+      responses:
+        '201':
+          description: Group created
+
+  /groups/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [groups]
+      summary: Get a group by ID
+      responses:
+        '200':
+          description: Group details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+    put:
+      tags: [groups]
+      summary: Replace a group by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupCreate'
+      responses:
+        '200':
+          description: Group updated
+    delete:
+      tags: [groups]
+      summary: Delete a group by ID
+      responses:
+        '204':
+          description: Group deleted
+
+  # --- Auditing ---
+  /audit-logs:
+    get:
+      tags: [auditing]
+      summary: Retrieve system audit logs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: table_name
+          schema: { type: string }
+        - in: query
+          name: record_id
+          schema: { type: string }
+        - in: query
+          name: changed_by
+          schema: { type: integer }
+        - in: query
+          name: operation
+          schema: { type: string }
+      responses:
+        "200":
+          description: A paginated list of audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAuditLogs"
+
+  /audit-logs/{table_name}/{record_id}:
+    get:
+      tags: [auditing]
+      summary: Full audit history for a specific record
+      parameters:
+        - in: path
+          name: table_name
+          required: true
+          schema: { type: string }
+        - in: path
+          name: record_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of audit log entries for the record
+
+  /audit-logs/by-device/{id}:
+    get:
+      tags: [auditing]
+      summary: Audit history for a device, including assignment changes
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        "200":
+          description: A paginated list of audit logs for the device
+
+  # --- Logs ---
+  /logs/devices:
+    get:
+      tags: [logs]
+      summary: Query historic device logs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: device_id
+          schema: { type: integer }
+        - in: query
+          name: level
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated device logs
+
+  /logs/applications:
+    get:
+      tags: [logs]
+      summary: Query historic application logs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: device_id
+          schema: { type: integer }
+        - in: query
+          name: application_id
+          schema: { type: integer }
+        - in: query
+          name: level
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated application logs
+
+  /logs/stream:
+    get:
+      tags: [logs]
+      summary: SSE stream of incoming logs
+      parameters:
+        - in: query
+          name: device_id
+          schema: { type: integer }
+        - in: query
+          name: application_id
+          schema: { type: integer }
+        - in: query
+          name: level
+          schema: { type: string }
+        - in: query
+          name: kind
+          schema: { type: string }
+      responses:
+        "200":
+          description: Server-Sent Events stream
+
+  # --- OS Management ---
+  /os-versions:
+    get:
+      tags: [os-versions]
+      summary: List OS Versions
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Paginated OS versions
+    post:
+      tags: [os-versions]
+      summary: Register a new OS release
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OsVersionCreate'
+      responses:
+        '201':
+          description: OS Version created
+
+  /os-assignments:
+    get:
+      tags: [os-assignments]
+      summary: List OS Assignments
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - in: query
+          name: device_uuid
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated OS assignments
+    post:
+      tags: [os-assignments]
+      summary: Assign an OS to a device or group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OsAssignmentCreate'
+      responses:
+        '201':
+          description: Assignment created
+
+  # --- Reported Assignments ---
+  /reported-os-assignments:
+    get:
+      tags: [devices]
+      summary: List reported OS assignments from devices
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Paginated reported OS assignments
+          
+  /reported-app-assignments:
+    get:
+      tags: [devices]
+      summary: List reported Application assignments from devices
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Paginated reported app assignments
+
+  # --- Registration ---
+  /pending-registrations:
+    post:
+      tags: [devices]
+      summary: Pre-authorize a new device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PendingDeviceRegistrationCreate'
+      responses:
+        '201':
+          description: Pre-authorization created
+
+components:
+  parameters:
+    PageParam:
+      in: query
+      name: page
+      schema:
+        type: integer
+        default: 1
+      description: The page number to retrieve
+    PageSizeParam:
+      in: query
+      name: page_size
+      schema:
+        type: integer
+        default: 20
+      description: Number of items per page
+    IdParam:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+      description: The ID of the resource
+      
+  schemas:
+    # --- Pagination Envelopes ---
+    PaginatedApplications:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Application"
+        page: { type: integer }
+        page_size: { type: integer }
+        total_items: { type: integer }
+        total_pages: { type: integer }
+        
+    PaginatedAppConfigs:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationConfig"
+        page: { type: integer }
+        page_size: { type: integer }
+        total_items: { type: integer }
+        total_pages: { type: integer }
+
+    PaginatedAppAssignments:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationAssignment"
+        page: { type: integer }
+        page_size: { type: integer }
+        total_items: { type: integer }
+        total_pages: { type: integer }
+        
+    PaginatedDevices:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Device"
+        page: { type: integer }
+        page_size: { type: integer }
+        total_items: { type: integer }
+        total_pages: { type: integer }
+        
+    PaginatedTenants:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tenant"
+        page: { type: integer }
+        page_size: { type: integer }
+        total_items: { type: integer }
+        total_pages: { type: integer }
+        
+    PaginatedGroups:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Group"
+        page: { type: integer }
+        page_size: { type: integer }
+        total_items: { type: integer }
+        total_pages: { type: integer }
+        
+    PaginatedAuditLogs:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        page: { type: integer }
+        page_size: { type: integer }
+        total_items: { type: integer }
+        total_pages: { type: integer }
+
+    # --- Core Entities ---
+    Tenant:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+
+    TenantCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+
+    Group:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+
+    GroupCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+
+    Device:
+      type: object
+      required: [id, uuid, serial_number, tenant_id]
+      properties:
+        id: { type: integer }
+        uuid: { type: string }
+        serial_number: { type: string }
+        public_key: { type: string, nullable: true }
+        tenant_id: { type: integer }
+        group_id: { type: integer, nullable: true }
+
+    DeviceCreate:
+      type: object
+      required: [uuid, serial_number, tenant_id]
+      properties:
+        uuid: { type: string }
+        serial_number: { type: string }
+        public_key: { type: string, nullable: true }
+        tenant_id: { type: integer }
+        group_id: { type: integer, nullable: true }
+
+    PendingDeviceRegistration:
+      type: object
+      required: [id, serial_number, endorsement_public_key]
+      properties:
+        id: { type: integer }
+        serial_number: { type: string }
+        endorsement_public_key: { type: string }
+
+    PendingDeviceRegistrationCreate:
+      type: object
+      required: [serial_number, endorsement_public_key]
+      properties:
+        serial_number: { type: string }
+        endorsement_public_key: { type: string }
+
+    OsVersion:
+      type: object
+      required: [id, commit_hash, orchestrator_version]
+      properties:
+        id: { type: integer }
+        commit_hash: { type: string }
+        orchestrator_version: { type: string }
+        description: { type: string, nullable: true }
+        deleted_at: { type: string, format: date-time, nullable: true }
+        superseded_by: { type: integer, nullable: true }
+
+    OsVersionCreate:
+      type: object
+      required: [commit_hash, orchestrator_version]
+      properties:
+        commit_hash: { type: string }
+        orchestrator_version: { type: string }
+        description: { type: string, nullable: true }
+
+    OsAssignment:
+      type: object
+      required: [id, os_version_id, immediate]
+      properties:
+        id: { type: integer }
+        os_version_id: { type: integer }
+        device_id: { type: integer, nullable: true }
+        group_id: { type: integer, nullable: true }
+        immediate: { type: boolean }
+        deleted_at: { type: string, format: date-time, nullable: true }
+        superseded_by: { type: integer, nullable: true }
+
+    OsAssignmentCreate:
+      type: object
+      required: [os_version_id]
+      properties:
+        os_version_id: { type: integer }
+        device_id: { type: integer, nullable: true }
+        group_id: { type: integer, nullable: true }
+        immediate: { type: boolean, nullable: true }
+
+    ReportedOsAssignment:
+      type: object
+      required: [id, os_version_id, device_id, updated_at]
+      properties:
+        id: { type: integer }
+        os_version_id: { type: integer }
+        device_id: { type: integer }
+        updated_at: { type: string, format: date-time }
+
+    ReportedApplicationAssignment:
+      type: object
+      required: [id, application_config_id, device_id, updated_at]
+      properties:
+        id: { type: integer }
+        application_config_id: { type: integer }
+        device_id: { type: integer }
+        updated_at: { type: string, format: date-time }
+
+    ContainerConfigV1:
+      description: As found in amos_common::entities::container_config
+      type: object
+      properties:
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+
+    Application:
+      type: object
+      required: [id, name, description]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+
+    ApplicationCreate:
+      type: object
+      required: [name, description]
+      properties:
+        name: { type: string }
+        description: { type: string }
+
+    ApplicationConfig:
+      type: object
+      required: [id, application_id, image, version, config_version]
+      properties:
+        id: { type: integer }
+        device_id: { type: integer, nullable: true }
+        group_id: { type: integer, nullable: true }
+        application_id: { type: integer }
+        image: { type: string }
+        version: { type: integer }
+        config_version: { type: integer }
+        config:
+          $ref: "#/components/schemas/ContainerConfigV1"
+        deleted_at: { type: string, format: date-time, nullable: true }
+        superseded_by: { type: integer, nullable: true }
+
+    ApplicationConfigCreate:
+      type: object
+      required: [application_id, image]
+      properties:
+        device_id: { type: integer, nullable: true }
+        group_id: { type: integer, nullable: true }
+        application_id: { type: integer }
+        image: { type: string }
+        config:
+          $ref: "#/components/schemas/ContainerConfigV1"
+        version: { type: integer }
+
+    ApplicationAssignment:
+      type: object
+      required: [id, application_config_id]
+      properties:
+        id: { type: integer }
+        application_config_id: { type: integer }
+        device_id: { type: integer, nullable: true }
+        group_id: { type: integer, nullable: true }
+        deleted_at: { type: string, format: date-time, nullable: true }
+        superseded_by: { type: integer, nullable: true }
+
+    ApplicationAssignmentCreate:
+      type: object
+      required: [application_config_id]
+      properties:
+        application_config_id: { type: integer }
+        device_id: { type: integer, nullable: true }
+        group_id: { type: integer, nullable: true }
+
+    AuditLog:
+      type: object
+      required: [id, table_name, record_id, operation, changed_by, changed_at]
+      properties:
+        id: { type: integer }
+        table_name: { type: string }
+        record_id: { type: string }
+        operation: { type: string }
+        old_data: { type: object, nullable: true }
+        new_data: { type: object, nullable: true }
+        changed_by: { type: integer }
+        changed_at: { type: string, format: date-time }

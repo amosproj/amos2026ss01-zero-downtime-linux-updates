@@ -24,13 +24,12 @@ This document explains how to install, configure, and operate the **Orchestrator
 
 ## Overview
 
-The **Orchestrator** is a background agent that runs on each Edge IPC. It periodically compares the desired state of the OS and application containers against the host's current state and is designed to trigger updates when they differ.
-
-> **Current status:** The update loops and reconciliation logic are in place, but the actual `bootc`/`rpm-ostree` OS update commands and Podman container management calls are **placeholder stubs** — they log output but do not yet perform real updates.
+The **Orchestrator** is a background daemon running on Edge IPC nodes. It coordinates real-time state enforcement for operating system images and application workloads using native `bootc` and `podman` abstractions.
 
 ```
-Orchestrator  ──►  OS Update Loop   (compares OS state, calls placeholder update)
-              ──►  App Update Loop  (reconciles container state, calls placeholder fns)
+Orchestrator  ──►  OS Update Loop   (Monitors OS image targets, manages deferred reboots)
+              ──►  App Update Loop  (Calculates and drives real container mutations)
+              ──►  Aliveness Loop   (Maintains continuous device heartbeats)
 ```
 
 ---
@@ -39,9 +38,9 @@ Orchestrator  ──►  OS Update Loop   (compares OS state, calls placeholder 
 
 | Requirement | Notes |
 |-------------|-------|
-| Linux | Any distro; rpm-ostree/bootc compatible OS recommended for future update support |
-| `bootc` | Optional — used for inventory collection (`bootc status`); update commands not yet wired |
-| `podman` | Optional — used for inventory collection (`podman ps`); container management not yet wired |
+| Linux | rpm-ostree/bootc compatible OS recommended for future update support |
+| `bootc` | Used for updates (`bootc switch`) |
+| `podman` | Used for container management |
 | Network access to Cloud API | HTTPS required (see Configuration) |
 | Rust toolchain | Only needed if building from source |
 
@@ -82,11 +81,17 @@ cp orchestrator/config.example.toml config.toml
 
 All config values can be overridden with environment variables prefixed `APP_`:
 
-| Environment variable | Config key | Description |
-|----------------------|------------|-------------|
-| `APP_CLOUD_URL` | `cloud_url` | Cloud API base URL |
-| `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | Poll frequency in seconds |
-| `https_proxy` | — | HTTPS proxy URL (reqwest default) |
+### Configuration Options
+
+| Environment Variable | Config Key | Default / Type | Description |
+|----------------------|------------|----------------|-------------|
+| `APP_CLOUD_URL` | `cloud_url` | String (Required) | Base URL for the cloud management endpoints |
+| `APP_PODMAN_PATH` | `podman_path` | String | Path locating the Podman socket connection interface |
+| `APP_POLL_INTERVAL_SECS` | `poll_interval_secs` | u64 | Target evaluation loop frequency |
+| `APP_LOG_FLUSH_INTERVAL_SECS` | `log_flush_interval_secs`| u64 | Delay between log database shipping cycles |
+| `APP_LOG_MAX_BATCH` | `log_max_batch` | usize | Maximum log items grouped in a single payload |
+| `APP_LOG_MAX_BUFFER` | `log_max_buffer` | usize | Maximum log items retained during network outages |
+| `APP_DEFERRED_SWITCH_TIMER_SECS`| `deferred_switch_timer_secs`| u64 | Grace time allowed before non-immediate OS updates trigger a reboot |
 
 > **Note:** `APP_CONFIG_FILE` is special — it selects *which* config file to load (see precedence above) rather than overriding a value. The `--config` flag takes precedence over it.
 
@@ -197,126 +202,7 @@ For application containers, use `podman` to switch back to the previous image ta
 
 ### API Reference
 
-All routes are served under `/v1`. Fields marked `*` are required. Pagination is available for all list routes with `?page=x&page_size=y`, defaulting to page 1 and page size 20.
+For a complete technical breakdown of the network communication protocols, data models, and active endpoints, please refer to the OpenAPI specification files:
 
-**Device Summaries** _(read-only)_
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/devices/summary` | List device summaries. Query options: `?group_id=<id>&tenant_id=<id>&uuid=<string>&hostname=<string>` |
-| `GET` | `/v1/devices/{id}/summary` | Get a single device summary |
-
-**Audit Logs** _(read-only)_
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/audit-logs` | List audit logs. Query options: `?table_name=<string>&record_id=<string>&changed_by=<int>&operation=<string>` |
-| `GET` | `/v1/audit-logs/{table_name}/{record_id}` | Get audit logs for a specific table and record id. |
-| `GET` | `/v1/audit-logs/by-device/{id}` | Get audit logs for a specific device. |
-
-**Tenants**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/tenants` | List tenants. Query options: `?name=<string>` |
-| `POST` | `/v1/tenants` | Create — body: `{ name*, description }` |
-| `GET` | `/v1/tenants/{id}` | Get by ID |
-| `PUT` | `/v1/tenants/{id}` | Replace by ID |
-| `DELETE` | `/v1/tenants/{id}` | Delete — 204 on success |
-
-**Groups**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/groups` | List groups. Query options: `?name=<string>` |
-| `POST` | `/v1/groups` | Create — body: `{ name* }` |
-| `GET` | `/v1/groups/{id}` | Get by ID |
-| `PUT` | `/v1/groups/{id}` | Replace by ID |
-| `DELETE` | `/v1/groups/{id}` | Delete — 204 on success |
-
-**Devices**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/devices` | List devices. Query options: `?group_id=<id>&tenant_id=<id>&uuid=<string>&hostname=<string>` |
-| `POST` | `/v1/devices` | Create — body: `{ uuid*, hostname*, tenant_id, group_id }` |
-| `GET` | `/v1/devices/{id}` | Get by ID |
-| `PUT` | `/v1/devices/{id}` | Replace by ID |
-| `DELETE` | `/v1/devices/{id}` | Delete — 204 on success |
-
-**Applications**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/applications` | List applications. Query options: `?name=<string>` |
-| `POST` | `/v1/applications` | Create — body: `{ name*, description }` |
-| `GET` | `/v1/applications/{id}` | Get by ID |
-| `PUT` | `/v1/applications/{id}` | Replace by ID |
-| `DELETE` | `/v1/applications/{id}` | Delete — 204 on success |
-
-**Application Configs**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/app-configs` | List configs. Query options: `?application_id=<id>` |
-| `POST` | `/v1/app-configs` | Create — body: `{ application_id, image*, config, comment }` |
-| `GET` | `/v1/app-configs/{id}` | Get by ID |
-| `PUT` | `/v1/app-configs/{id}` | Replace by ID |
-| `DELETE` | `/v1/app-configs/{id}` | Delete — 204 on success |
-
-**Application Assignments**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/app-assignments` | List. Query options: `?application_config_id=<id>&device_id=<id>&group_id=<id>` |
-| `POST` | `/v1/app-assignments` | Create — body: `{ application_config_id, device_id, group_id }` — `device_id` or `group_id` required |
-| `GET` | `/v1/app-assignments/{id}` | Get by ID |
-| `PUT` | `/v1/app-assignments/{id}` | Replace by ID |
-| `DELETE` | `/v1/app-assignments/{id}` | Delete — 204 on success |
-
-**Reported Application Assignments** _(device-originated — no POST/PUT)_
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/reported-app-assignments` | List. Query options: `?application_config_id=<id>&device_id=<id>` |
-| `GET` | `/v1/reported-app-assignments/{id}` | Get by ID |
-| `DELETE` | `/v1/reported-app-assignments/{id}` | Delete — 204 on success |
-
-**OS Versions**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/os-versions` | List OS versions. |
-| `POST` | `/v1/os-versions` | Create — body: `{ commit_hash*, orchestrator_version*, description }` |
-| `GET` | `/v1/os-versions/{id}` | Get by ID |
-| `PUT` | `/v1/os-versions/{id}` | Replace by ID |
-| `DELETE` | `/v1/os-versions/{id}` | Delete — 204 on success |
-
-**OS Assignments**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/os-assignments` | List. Query options: `?os_version_id=<id>&device_id=<id>&device_uuid=<string>&group_id=<id>` |
-| `POST` | `/v1/os-assignments` | Create — body: `{ os_version_id, device_id, group_id }` — `device_id` or `group_id` required |
-| `GET` | `/v1/os-assignments/{id}` | Get by ID |
-| `PUT` | `/v1/os-assignments/{id}` | Replace by ID |
-| `DELETE` | `/v1/os-assignments/{id}` | Delete — 204 on success |
-
-**Reported OS Assignments** _device originated — no PUT_
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/reported-os-assignments` | List. Query options: `?device_id=<id>&os_version_id=<id>` |
-| `POST` | `/v1/reported-os-assignments` | Create — body: `{ os_version_id*, device_id }` Device id can be replaced by Query option `?device_uuid=<string>` |
-| `GET` | `/v1/reported-os-assignments/{id}` | Get by ID |
-| `DELETE` | `/v1/reported-os-assignments/{id}` | Delete — 204 on success |
-
-### Error responses
-
-All errors return JSON: `{ "error": "<message>" }`
-
-| Status | Meaning |
-|--------|---------|
-| `404 Not Found` | No resource with that ID |
-| `422 Unprocessable Entity` | Validation failed (empty required field; missing `device_id`/`group_id`) |
-| `500 Internal Server Error` | Database error |
+* [Device User API Reference](./DeviceApi/openapi_user.yaml)
+* [Full Device API Specification](./DeviceApi/openapi.yaml)

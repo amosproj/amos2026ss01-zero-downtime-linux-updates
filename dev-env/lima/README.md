@@ -110,18 +110,7 @@ or just read them after the fact:
 ~/.lima/edge-ipc/serial.log
 ```
 
-> [!TIP]
-> for syntax highlighting of .log files use e.g. `bat` https://github.com/sharkdp/bat or a nvim plugin https://github.com/fei6409/log-highlight.nvim
-
-#### vm: cloud-init
-
-[//]: #TODO
-
-#### bootc
-
-```
-sudo bootc status
-```
+> Tip: for syntax highlighting of .log files use e.g. `bat` https://github.com/sharkdp/bat or a nvim plugin https://github.com/fei6409/log-highlight.nvim
 
 #### orchestrator.service
 use `journalctl`:
@@ -152,6 +141,31 @@ specifically:
 > `amos-orchestrator` by hand as your normal user fails to create `/var/lib/amos`
 > because only root may write under `/var/lib`. Use
 > `sudo systemctl start orchestrator.service` instead.
+
+## Environment & Configuration Variables Reference
+
+To successfully provision and run the local edge environment, configurations are split across host environment scripts, the Lima VM template, and the orchestrator configuration file.
+
+### 1. Host Identity Variables (`scripts/tests/common_env.sh`)
+Before launching the VM, sourcing `common_env.sh` initializes hardware parameters injected into the virtualized system management BIOS (SMBIOS):
+* **`DEVICE_UUID`**: A mock unique identifier assigned to the edge node.
+* **`DEVICE_SERIAL`**: A mock hardware serial string.
+
+These variables are leveraged by the QEMU boot parameters (`-smbios type=1...`) to assign deterministic identities to the VM. This identity allows the orchestrator to register its virtual TPM (vTPM) and authenticate successfully against the simulated cloud backend.
+
+### 2. Lima Core Variables (`edge-ipc.yaml`)
+These values govern the guest environment parameters set inside the VM container context:
+* **`cpus` / `memory` / `disk`**: Resource baselines (Default: 2 Cores, 4GiB RAM, 20GiB Storage) required to cleanly run the underlying bootc/Fedora IoT system layer.
+* **`LIMA_CIDATA_GUEST_INSTALL_PREFIX` (Default: `/var/usrlocal`)**: Directs guest components to look under writable disk segments for hot-swapping development binaries, mitigating the constraints of the immutable read-only `/usr` file system structure.
+* **`APP_CONFIG_FILE` (Default: `/etc/amos/config.toml`)**: Specifies the direct execution path used by the orchestrator systemd service unit.
+
+### 3. Orchestrator Application Config (`orchestrator-config.toml`)
+This configuration file maps the specific runtime logic of the `amos-orchestrator` binary and is automatically provisioned inside the guest space at `/etc/amos/config.toml`:
+
+| Key | Default Value | Purpose |
+| :--- | :--- | :--- |
+| `cloud_url` | `"http://host.lima.internal:8080/v1"` | The absolute API endpoint route. `host.lima.internal` resolves directly back to the host machine loopback loop. |
+| `poll_interval_secs` | `5` | Pacing threshold (in seconds) tracking how aggressively the device checks the cloud for new OS container or application manifest updates. |
 
 ## Iterating on the orchestrator (hot-swap)
 

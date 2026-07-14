@@ -1,5 +1,5 @@
 # Orchestrator Configuration
-# Copy this file to config.toml and adjust values for your environment.
+# Copy this file to config.toml in your working directory and adjust values.
 # All keys can also be set via environment variables prefixed APP_
 # (e.g. APP_CLOUD_URL). Environment variables take precedence over this file.
 # The path to this file can be chosen with the --config flag or, if that is
@@ -16,3 +16,39 @@ cloud_url = "https://your-cloud-api.example.com/v1"
 # Env: APP_POLL_INTERVAL_SECS
 # Default: 5
 poll_interval_secs = 60
+
+# Path to the Podman system socket.
+# Env: APP_PODMAN_PATH
+# Default: /run/podman/podman.sock
+podman_path = "/run/podman/podman.sock"
+
+# Optional HTTPS Proxy URL for routing cloud requests.
+# Env: APP_HTTPS_PROXY
+# Default: null
+# https_proxy = "http://proxy.example.com:8080"
+
+# --- Logging Configurations ---
+
+# How often buffered device logs are flushed to the cloud API, in seconds.
+# Env: APP_LOG_FLUSH_INTERVAL_SECS
+# Default: 60
+log_flush_interval_secs = 60
+
+# Maximum number of log lines sent in a single batch.
+# Env: APP_LOG_MAX_BATCH
+# Default: 256
+log_max_batch = 256
+
+# Maximum log entries kept in memory if the cloud API is unreachable.
+# Oldest entries are discarded when this threshold is exceeded.
+# Env: APP_LOG_MAX_BUFFER
+# Default: 10000
+log_max_buffer = 10000
+
+# --- OS Management ---
+
+# Countdown period (in seconds) for deferred (non-immediate) OS updates
+# before forcing an automatic system reboot.
+# Env: APP_DEFERRED_SWITCH_TIMER_SECS
+# Default: 43200 (12 hours)
+deferred_switch_timer_secs = 43200
