@@ -1,25 +1,8 @@
-# Design Documentation
+# Architecture and Design Documentation
 
-## Zero-Downtime Linux Updates — Software Architecture
+This document describes the architecture and design of the Zero-Downtime Linux Updates project. It provides an overview of the system's goals, architecture, components, and key data structures. It also explains the orchestrator's event loops for OS and application updates, as well as the configuration and inventory systems.
 
-This document describes the software architecture, component design, and internal data flows of the Zero-Downtime Linux Updates project.
-
----
-
-## Table of Contents
-
-1. [System Goals](#system-goals)
-2. [System Architecture](#system-architecture)
-3. [Component Diagram](#component-diagram)
-4. [Component Descriptions](#component-descriptions)
-5. [Orchestrator](#orchestrator)
-6. [Key Data Structures](#key-data-structures)
-7. [Agent Event Loop](#agent-event-loop)
-8. [OS Update Loop](#os-update-loop)
-9. [Application Update Loop](#application-update-loop)
-10. [API Contract](#api-contract)
-11. [Configuration System](#configuration-system)
-12. [Inventory System](#inventory-system)
+This document is intended for developers and maintainers of the project. It is not a user-facing guide, and it does not cover how to install or operate the system. For that, see [User Documentation](user_documentation.md).
 
 ---
 
