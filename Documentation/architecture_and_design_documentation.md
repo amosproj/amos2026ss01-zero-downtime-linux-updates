@@ -8,34 +8,77 @@ This document describes the software architecture, component design, and interna
 
 ## Table of Contents
 
-1. [System Overview](#system-overview)
-2. [Component Diagram](#component-diagram)
-3. [Component Descriptions](#component-descriptions)
-4. [Internal Module Structure — Orchestrator](#internal-module-structure--orchestrator)
-5. [Key Data Structures](#key-data-structures)
-6. [Agent Event Loop](#agent-event-loop)
-7. [OS Update Loop](#os-update-loop)
-8. [Application Update Loop](#application-update-loop)
-9. [API Contract](#api-contract)
-10. [Configuration System](#configuration-system)
-11. [Inventory System](#inventory-system)
+1. [System Goals](#system-goals)
+2. [System Architecture](#system-architecture)
+3. [Component Diagram](#component-diagram)
+4. [Component Descriptions](#component-descriptions)
+5. [Orchestrator](#orchestrator)
+6. [Key Data Structures](#key-data-structures)
+7. [Agent Event Loop](#agent-event-loop)
+8. [OS Update Loop](#os-update-loop)
+9. [Application Update Loop](#application-update-loop)
+10. [API Contract](#api-contract)
+11. [Configuration System](#configuration-system)
+12. [Inventory System](#inventory-system)
 
 ---
 
-## System Overview
+## System Goals
 
-The system enables **zero-downtime OS and application updates** for Edge IPC devices. Each device runs an **Orchestrator** agent that:
+- A user operates the cloud via API/UI.
+- The cloud persists current state of all Edge IPCs in PostgreSQL.
+- The edge IPCs each run an `Orchestrator`.
+- The `Orchestrator` checks whether OS/apps are up to date and triggers updates accordingly.
+- Update artifacts are pulled from a product source (GHCR).
 
-1. Reads configuration on startup.
-2. Runs two concurrent polling loops — one for OS state, one for application container state.
-3. Compares current host state against a target state and triggers updates when they differ.
-4. Writes the device inventory to a local JSON file.
+## System Architecture
 
----
+```mermaid
+flowchart LR
+    %% Actors
+    User[User]
 
-## Component Diagram
+    %% Cloud side
+    subgraph Cloud[Cloud]
+        API[Cloud API - User-facing]
+        DMAPI[Cloud API - Device Endpoints]
+        DB[(PostgreSQL)]
+        API <--> DB
+        DMAPI <--> DB
+    end
 
-see [architecture.md](architecture.md)
+    %% Edge side
+    subgraph Edge["Edge IPCs (1..n)"]
+        subgraph Orchestrator[Orchestrator Threads]
+            OSLoop[OS Update Loop]
+            AppLoop[App Reconcile Loop]
+            PingLoop[Aliveness Ping Loop]
+        end
+        BOOTC[bootc engine]
+        PODMAN[Podman engine]
+
+        OSLoop -->|Invokes switches/reboots| BOOTC
+        AppLoop -->|Manages container lifecycles| PODMAN
+    end
+
+    %% External source
+    Product["GitHub (GHCR)"]
+
+    %% Interactions
+    User -->|Management/API calls| API
+    DMAPI <-->|API Polling & Reporting| Orchestrator
+    BOOTC -->|Download & stage OS image| Product
+    PODMAN -->|Pull container image| Product
+
+    classDef cloud fill:#1f3b64,color:#fff,stroke:#0f2038,stroke-width:1px;
+    classDef edge fill:#1f5f3a,color:#fff,stroke:#0f3320,stroke-width:1px;
+    classDef ext fill:#5b2b6f,color:#fff,stroke:#361944,stroke-width:1px;
+
+    class API,DMAPI,DB cloud;
+    class Orchestrator,OSLoop,AppLoop,PingLoop,BOOTC,PODMAN edge;
+    class Product ext;
+    style Cloud fill:#eef9ff,stroke:#4aa3df,stroke-width:2px,color:#0b3557
+```
 
 ---
 
@@ -74,7 +117,9 @@ A lightweight Axum-based HTTP server used during development and testing to simu
 
 ---
 
-## Internal Module Structure — Orchestrator
+## Orchestrator
+
+### Internal Module Structure
 
 ```
 orchestrator/src/
@@ -89,6 +134,57 @@ orchestrator/src/
 ├── podman/           — Podman connection wrapper and log registry pipelines
 └── util/             — low-level executer, hardware identity, and TPM 2.0 handlers
 ```
+
+### Subsystem Deep Dive
+
+#### Application Log Aggregation & Backpressure
+
+The Orchestrator centralizes container log collection via an asynchronous multiplexing registry task.
+
+- **Timestamp Extraction:** Containers are tailed with runtime-enforced timestamps. The ingestion pipeline strips the RFC3339-nano prefix applied by the container engine to preserve the exact execution time, falling back to local time only if the log line lacks a valid prefix.
+- **Flushing and Batching:** To minimize network overhead, logs are grouped into batches (`log_max_batch`) and pushed periodically (`log_flush_interval_secs`).
+- **Memory Protection (Backpressure):** If connection to the Cloud API fails, logs are buffered in memory up to a hard cap (`log_max_buffer`). When the buffer fills completely, backpressure is enforced by evicting the oldest log lines first, preventing edge device out-of-memory (OOM) faults.
+
+#### Subprocess Execution & Lifecycle Exit Codes
+
+Operating system updates (`bootc`) and system-level actions are safely wrapped inside an isolated command execution layer.
+
+- **Stream Deadlocks:** The executer drains `stdout` and `stderr` streams concurrently using asynchronous line loops. This ensures that fast-exiting processes do not leave unread data in system buffers, avoiding truncated logs.
+- **Reboot Imminence (Exit Code 137):** Processes terminated without a clean status return or killed by system signals return exit code `137`. During OS upgrade and rollback phases, code `137` is explicitly intercepted and handled as a successful transaction, indicating that the system engine is dropping execution to perform an immediate hardware reboot.
+
+#### Hardware Identity & TPM 2.0 Security
+
+The system binds device identity and authorization tokens directly to physical (or emulated) hardware primitives.
+
+##### Hardware Identity Paths
+
+The Orchestrator validates identity via DMI/SMBIOS tables using the following files:
+
+- Primary Unique Identifier: `/sys/class/dmi/id/product_uuid`
+- Fallback Identifier: `/sys/class/dmi/id/board_serial` (utilized to accommodate specific university reference hardware constraints).
+
+> Note: String validation rules automatically reject generic OEM placeholders such as "Not Specified" or "To Be Filled By O.E.M.".
+
+#### Cryptographic Architecture & Handle Allocation
+
+Device security relies on a TPM 2.0 interface communicating over `/dev/tpmrm0`. Cryptographic operations adhere to the following layout:
+
+| Asset / Operation | Primitive Details | TPM Handle / Path Constraint |
+| --- | --- | --- |
+| **Endorsement Key (EK)** | RSA Public Key extraction | `0x8101_0001` (Read directly via reference convention) |
+| **Device Signing Key** | 2048-bit RSA (Owner hierarchy) | `0x8100_A038` (Created and persisted if missing) |
+| **Data Signing Scheme** | RSASSA-PKCS1-v1_5 + SHA256 | Handled in an isolated Null-Auth session |
+
+#### Proactive JWT Management
+
+Cloud API interactions require a Device JWT signed by the TPM. To maintain an uninterrupted connection state, the system employs a proactive refresh window: token validity is re-evaluated during every cycle, and a new signed JWT is requested exactly `30 seconds` prior to token expiration (`REFRESH_BEFORE`), preventing request drops caused by clock drift.
+
+#### Cross-Loop Interlocking (OS Upgrade Freeze)
+
+To prevent container mutations or log shipping corruption while the host system undergoes structural upgrades, the Orchestrator employs a thread-safe synchronization state (`os_upgrade_in_progress: Arc<AtomicBool>`).
+
+- **Behavior:** Whenever an OS update is being actively applied (either immediately or following the expiration of a deferred timer), this atomic flag is flipped to `true`.
+- **Impact:** The application reconciliation loop instantly freezes its execution cycle, printing a diagnostic freeze message and bypassing any container creation, modification, or teardown tasks until the system initiates its hardware reboot.
 
 ---
 
@@ -164,6 +260,14 @@ pub struct ApiClient {
 ---
 
 ## Agent Event Loop
+
+1. `Orchestrator` polls `Cloud API`.
+2. Cloud returns desired state for OS and applications.
+3. If update is needed:
+   - OS path via `bootc`
+   - App path via `Podman`
+4. `Orchestrator` reports update result/status to cloud.
+5. Cloud stores state in PostgreSQL.
 
 ```mermaid
 flowchart TD
