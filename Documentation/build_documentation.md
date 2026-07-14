@@ -284,6 +284,8 @@ The project uses GitHub Actions. Workflows are defined under `.github/workflows/
 
 Changelogs are auto-generated from conventional commits using [`git-cliff`](https://github.com/orhun/git-cliff) (configured in `cliff.toml`).
 
+Also, see [CI Pipeline](./ci.md)
+
 ## Environment Variables Reference
 
 > See [User Documentation — Configuration](user_documentation.md#configuration) for the full environment variable reference.
