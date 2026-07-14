@@ -57,6 +57,26 @@ fi
 echo ">>> Building mdBook project documentation -> target/doc/docs"
 mdbook build Documentation --dest-dir "$OUT_DIR/docs"
 
+# Some chapters are thin {{#include}} wrappers around READMEs that live next to
+# the code they document (outside the book's src). mdBook's global edit-url
+# points the "Suggest an edit" button at the wrapper stub; repoint it at the
+# real source file so the button lands on editable content. Keep this map in
+# sync with the {{#include}} wrapper pages under Documentation/.
+echo ">>> Repointing edit links for included pages -> real source files"
+while IFS='|' read -r stub real; do
+    [ -n "$stub" ] || continue
+    grep -rl --include='*.html' -F "edit/main/Documentation/$stub\"" "$OUT_DIR/docs" |
+        while IFS= read -r html; do
+            sed -i.bak "s#edit/main/Documentation/$stub\"#edit/main/$real\"#g" "$html"
+            rm -f "$html.bak"
+        done
+done <<'EDIT_MAP'
+./scripts.md|scripts/README.md
+./dev-env/tpm.md|dev-env/tpm.md
+./dev-env/lima.md|dev-env/lima/README.md
+./bootc-build/iso.md|bootc-build/iso/README.md
+EDIT_MAP
+
 echo ">>> Adding landing page -> target/doc/index.html"
 cp "$SCRIPT_DIR/docs-landing.html" "$OUT_DIR/index.html"
 
