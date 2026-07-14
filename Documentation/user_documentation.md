@@ -186,16 +186,11 @@ sudo journalctl -u amos-orchestrator -f
 
 ## Rollback & Error Recovery
 
-> **Future release:** Automated rollback and error recovery are not yet implemented.
-
 If an update causes a problem you can manually trigger a rollback using the standard OS tooling:
 
 ```bash
 # OS rollback via bootc
 sudo bootc rollback
-
-# OS rollback via rpm-ostree
-sudo rpm-ostree rollback
 ```
 
 For application containers, use `podman` to switch back to the previous image tag manually. Automated rollback support will be added in a future sprint.
