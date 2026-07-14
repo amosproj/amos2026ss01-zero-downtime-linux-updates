@@ -166,8 +166,7 @@ impl OrchestratorLogger {
                 self.buffer.clear();
             }
             Err(err) => {
-                // TODO: Moved from warn to debug for demo
-                tracing::debug!(
+                tracing::warn!(
                     target: LOG_INTERNAL_TARGET,
                     error = %err,
                     buffered = self.buffer.len(),
@@ -178,8 +177,7 @@ impl OrchestratorLogger {
                 if self.buffer.len() > max_buffer {
                     let drop_count = self.buffer.len() - max_buffer;
                     self.buffer.drain(..drop_count);
-                    // TODO: Moved from warn to debug for demo
-                    tracing::debug!(
+                    tracing::warn!(
                         target: LOG_INTERNAL_TARGET,
                         dropped = drop_count,
                         "Dropped oldest device log entries due to buffer cap",
