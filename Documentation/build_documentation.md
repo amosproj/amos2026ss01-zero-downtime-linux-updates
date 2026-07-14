@@ -128,6 +128,12 @@ cargo build -p amos-api-server
 
 ---
 
+## ISO Building
+
+[ISO Build](../bootc-build/iso/README.md)
+
+---
+
 ## Running Tests
 
 ### Run all tests
@@ -143,6 +149,10 @@ cargo test -p amos-api-server
 cargo test -p amos-orchestrator
 cargo test -p amos-common
 ```
+
+### Integration testing
+
+To test the whole system in the sense of e2e integration tests, see the e2e scripts. Further description of the e2e tests can be found at [scripts_overview](../scripts/scripts_overview.md)
 
 ### Notable test coverage
 
@@ -223,37 +233,7 @@ Exit code 0 means the agent is correctly configured and inventory tooling is ava
 
 ## Deploying to an Edge Device
 
-### 1. Copy the release binary
-
-```bash
-cargo build --release
-scp target/release/amos-orchestrator user@edge-device:/usr/local/bin/
-ssh user@edge-device "chmod +x /usr/local/bin/amos-orchestrator"
-```
-
-### 2. Create the config file on the device
-
-```bash
-ssh user@edge-device "sudo mkdir -p /etc/amos"
-scp orchestrator/config.example.toml user@edge-device:/etc/amos/config.toml
-# Edit /etc/amos/config.toml on the device with the correct cloud_url
-```
-
-### 3. Install and enable the systemd service
-
-```bash
-scp bootc-build/orchestrator.service user@edge-device:/tmp/
-ssh user@edge-device "sudo cp /tmp/orchestrator.service /etc/systemd/system/ && \
-  sudo systemctl daemon-reload && \
-  sudo systemctl enable --now amos-orchestrator"
-```
-
-### 4. Verify
-
-```bash
-ssh user@edge-device "sudo systemctl status amos-orchestrator"
-ssh user@edge-device "sudo journalctl -u amos-orchestrator -n 50"
-```
+Process and commands are similar to that of local testing with lima: [dev-env/lima.md](dev-env/lima.md). A production update of orchestrator should be done via a OS version update / OS image with new orchestrator binary.
 
 ---
 
