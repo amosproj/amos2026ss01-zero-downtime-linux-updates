@@ -32,7 +32,7 @@ replace it.
 The systemd unit (`/etc/systemd/system/orchestrator.service`) ships in the
 image and points `ExecStart` at `/usr/libexec/amos-orchestrator`. In the dev
 VM, a systemd drop-in overrides this to a writable path — see
-[`dev-env/lima/README.md`](../dev-env/lima/README.md).
+[`dev-env/lima/README.md`](../dev-env/lima.md).
 
 ### 3. Building the ISO Locally
 

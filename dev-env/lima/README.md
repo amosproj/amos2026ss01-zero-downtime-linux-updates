@@ -11,8 +11,8 @@ agent run end to end, without any physical hardware
   checks the cloud for OS/app updates, applies them, and reports a device
   **inventory** back. On boot it writes the inventory to a JSON file and then
   polls the cloud API on an interval.
-- The VM image is defined in [`../../bootc-build/Containerfile`](../../bootc-build/Containerfile);
-  the VM itself is defined in [`edge-ipc.yaml`](./edge-ipc.yaml).
+- The VM image is defined in [`bootc-build/Containerfile`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/bootc-build/Containerfile);
+  the VM itself is defined in [`edge-ipc.yaml`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/dev-env/lima/edge-ipc.yaml).
 
 ## Prerequisites
 
@@ -26,26 +26,33 @@ agent run end to end, without any physical hardware
 
 0. *cd* into the project root
 1. Get a disk image into ./dist - pick ONE:
+
    ```bash
    make pull-image PULL_REF=main      # download the prebuilt image from CI (fast)
    make image                         # OR build it locally from source
    ```
+
    Notice: When using *PULL_REF* to target a certain branch, replace `/` with `-`
 2. Create the VM (boots the image from ./dist).
    You may need to delete a previous vm first: `limactl rm -f edge-ipc`.
+
    ```bash
    limactl create --name edge-ipc dev-env/lima/edge-ipc.yaml --vm-type qemu --arch x86_64 
    ```
+
    For the TPM to work, QEMU *must* be used!
 3. Start the software TPM
+
    ```bash
    scripts/create_tpm.sh
    swtpm socket --tpm2 --tpmstate dir=/tmp/emulated_tpm --ctrl type=unixio,path=/tmp/emulated_tpm/swtpm-sock --log level=20 -d
    ```
+
    (The swtpm is forked to the background and terminates, as soon the VM is shut down once it has attached to the socket)
 
    Using the command above, the TPM state is saved under */tmp/emulated_tpm*. Could be useful for testing, at least good to know.
 4. Source the device parameter variables and start the VM (with the vTPM attached)
+
    ```bash
    . scripts/tests/common_env.sh
    QEMU_SYSTEM_X86_64="qemu-system-x86_64 \
@@ -57,6 +64,7 @@ agent run end to end, without any physical hardware
        limactl start edge-ipc
    ./scripts/tests/e2e_register_pending_device.sh
    ```
+
    (append `--log-level debug` for more verbose output from limactl)
 
    The script for "registering" the device simulates the TPM endorsement key uploading, so after a short delay, the device can register itself.
@@ -64,17 +72,20 @@ agent run end to end, without any physical hardware
 ## Accessing the VM
 
 Get a (implicit ssh) shell into the VM
+
 ```bash
 limactl shell edge-ipc
 ```
 
-Copy files to/from VM with `limactl copy` https://lima-vm.io/docs/reference/limactl_copy/
+Copy files to/from VM with `limactl copy` <https://lima-vm.io/docs/reference/limactl_copy/>
+
 ```bash
 limactl copy target/debug/amos-orchestrator edge-ipc:/tmp/
 ```
 
 Alternatively:
 Get the ssh config for the VM and use that for explicit ssh access or scp'ing sth. to the VM:
+
 ```bash
 edge_ssh_config=`limactl ls --format='{{.SSHConfigFile}}' edge-ipc`
 
@@ -83,7 +94,8 @@ ssh -F "$edge_ssh_config" edge-ipc
 scp -F "$edge_ssh_config" target/debug/amos-orchestrator lima-edge-ipc:/tmp/
 ```
 
-Inside the VM, watch the orchestrator systemd service: 
+Inside the VM, watch the orchestrator systemd service:
+
 ```bash
 journalctl -fu orchestrator.service
 ```
@@ -99,20 +111,25 @@ Delete the VM (state lost): `limactl delete edge-ipc`
 ## Observing logs and status
 
 #### vm: qemu booting
+
 follow logs of VM booting:
+
 ```
 less -N +F ~/.lima/edge-ipc/serial.log
 # or in color:
 tail -f ~/.lima/edge-ipc/serial.log | bat --paging=never -l log
 ```
+
 or just read them after the fact:
+
 ```
 ~/.lima/edge-ipc/serial.log
 ```
 
-> Tip: for syntax highlighting of .log files use e.g. `bat` https://github.com/sharkdp/bat or a nvim plugin https://github.com/fei6409/log-highlight.nvim
+> Tip: for syntax highlighting of .log files use e.g. `bat` <https://github.com/sharkdp/bat> or a nvim plugin <https://github.com/fei6409/log-highlight.nvim>
 
 #### orchestrator.service
+
 use `journalctl`:
 
 ```bash
@@ -123,7 +140,7 @@ limactl shell edge-ipc -- journalctl -u orchestrator.service -n200  # last 200 l
 ## Key paths inside the VM
 
 This is a bootc/ostree system. See
-[`../../Documentation/architecture.md`](../../Documentation/architecture.md)
+[`ISO Build`](./bootc-build/iso.md)
 for the full explanation of `/usr` (read-only, image), `/etc` (writable,
 merged) and `/var` (writable, first-boot-populated only). In the dev VM
 specifically:
@@ -132,8 +149,8 @@ specifically:
 | -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `/usr/libexec/amos-orchestrator`                         | The orchestrator binary shipped in the image                              | Read-only; updated atomically with the OS                                                   |
 | `/var/usrlocal/bin/amos-orchestrator`                    | The binary the dev VM's service actually runs                             | Writable; populated by `make dev-deploy`. Falls back to a symlink to `/usr/libexec` on boot |
-| `/etc/systemd/system/orchestrator.service.d/10-dev.conf` | Drop-in that redirects `ExecStart` at the writable path above             | Written by [`edge-ipc.yaml`](./edge-ipc.yaml); dev-only — not present in prod images        |
-| `/etc/amos/config.toml`                                  | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](./edge-ipc.yaml)                     |
+| `/etc/systemd/system/orchestrator.service.d/10-dev.conf` | Drop-in that redirects `ExecStart` at the writable path above             | Written by [`edge-ipc.yaml`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/dev-env/lima/edge-ipc.yaml); dev-only — not present in prod images        |
+| `/etc/amos/config.toml`                                  | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/dev-env/lima/edge-ipc.yaml)                     |
 | `/var/lib/amos/inventory.json`                           | Device inventory the agent writes on startup                              | Standard place for app state; created by the service (runs as root)                         |
 | `/etc/systemd/system/orchestrator.service`               | The systemd service that runs the agent                                   | Enabled at image-build time; starts on boot                                                 |
 
@@ -147,19 +164,22 @@ specifically:
 To successfully provision and run the local edge environment, configurations are split across host environment scripts, the Lima VM template, and the orchestrator configuration file.
 
 ### 1. Host Identity Variables (`scripts/tests/common_env.sh`)
+
 Before launching the VM, sourcing `common_env.sh` initializes hardware parameters injected into the virtualized system management BIOS (SMBIOS):
-* **`DEVICE_UUID`**: A mock unique identifier assigned to the edge node.
-* **`DEVICE_SERIAL`**: A mock hardware serial string.
+- **`DEVICE_UUID`**: A mock unique identifier assigned to the edge node.
+- **`DEVICE_SERIAL`**: A mock hardware serial string.
 
 These variables are leveraged by the QEMU boot parameters (`-smbios type=1...`) to assign deterministic identities to the VM. This identity allows the orchestrator to register its virtual TPM (vTPM) and authenticate successfully against the simulated cloud backend.
 
 ### 2. Lima Core Variables (`edge-ipc.yaml`)
+
 These values govern the guest environment parameters set inside the VM container context:
-* **`cpus` / `memory` / `disk`**: Resource baselines (Default: 2 Cores, 4GiB RAM, 20GiB Storage) required to cleanly run the underlying bootc/Fedora IoT system layer.
-* **`LIMA_CIDATA_GUEST_INSTALL_PREFIX` (Default: `/var/usrlocal`)**: Directs guest components to look under writable disk segments for hot-swapping development binaries, mitigating the constraints of the immutable read-only `/usr` file system structure.
-* **`APP_CONFIG_FILE` (Default: `/etc/amos/config.toml`)**: Specifies the direct execution path used by the orchestrator systemd service unit.
+- **`cpus` / `memory` / `disk`**: Resource baselines (Default: 2 Cores, 4GiB RAM, 20GiB Storage) required to cleanly run the underlying bootc/Fedora IoT system layer.
+- **`LIMA_CIDATA_GUEST_INSTALL_PREFIX` (Default: `/var/usrlocal`)**: Directs guest components to look under writable disk segments for hot-swapping development binaries, mitigating the constraints of the immutable read-only `/usr` file system structure.
+- **`APP_CONFIG_FILE` (Default: `/etc/amos/config.toml`)**: Specifies the direct execution path used by the orchestrator systemd service unit.
 
 ### 3. Orchestrator Application Config (`orchestrator-config.toml`)
+
 This configuration file maps the specific runtime logic of the `amos-orchestrator` binary and is automatically provisioned inside the guest space at `/etc/amos/config.toml`:
 
 | Key | Default Value | Purpose |

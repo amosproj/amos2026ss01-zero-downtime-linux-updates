@@ -4,10 +4,11 @@
 
 # Project documentation
 
-- [Architecture](./architecture.md)
 - [Fundamentals: OS Images & bootc](./image-based-os.md)
-- [Design documentation](./design_documentation.md)
+- [Architecture and Design documentation](./architecture_and_design_documentation.md)
 - [Build documentation](./build_documentation.md)
+    - [ISO build & bare-metal provisioning](./bootc-build/iso.md)
+    - [Scripts & testing overview](./scripts.md)
 - [User documentation](./user_documentation.md)
 - [Log API (TimescaleDB)](./log_api.md)
 - [CI pipeline](./ci.md)

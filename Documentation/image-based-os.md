@@ -94,7 +94,7 @@ guarantee.
 
 On our edge IPCs the `amos-orchestrator` agent drives this loop: it polls the
 cloud for the desired OS version and invokes `bootc` to converge the device onto
-it. See the [Architecture](./architecture.md) for how that fits together.
+it. See the [Architecture and Design Document](./architecture_and_design_documentation.md) for how that fits together.
 
 > **Key takeaway:** an IPC is installed from a disk image **once**. From then on
 > the whole OS — upgrades, downgrades, and rollbacks — is just a container image

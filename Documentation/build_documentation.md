@@ -89,9 +89,9 @@ make setup
 - A **commit message template** (conventional commits format).
 - A **Git hook** that automatically appends the DCO sign-off line to commit messages.
 
-> **Note:** All commits must be signed off (`git commit -s`) per the project's [Developer Certificate of Origin](../DCO).
+> **Note:** All commits must be signed off (`git commit -s`) per the project's [Developer Certificate of Origin](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/DCO).
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for full contribution guidelines.
+See [CONTRIBUTING.md](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/CONTRIBUTING.md) for full contribution guidelines.
 
 ---
 
@@ -130,7 +130,7 @@ cargo build -p amos-api-server
 
 ## ISO Building
 
-[ISO Build](../bootc-build/iso/README.md)
+[ISO Build](./bootc-build/iso.md)
 
 ---
 
@@ -152,7 +152,7 @@ cargo test -p amos-common
 
 ### Integration testing
 
-To test the whole system in the sense of e2e integration tests, see the e2e scripts. Further description of the e2e tests can be found at [scripts_overview](../scripts/scripts_overview.md)
+To test the whole system in the sense of e2e integration tests, see the e2e scripts. Further description of the e2e tests can be found at [scripts](./scripts.md)
 
 ### Notable test coverage
 
@@ -233,11 +233,13 @@ Exit code 0 means the agent is correctly configured and inventory tooling is ava
 
 ## Deploying to an Edge Device
 
-Process and commands are similar to that of local testing with lima: [dev-env/lima.md](dev-env/lima.md). A production update of orchestrator should be done via a OS version update / OS image with new orchestrator binary.
+For local development and testing, run the edge device as a Lima VM and iterate on the orchestrator with `make dev-deploy`, which builds the binary and hot-swaps it into the running VM. See [dev-env/lima.md](dev-env/lima.md) for the full setup and hot-swap workflow.
+
+`make dev-deploy` is a development-only shortcut. A production update of the orchestrator should be delivered as an OS version update — a new OS image that bundles the updated orchestrator binary.
 
 ---
 
-## Container / rootc Build
+## Container / bootc Build
 
 The `bootc-build/` directory contains the files needed to embed the Orchestrator into an OS container image.
 
@@ -289,56 +291,3 @@ Also, see [CI Pipeline](./ci.md)
 ## Environment Variables Reference
 
 > See [User Documentation — Configuration](user_documentation.md#configuration) for the full environment variable reference.
-
----
-
-## Subsystem Deep Dives
-
-### Application Log Aggregation & Backpressure
-
-The Orchestrator centralizes container log collection via an asynchronous multiplexing registry task.
-
-- **Timestamp Extraction:** Containers are tailed with runtime-enforced timestamps. The ingestion pipeline strips the RFC3339-nano prefix applied by the container engine to preserve the exact execution time, falling back to local time only if the log line lacks a valid prefix.
-- **Flushing and Batching:** To minimize network overhead, logs are grouped into batches (`log_max_batch`) and pushed periodically (`log_flush_interval_secs`).
-- **Memory Protection (Backpressure):** If connection to the Cloud API fails, logs are buffered in memory up to a hard cap (`log_max_buffer`). When the buffer fills completely, backpressure is enforced by evicting the oldest log lines first, preventing edge device out-of-memory (OOM) faults.
-
-### Subprocess Execution & Lifecycle Exit Codes
-
-Operating system updates (`bootc`) and system-level actions are safely wrapped inside an isolated command execution layer.
-
-- **Stream Deadlocks:** The executer drains `stdout` and `stderr` streams concurrently using asynchronous line loops. This ensures that fast-exiting processes do not leave unread data in system buffers, avoiding truncated logs.
-- **Reboot Imminence (Exit Code 137):** Processes terminated without a clean status return or killed by system signals return exit code `137`. During OS upgrade and rollback phases, code `137` is explicitly intercepted and handled as a successful transaction, indicating that the system engine is dropping execution to perform an immediate hardware reboot.
-
-### Hardware Identity & TPM 2.0 Security
-
-The system binds device identity and authorization tokens directly to physical (or emulated) hardware primitives.
-
-#### Hardware Identity Paths
-
-The Orchestrator validates identity via DMI/SMBIOS tables using the following files:
-
-- Primary Unique Identifier: `/sys/class/dmi/id/product_uuid`
-- Fallback Identifier: `/sys/class/dmi/id/board_serial` (utilized to accommodate specific university reference hardware constraints).
-
-> Note: String validation rules automatically reject generic OEM placeholders such as "Not Specified" or "To Be Filled By O.E.M.".
-
-#### Cryptographic Architecture & Handle Allocation
-
-Device security relies on a TPM 2.0 interface communicating over `/dev/tpmrm0`. Cryptographic operations adhere to the following layout:
-
-| Asset / Operation | Primitive Details | TPM Handle / Path Constraint |
-| --- | --- | --- |
-| **Endorsement Key (EK)** | RSA Public Key extraction | `0x8101_0001` (Read directly via reference convention) |
-| **Device Signing Key** | 2048-bit RSA (Owner hierarchy) | `0x8100_A038` (Created and persisted if missing) |
-| **Data Signing Scheme** | RSASSA-PKCS1-v1_5 + SHA256 | Handled in an isolated Null-Auth session |
-
-#### Proactive JWT Management
-
-Cloud API interactions require a Device JWT signed by the TPM. To maintain an uninterrupted connection state, the system employs a proactive refresh window: token validity is re-evaluated during every cycle, and a new signed JWT is requested exactly `30 seconds` prior to token expiration (`REFRESH_BEFORE`), preventing request drops caused by clock drift.
-
-### Cross-Loop Interlocking (OS Upgrade Freeze)
-
-To prevent container mutations or log shipping corruption while the host system undergoes structural upgrades, the Orchestrator employs a thread-safe synchronization state (`os_upgrade_in_progress: Arc<AtomicBool>`).
-
-- **Behavior:** Whenever an OS update is being actively applied (either immediately or following the expiration of a deferred timer), this atomic flag is flipped to `true`.
-- **Impact:** The application reconciliation loop instantly freezes its execution cycle, printing a diagnostic freeze message and bypassing any container creation, modification, or teardown tasks until the system initiates its hardware reboot.

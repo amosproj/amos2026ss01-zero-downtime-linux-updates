@@ -71,7 +71,7 @@ The Orchestrator reads its configuration from a TOML file. The file path is reso
 2. The `APP_CONFIG_FILE` environment variable (required if set).
 3. `config.toml` in the current working directory (optional — defaults are used if absent).
 
-A ready-to-use template with inline documentation for all available options is provided at [`orchestrator/config.example.toml`](../orchestrator/config.example.toml). Copy it and adjust the values for your environment:
+A ready-to-use template with inline documentation for all available options is provided at [`orchestrator/config.example.toml`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/orchestrator/config.example.toml). Copy it and adjust the values for your environment:
 
 ```bash
 cp orchestrator/config.example.toml config.toml
@@ -167,7 +167,7 @@ Log output is written to **stderr**. Default level is `WARN`. Use `-d` / `-dd` f
 
 ## Running as a systemd Service
 
-A systemd unit file is provided in [`bootc-build/orchestrator.service`](../bootc-build/orchestrator.service). To install it:
+A systemd unit file is provided in [`bootc-build/orchestrator.service`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/bootc-build/orchestrator.service). To install it:
 
 ```bash
 sudo cp bootc-build/orchestrator.service /etc/systemd/system/
@@ -186,16 +186,11 @@ sudo journalctl -u amos-orchestrator -f
 
 ## Rollback & Error Recovery
 
-> **Future release:** Automated rollback and error recovery are not yet implemented.
-
 If an update causes a problem you can manually trigger a rollback using the standard OS tooling:
 
 ```bash
 # OS rollback via bootc
 sudo bootc rollback
-
-# OS rollback via rpm-ostree
-sudo rpm-ostree rollback
 ```
 
 For application containers, use `podman` to switch back to the previous image tag manually. Automated rollback support will be added in a future sprint.

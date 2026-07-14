@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AMOS — Documentation</title>
+    <title>AMOS — Zero-Downtime Linux Updates</title>
     <style>
         :root {
             color-scheme: light dark;
@@ -16,6 +16,9 @@
             --card-border: #ddd;
             --card-border-hover: #888;
             --card-bg-hover: #fafafa;
+            --accent: #1f5f3a;
+            --accent-fg: #ffffff;
+            --hero-bg: #f4f7f5;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -28,60 +31,90 @@
                 --card-border: #30363d;
                 --card-border-hover: #6e7681;
                 --card-bg-hover: #161b22;
+                --accent: #2ea043;
+                --accent-fg: #0d1117;
+                --hero-bg: #12181f;
             }
         }
 
         body {
-            font-family:
-                system-ui,
-                -apple-system,
-                sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
             max-width: 64rem;
-            margin: 4rem auto;
-            padding: 0 1rem;
+            margin: 0 auto;
+            padding: 0 1rem 4rem;
             line-height: 1.6;
             background: var(--bg);
             color: var(--fg);
         }
 
-        h1 {
-            margin-bottom: 0.25rem;
+        .hero {
+            background: var(--hero-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
+            margin: 3rem 0 2.5rem;
         }
 
-        p.sub {
-            color: var(--fg-subtle);
-            margin-top: 0;
+        .hero h1 {
+            margin: 0 0 0.5rem;
+            font-size: 2rem;
         }
 
-        .columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-top: 2rem;
+        .hero p {
+            color: var(--fg-muted);
+            margin: 0 0 1.5rem;
+            max-width: 44rem;
         }
 
-        @media (max-width: 720px) {
-            .columns {
-                grid-template-columns: 1fr;
-            }
+        .cta {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--accent-fg);
+            font-weight: 600;
+            padding: 0.7rem 1.25rem;
+            border-radius: 8px;
+            text-decoration: none;
+        }
+
+        .cta:hover {
+            filter: brightness(1.08);
+        }
+
+        .cta.secondary {
+            background: transparent;
+            color: var(--fg);
+            border: 1px solid var(--card-border-hover);
+            margin-left: 0.5rem;
+        }
+
+        section {
+            margin-top: 2.5rem;
         }
 
         section h2 {
             font-size: 1.1rem;
-            margin: 0 0 0.75rem;
+            margin: 0 0 0.25rem;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: var(--heading-muted);
         }
 
-        ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+        section>p.section-sub {
+            margin: 0 0 1rem;
+            color: var(--fg-subtle);
+            font-size: 0.95rem;
         }
 
-        li {
-            margin: 0.75rem 0;
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 720px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
         }
 
         a.card {
@@ -108,109 +141,91 @@
 
         .desc {
             color: var(--fg-muted);
+            font-size: 0.95rem;
         }
     </style>
 </head>
 
 <body>
-    <h1>AMOS — Zero-Downtime Linux Updates</h1>
-    <p class="sub">Project documentation and Rust API reference</p>
-
-    <div class="columns">
-        <section>
-            <h2>Project docs</h2>
-            <ul>
-                <li>
-                    <a class="card" href="docs/architecture.html">
-                        <span class="name">Architecture</span><br />
-                        <span class="desc">Target architecture, components, and how they
-                            fit together.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card" href="docs/image-based-os.html">
-                        <span class="name">Fundamentals: OS Images &amp; bootc</span><br />
-                        <span class="desc">How bootc works. Core concepts for understanding this project's
-                            approach.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card" href="docs/design_documentation.html">
-                        <span class="name">Design documentation</span><br />
-                        <span class="desc">Design decisions, trade-offs, and
-                            rationale.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card" href="docs/build_documentation.html">
-                        <span class="name">Build documentation</span><br />
-                        <span class="desc">How to build the workspace, images, and
-                            containers.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card" href="docs/user_documentation.html">
-                        <span class="name">User documentation</span><br />
-                        <span class="desc">Running and operating an AMOS deployment.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card" href="docs/Dev_Environment.html">
-                        <span class="name">Development environment</span><br />
-                        <span class="desc">Setting up the dev container and local
-                            toolchain.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card" href="docs/ci.html">
-                        <span class="name">CI/CD</span><br />
-                        <span class="desc">Overview of the CI/CD pipeline and
-                            workflows.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card" href="swagger-ui.html">
-                        <span class="name">Device-facing API</span><br />
-                        <span class="desc">View the OpenAPI spec of the device-facing API inside SwaggerUI.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card" href="swagger-ui-user.html">
-                        <span class="name">User-facing API</span><br />
-                        <span class="desc">View the OpenAPI spec of the user-facing API inside SwaggerUI.</span>
-                    </a>
-                </li>
-            </ul>
-        </section>
-
-        <section>
-            <h2>API reference (rustdoc)</h2>
-            <ul>
-                <li>
-                    <a class="card crate" href="amos_orchestrator/index.html">
-                        <span class="name">amos_orchestrator</span><br />
-                        <span class="desc">Edge-device agent that orchestrates
-                            bootc/OS-tree and application container
-                            updates.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card crate" href="amos_api_server/index.html">
-                        <span class="name">amos_api_server</span><br />
-                        <span class="desc">Cloud API serving the desired OS and
-                            application state to orchestrators.</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="card crate" href="amos_common/index.html">
-                        <span class="name">amos_common</span><br />
-                        <span class="desc">Shared API types, DTOs, and utilities used
-                            across the workspace.</span>
-                    </a>
-                </li>
-            </ul>
-        </section>
+    <div class="hero">
+        <h1>AMOS — Zero-Downtime Linux Updates</h1>
+        <p>
+            An edge-device update system built on <strong>bootc</strong>: the whole operating
+            system is shipped as a bootable container image, and an on-device agent
+            (<code>amos-orchestrator</code>) converges each device onto the OS and application
+            versions the cloud assigns. OS updates are atomic and staged, and the OS
+            rolls back automatically if a new version fails to boot or fails its health checks.
+        </p>
+        <a class="cta" href="docs/index.html">Read the documentation</a>
+        <a class="cta secondary" href="https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates">View on
+            GitHub</a>
     </div>
+
+    <section>
+        <h2>Start here</h2>
+        <p class="section-sub">New to the project? These are the best entry points — the full
+            chapter list lives in the documentation sidebar.</p>
+        <div class="cards">
+            <a class="card" href="docs/image-based-os.html">
+                <span class="name">Fundamentals: OS Images &amp; bootc</span><br />
+                <span class="desc">What a bootable container image is and how install-once /
+                    update-forever works. Read this first.</span>
+            </a>
+            <a class="card" href="docs/architecture_and_design_documentation.html">
+                <span class="name">Architecture &amp; Design</span><br />
+                <span class="desc">Components, the orchestrator's update loops, data structures,
+                    and the design decisions behind them.</span>
+            </a>
+            <a class="card" href="docs/user_documentation.html">
+                <span class="name">User guide</span><br />
+                <span class="desc">Install, configure, and operate the orchestrator agent on an
+                    edge device.</span>
+            </a>
+            <a class="card" href="docs/build_documentation.html">
+                <span class="name">Build &amp; deploy</span><br />
+                <span class="desc">Build the workspace, the OS container image, and the disk
+                    images used for first-time provisioning.</span>
+            </a>
+        </div>
+    </section>
+
+    <section>
+        <h2>API references</h2>
+        <p class="section-sub">OpenAPI specs rendered in Swagger UI.</p>
+        <div class="cards">
+            <a class="card" href="swagger-ui.html">
+                <span class="name">Device-facing API</span><br />
+                <span class="desc">Endpoints the orchestrator uses to poll desired state and
+                    report status.</span>
+            </a>
+            <a class="card" href="swagger-ui-user.html">
+                <span class="name">User-facing API</span><br />
+                <span class="desc">Endpoints for operating the fleet from the cloud
+                    side.</span>
+            </a>
+        </div>
+    </section>
+
+    <section>
+        <h2>Rust API reference (rustdoc)</h2>
+        <div class="cards">
+            <a class="card crate" href="amos_orchestrator/index.html">
+                <span class="name">amos_orchestrator</span><br />
+                <span class="desc">Edge-device agent orchestrating bootc/OS-tree and application
+                    container updates.</span>
+            </a>
+            <a class="card crate" href="amos_api_server/index.html">
+                <span class="name">amos_api_server</span><br />
+                <span class="desc">Cloud API serving desired OS and application state to
+                    orchestrators.</span>
+            </a>
+            <a class="card crate" href="amos_common/index.html">
+                <span class="name">amos_common</span><br />
+                <span class="desc">Shared API types, DTOs, and utilities used across the
+                    workspace.</span>
+            </a>
+        </div>
+    </section>
 </body>
 
 </html>
