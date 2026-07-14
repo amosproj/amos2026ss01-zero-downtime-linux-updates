@@ -233,11 +233,13 @@ Exit code 0 means the agent is correctly configured and inventory tooling is ava
 
 ## Deploying to an Edge Device
 
-Process and commands are similar to that of local testing with lima: [dev-env/lima.md](dev-env/lima.md). A production update of orchestrator should be done via a OS version update / OS image with new orchestrator binary.
+For local development and testing, run the edge device as a Lima VM and iterate on the orchestrator with `make dev-deploy`, which builds the binary and hot-swaps it into the running VM. See [dev-env/lima.md](dev-env/lima.md) for the full setup and hot-swap workflow.
+
+`make dev-deploy` is a development-only shortcut. A production update of the orchestrator should be delivered as an OS version update — a new OS image that bundles the updated orchestrator binary.
 
 ---
 
-## Container / rootc Build
+## Container / bootc Build
 
 The `bootc-build/` directory contains the files needed to embed the Orchestrator into an OS container image.
 
