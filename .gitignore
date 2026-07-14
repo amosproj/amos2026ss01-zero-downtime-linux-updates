@@ -49,6 +49,3 @@ config.toml
 
 # Added by cargo
 /target
-
-# Docs build: staged copies of external markdown (see scripts/build-docs.sh)
-/Documentation/dev-env/

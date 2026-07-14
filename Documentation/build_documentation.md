@@ -89,9 +89,9 @@ make setup
 - A **commit message template** (conventional commits format).
 - A **Git hook** that automatically appends the DCO sign-off line to commit messages.
 
-> **Note:** All commits must be signed off (`git commit -s`) per the project's [Developer Certificate of Origin](../DCO).
+> **Note:** All commits must be signed off (`git commit -s`) per the project's [Developer Certificate of Origin](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/DCO).
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for full contribution guidelines.
+See [CONTRIBUTING.md](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/CONTRIBUTING.md) for full contribution guidelines.
 
 ---
 
@@ -130,7 +130,7 @@ cargo build -p amos-api-server
 
 ## ISO Building
 
-[ISO Build](../bootc-build/iso/README.md)
+[ISO Build](./bootc-build/iso.md)
 
 ---
 
@@ -152,7 +152,7 @@ cargo test -p amos-common
 
 ### Integration testing
 
-To test the whole system in the sense of e2e integration tests, see the e2e scripts. Further description of the e2e tests can be found at [scripts_overview](../scripts/scripts_overview.md)
+To test the whole system in the sense of e2e integration tests, see the e2e scripts. Further description of the e2e tests can be found at [scripts](./scripts.md)
 
 ### Notable test coverage
 
