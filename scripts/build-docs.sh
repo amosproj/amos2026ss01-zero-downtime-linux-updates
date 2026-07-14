@@ -54,11 +54,6 @@ else
     cargo doc --no-deps --workspace --all-features --document-private-items
 fi
 
-echo ">>> Staging external docs into Documentation/dev-env"
-mkdir -p Documentation/dev-env
-cp dev-env/tpm.md Documentation/dev-env/tpm.md
-cp dev-env/lima/README.md Documentation/dev-env/lima.md
-
 echo ">>> Building mdBook project documentation -> target/doc/docs"
 mdbook build Documentation --dest-dir "$OUT_DIR/docs"
 

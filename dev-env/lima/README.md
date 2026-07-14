@@ -11,8 +11,8 @@ agent run end to end, without any physical hardware
   checks the cloud for OS/app updates, applies them, and reports a device
   **inventory** back. On boot it writes the inventory to a JSON file and then
   polls the cloud API on an interval.
-- The VM image is defined in [`../../bootc-build/Containerfile`](../../bootc-build/Containerfile);
-  the VM itself is defined in [`edge-ipc.yaml`](./edge-ipc.yaml).
+- The VM image is defined in [`bootc-build/Containerfile`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/bootc-build/Containerfile);
+  the VM itself is defined in [`edge-ipc.yaml`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/dev-env/lima/edge-ipc.yaml).
 
 ## Prerequisites
 
@@ -123,7 +123,7 @@ limactl shell edge-ipc -- journalctl -u orchestrator.service -n200  # last 200 l
 ## Key paths inside the VM
 
 This is a bootc/ostree system. See
-[`../../Documentation/architecture.md`](../../Documentation/architecture.md)
+[`architecture.md`](../architecture.md)
 for the full explanation of `/usr` (read-only, image), `/etc` (writable,
 merged) and `/var` (writable, first-boot-populated only). In the dev VM
 specifically:
@@ -132,8 +132,8 @@ specifically:
 | -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `/usr/libexec/amos-orchestrator`                         | The orchestrator binary shipped in the image                              | Read-only; updated atomically with the OS                                                   |
 | `/var/usrlocal/bin/amos-orchestrator`                    | The binary the dev VM's service actually runs                             | Writable; populated by `make dev-deploy`. Falls back to a symlink to `/usr/libexec` on boot |
-| `/etc/systemd/system/orchestrator.service.d/10-dev.conf` | Drop-in that redirects `ExecStart` at the writable path above             | Written by [`edge-ipc.yaml`](./edge-ipc.yaml); dev-only — not present in prod images        |
-| `/etc/amos/config.toml`                                  | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](./edge-ipc.yaml)                     |
+| `/etc/systemd/system/orchestrator.service.d/10-dev.conf` | Drop-in that redirects `ExecStart` at the writable path above             | Written by [`edge-ipc.yaml`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/dev-env/lima/edge-ipc.yaml); dev-only — not present in prod images        |
+| `/etc/amos/config.toml`                                  | Orchestrator config (cloud URL, poll interval, inventory path, device ID) | Written when the VM is created, from [`edge-ipc.yaml`](https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/blob/main/dev-env/lima/edge-ipc.yaml)                     |
 | `/var/lib/amos/inventory.json`                           | Device inventory the agent writes on startup                              | Standard place for app state; created by the service (runs as root)                         |
 | `/etc/systemd/system/orchestrator.service`               | The systemd service that runs the agent                                   | Enabled at image-build time; starts on boot                                                 |
 
