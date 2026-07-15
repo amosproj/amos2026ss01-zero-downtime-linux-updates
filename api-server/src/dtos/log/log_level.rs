@@ -1,3 +1,6 @@
+// https://github.com/rust-lang/rust/issues/57644
+#![allow(ambiguous_associated_items)]
+
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
