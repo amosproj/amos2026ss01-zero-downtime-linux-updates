@@ -1,0 +1,3773 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.3" serialNumber="urn:uuid:1e98ae4e-5ce5-4bfa-9188-d30db9c375bf" version="1">
+  <metadata>
+    <timestamp>2026-07-15T00:44:55.764176000Z</timestamp>
+    <tools>
+      <tool>
+        <vendor>CycloneDX</vendor>
+        <name>cargo-cyclonedx</name>
+        <version>0.5.9</version>
+      </tool>
+    </tools>
+    <component type="library" bom-ref="path+file:///Users/uzanto/projects/amos2026ss01-zero-downtime-linux-updates/git-amos/common#amos-common@0.1.0">
+      <name>amos-common</name>
+      <version>0.1.0</version>
+      <scope>required</scope>
+      <purl>pkg:cargo/amos-common@0.1.0?download_url=file://.</purl>
+      <components>
+        <component type="library" bom-ref="path+file:///Users/uzanto/projects/amos2026ss01-zero-downtime-linux-updates/git-amos/common#amos-common@0.1.0 bin-target-0">
+          <name>amos_common</name>
+          <version>0.1.0</version>
+          <purl>pkg:cargo/amos-common@0.1.0?download_url=file://.#src/lib.rs</purl>
+        </component>
+      </components>
+    </component>
+    <properties>
+      <property name="cdx:rustc:sbom:target:triple">aarch64-apple-darwin</property>
+    </properties>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#anyhow@1.0.103">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>anyhow</name>
+      <version>1.0.103</version>
+      <description>Flexible concrete Error type built on std::error::Error</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/anyhow@1.0.103</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/anyhow</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/anyhow</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#atomic-waker@1.1.2">
+      <author>Stjepan Glavina &lt;stjepang@gmail.com&gt;, Contributors to futures-rs</author>
+      <name>atomic-waker</name>
+      <version>1.1.2</version>
+      <description>A synchronization primitive for task wakeup</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/atomic-waker@1.1.2</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/smol-rs/atomic-waker</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#autocfg@1.5.1">
+      <author>Josh Stone &lt;cuviper@gmail.com&gt;</author>
+      <name>autocfg</name>
+      <version>1.5.1</version>
+      <description>Automatic cfg for Rust compiler features</description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/autocfg@1.5.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/autocfg/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/cuviper/autocfg</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#aws-lc-rs@1.17.1">
+      <author>AWS-LibCrypto</author>
+      <name>aws-lc-rs</name>
+      <version>1.17.1</version>
+      <description>aws-lc-rs is a cryptographic library using AWS-LC for its cryptographic operations. This library strives to be API-compatible with the popular Rust library named ring.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">4342d8937fc7e5dd9b1c60292261c0670c882a2cd1719cfc11b1af41731e32ad</hash>
+      </hashes>
+      <licenses>
+        <expression>ISC AND (Apache-2.0 OR ISC)</expression>
+      </licenses>
+      <purl>pkg:cargo/aws-lc-rs@1.17.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/crate/aws-lc-rs</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/aws/aws-lc-rs</url>
+        </reference>
+        <reference type="other">
+          <url>aws_lc_rs_1_17_1_sys</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/aws/aws-lc-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#aws-lc-sys@0.42.0">
+      <author>AWS-LC</author>
+      <name>aws-lc-sys</name>
+      <version>0.42.0</version>
+      <description>AWS-LC is a general-purpose cryptographic library maintained by the AWS Cryptography team for AWS and their customers. It іs based on code from the Google BoringSSL project and the OpenSSL project.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">6d9ceb1da931507a12f4fccea479dccd00da1943e1b4ae72d8e502d707361444</hash>
+      </hashes>
+      <licenses>
+        <expression>ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0)</expression>
+      </licenses>
+      <purl>pkg:cargo/aws-lc-sys@0.42.0</purl>
+      <externalReferences>
+        <reference type="other">
+          <url>aws_lc_0_42_0</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/aws/aws-lc-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1">
+      <author>Marshall Pierce &lt;marshall@mpierce.org&gt;</author>
+      <name>base64</name>
+      <version>0.22.1</version>
+      <description>encodes and decodes base64 as bytes or utf8</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/base64@0.22.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/base64</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/marshallpierce/rust-base64</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#bitflags@2.13.0">
+      <author>The Rust Project Developers</author>
+      <name>bitflags</name>
+      <version>2.13.0</version>
+      <description>A macro to generate structures which behave like bitflags. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">b4388bee8683e3d04af747c73422af53102d2bd24d9eadb6cbc100baef4b43f8</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/bitflags@2.13.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/bitflags</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/bitflags/bitflags</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/bitflags/bitflags</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1">
+      <author>Carl Lerche &lt;me@carllerche.com&gt;, Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>bytes</name>
+      <version>1.12.1</version>
+      <description>Types and traits for working with bytes</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/bytes@1.12.1</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/bytes</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#cc@1.2.67">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;</author>
+      <name>cc</name>
+      <version>1.2.67</version>
+      <description>A build-time dependency for Cargo build scripts to assist in invoking the native C compiler to compile native C code into a static archive to be linked into Rust code. </description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">e17dd265a7d0f31ef544e1b20e03add05d3b45b491b633b10d67145d2acc1a38</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/cc@1.2.67</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/cc</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/rust-lang/cc-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/cc-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;</author>
+      <name>cfg-if</name>
+      <version>1.0.4</version>
+      <description>A macro to ergonomically define an item depending on a large number of #[cfg] parameters. Structured like an if-else chain, the first matching branch is the item that gets emitted. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/cfg-if@1.0.4</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/cfg-if</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#cfg_aliases@0.2.1">
+      <author>Zicklag &lt;zicklag@katharostech.com&gt;</author>
+      <name>cfg_aliases</name>
+      <version>0.2.1</version>
+      <description>A tiny utility to help save you a lot of effort with long winded `#[cfg()]` checks.</description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/cfg_aliases@0.2.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/cfg_aliases</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/katharostech/cfg_aliases</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/katharostech/cfg_aliases</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#chacha20@0.10.1">
+      <author>RustCrypto Developers</author>
+      <name>chacha20</name>
+      <version>0.10.1</version>
+      <description>The ChaCha20 stream cipher (RFC 8439) implemented in pure Rust using traits from the RustCrypto `cipher` crate, with optional architecture-specific hardware acceleration (AVX2, SSE2). Additionally provides the ChaCha8, ChaCha12, XChaCha20, XChaCha12 and XChaCha8 stream ciphers, and also optional rand_core-compatible RNGs based on those ciphers. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">d524456ba66e72eb8b115ff89e01e497f8e6d11d78b70b1aa13c0fbd97540a81</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/chacha20@0.10.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/chacha20</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/RustCrypto/stream-ciphers</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45">
+      <name>chrono</name>
+      <version>0.4.45</version>
+      <description>Date and time library for Rust</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/chrono@0.4.45</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/chrono/</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/chronotope/chrono</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/chronotope/chrono</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#cmake@0.1.58">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;</author>
+      <name>cmake</name>
+      <version>0.1.58</version>
+      <description>A build dependency for running `cmake` to build a native library </description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">c0f78a02292a74a88ac736019ab962ece0bc380e3f977bf72e376c5d78ff0678</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/cmake@0.1.58</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/cmake</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/rust-lang/cmake-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/cmake-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7">
+      <author>The Servo Project Developers</author>
+      <name>core-foundation-sys</name>
+      <version>0.8.7</version>
+      <description>Bindings to Core Foundation for macOS</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/core-foundation-sys@0.8.7</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://github.com/servo/core-foundation-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/servo/core-foundation-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation@0.10.1">
+      <author>The Servo Project Developers</author>
+      <name>core-foundation</name>
+      <version>0.10.1</version>
+      <description>Bindings to Core Foundation for macOS</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">b2a6cd9ae233e7f62ba4e9353e81a88df7fc8a5987b8d445b4d90c879bd156f6</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/core-foundation@0.10.1</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/servo/core-foundation-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation@0.9.4">
+      <author>The Servo Project Developers</author>
+      <name>core-foundation</name>
+      <version>0.9.4</version>
+      <description>Bindings to Core Foundation for macOS</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">91e195e091a93c46f7102ec7818a2aa394e1e1771c3ab4825963fa03e45afb8f</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/core-foundation@0.9.4</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://github.com/servo/core-foundation-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/servo/core-foundation-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6">
+      <author>Jane Lusby &lt;jlusby@yaah.dev&gt;</author>
+      <name>displaydoc</name>
+      <version>0.2.6</version>
+      <description>A derive macro for implementing the display Trait via a doc comment and string interpolation </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">1ac70aa55017e108007fbaf5aa0f54b021c98f92ff8af59d42eda9da96e3dd4f</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/displaydoc@0.2.6</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/displaydoc</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/yaahc/displaydoc</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/yaahc/displaydoc</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#dunce@1.0.5">
+      <author>Kornel &lt;kornel@geekhood.net&gt;</author>
+      <name>dunce</name>
+      <version>1.0.5</version>
+      <description>Normalize Windows paths to the most compatible format, avoiding UNC where possible</description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813</hash>
+      </hashes>
+      <licenses>
+        <expression>CC0-1.0 OR MIT-0 OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/dunce@1.0.5</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/dunce</url>
+        </reference>
+        <reference type="website">
+          <url>https://lib.rs/crates/dunce</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://gitlab.com/kornelski/dunce</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#encoding_rs@0.8.35">
+      <author>Henri Sivonen &lt;hsivonen@hsivonen.fi&gt;</author>
+      <name>encoding_rs</name>
+      <version>0.8.35</version>
+      <description>A Gecko-oriented implementation of the Encoding Standard</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">75030f3c4f45dafd7586dd6780965a8c7e8e285a5ecb86713e63a79c5b2766f3</hash>
+      </hashes>
+      <licenses>
+        <expression>(Apache-2.0 OR MIT) AND BSD-3-Clause</expression>
+      </licenses>
+      <purl>pkg:cargo/encoding_rs@0.8.35</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/encoding_rs/</url>
+        </reference>
+        <reference type="website">
+          <url>https://docs.rs/encoding_rs/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hsivonen/encoding_rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#equivalent@1.0.2">
+      <name>equivalent</name>
+      <version>1.0.2</version>
+      <description>Traits for key comparison in maps.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/equivalent@1.0.2</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/indexmap-rs/equivalent</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#errno@0.3.14">
+      <author>Chris Wong &lt;lambda.fairy@gmail.com&gt;, Dan Gohman &lt;dev@sunfishcode.online&gt;</author>
+      <name>errno</name>
+      <version>0.3.14</version>
+      <description>Cross-platform interface to the `errno` variable.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/errno@0.3.14</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/errno</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/lambda-fairy/rust-errno</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#find-msvc-tools@0.1.9">
+      <name>find-msvc-tools</name>
+      <version>0.1.9</version>
+      <description>Find windows-specific tools, read MSVC versions from the registry and from COM interfaces</description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/find-msvc-tools@0.1.9</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/find-msvc-tools</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/cc-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#fnv@1.0.7">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;</author>
+      <name>fnv</name>
+      <version>1.0.7</version>
+      <description>Fowler–Noll–Vo hash function</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0  OR  MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/fnv@1.0.7</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://doc.servo.org/fnv/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/servo/rust-fnv</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#form_urlencoded@1.2.2">
+      <author>The rust-url developers</author>
+      <name>form_urlencoded</name>
+      <version>1.2.2</version>
+      <description>Parser and serializer for the application/x-www-form-urlencoded syntax, as used by HTML forms.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/form_urlencoded@1.2.2</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/servo/rust-url</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#fs_extra@1.3.0">
+      <author>Denis Kurilenko &lt;webdesus@gmail.com&gt;</author>
+      <name>fs_extra</name>
+      <version>1.3.0</version>
+      <description>Expanding std::fs and std::io. Recursively copy folders with information about process and much more.</description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/fs_extra@1.3.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/fs_extra</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/webdesus/fs_extra</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/webdesus/fs_extra</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#futures-channel@0.3.32">
+      <name>futures-channel</name>
+      <version>0.3.32</version>
+      <description>Channels for asynchronous communication using futures-rs. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">07bbe89c50d7a535e539b8c17bc0b49bdb77747034daa8087407d655f3f7cc1d</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/futures-channel@0.3.32</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://rust-lang.github.io/futures-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/futures-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32">
+      <name>futures-core</name>
+      <version>0.3.32</version>
+      <description>The core traits and types in for the `futures` library. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">7e3450815272ef58cec6d564423f6e755e25379b217b0bc688e295ba24df6b1d</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/futures-core@0.3.32</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://rust-lang.github.io/futures-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/futures-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#futures-io@0.3.32">
+      <name>futures-io</name>
+      <version>0.3.32</version>
+      <description>The `AsyncRead`, `AsyncWrite`, `AsyncSeek`, and `AsyncBufRead` traits for the futures-rs library. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">cecba35d7ad927e23624b22ad55235f2239cfa44fd10428eecbeba6d6a717718</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/futures-io@0.3.32</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://rust-lang.github.io/futures-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/futures-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#futures-macro@0.3.32">
+      <name>futures-macro</name>
+      <version>0.3.32</version>
+      <description>The futures-rs procedural macro implementations. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">e835b70203e41293343137df5c0664546da5745f82ec9b84d40be8336958447b</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/futures-macro@0.3.32</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://rust-lang.github.io/futures-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/futures-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.32">
+      <name>futures-sink</name>
+      <version>0.3.32</version>
+      <description>The asynchronous `Sink` trait for the futures-rs library. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">c39754e157331b013978ec91992bde1ac089843443c49cbc7f46150b0fad0893</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/futures-sink@0.3.32</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://rust-lang.github.io/futures-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/futures-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#futures-task@0.3.32">
+      <name>futures-task</name>
+      <version>0.3.32</version>
+      <description>Tools for working with tasks. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">037711b3d59c33004d3856fbdc83b99d4ff37a24768fa1be9ce3538a1cde4393</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/futures-task@0.3.32</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://rust-lang.github.io/futures-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/futures-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32">
+      <name>futures-util</name>
+      <version>0.3.32</version>
+      <description>Common utilities and extension traits for the futures-rs library. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">389ca41296e6190b48053de0321d02a77f32f8a5d2461dd38762c0593805c6d6</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/futures-util@0.3.32</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://rust-lang.github.io/futures-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/futures-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17">
+      <author>The Rand Project Developers</author>
+      <name>getrandom</name>
+      <version>0.2.17</version>
+      <description>A small cross-platform library for retrieving random data from system source</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/getrandom@0.2.17</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/getrandom</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-random/getrandom</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3">
+      <author>The Rand Project Developers</author>
+      <name>getrandom</name>
+      <version>0.4.3</version>
+      <description>A small cross-platform library for retrieving random data from system source</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/getrandom@0.4.3</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/getrandom</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-random/getrandom</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#h2@0.4.15">
+      <author>Carl Lerche &lt;me@carllerche.com&gt;, Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>h2</name>
+      <version>0.4.15</version>
+      <description>An HTTP/2 client and server</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">6cb093c84e8bd9b188d4c4a8cb6579fc016968d14c99882163cd3ff402a4f155</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/h2@0.4.15</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/h2</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hyperium/h2</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.17.1">
+      <name>hashbrown</name>
+      <version>0.17.1</version>
+      <description>A Rust port of Google's SwissTable hash map</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/hashbrown@0.17.1</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/hashbrown</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#http-body-util@0.1.4">
+      <author>Carl Lerche &lt;me@carllerche.com&gt;, Lucio Franco &lt;luciofranco14@gmail.com&gt;, Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>http-body-util</name>
+      <version>0.1.4</version>
+      <description>Combinators and adapters for HTTP request or response bodies. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">e9f41fd6a08e4d4ec69df65976da761afd5ad5e58a9d4acb46bd1c953a9e3ff2</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/http-body-util@0.1.4</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/http-body-util</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hyperium/http-body</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0">
+      <author>Carl Lerche &lt;me@carllerche.com&gt;, Lucio Franco &lt;luciofranco14@gmail.com&gt;, Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>http-body</name>
+      <version>1.1.0</version>
+      <description>Trait representing an asynchronous, streaming, HTTP request or response body. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">ca2a8f2913ee65f60facd6a5905613afaa448497a0230cc41ce022d93290bc2c</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/http-body@1.1.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/http-body</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hyperium/http-body</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;, Carl Lerche &lt;me@carllerche.com&gt;, Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>http</name>
+      <version>1.4.2</version>
+      <description>A set of types for representing HTTP requests and responses. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">6970f50e31d6fc17d3fa27329444bfa74e196cf62e95052a3f6fee181dba6425</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/http@1.4.2</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/http</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hyperium/http</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#httparse@1.10.1">
+      <author>Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>httparse</name>
+      <version>1.10.1</version>
+      <description>A tiny, safe, speedy, zero-copy HTTP/1.x parser.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/httparse@1.10.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/httparse</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/seanmonstar/httparse</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#httpdate@1.0.3">
+      <author>Pyfisch &lt;pyfisch@posteo.org&gt;</author>
+      <name>httpdate</name>
+      <version>1.0.3</version>
+      <description>HTTP date parsing and formatting</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/httpdate@1.0.3</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/pyfisch/httpdate</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#hyper-rustls@0.27.9">
+      <name>hyper-rustls</name>
+      <version>0.27.9</version>
+      <description>Rustls+hyper integration for pure rust HTTPS</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">33ca68d021ef39cf6463ab54c1d0f5daf03377b70561305bb89a8f83aab66e0f</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR ISC OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/hyper-rustls@0.27.9</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/hyper-rustls/</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/rustls/hyper-rustls</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rustls/hyper-rustls</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#hyper-util@0.1.20">
+      <author>Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>hyper-util</name>
+      <version>0.1.20</version>
+      <description>hyper utilities</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">96547c2556ec9d12fb1578c4eaf448b04993e7fb79cbaad930a656880a6bdfa0</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/hyper-util@0.1.20</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/hyper-util</url>
+        </reference>
+        <reference type="website">
+          <url>https://hyper.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hyperium/hyper-util</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#hyper@1.10.1">
+      <author>Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>hyper</name>
+      <version>1.10.1</version>
+      <description>A protective and efficient HTTP library for all.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">55281c53a1894c864990125767da440a4e630446785086f52523b20033b74498</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/hyper@1.10.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/hyper</url>
+        </reference>
+        <reference type="website">
+          <url>https://hyper.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hyperium/hyper</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#iana-time-zone@0.1.65">
+      <author>Andrew Straw &lt;strawman@astraw.com&gt;, René Kijewski &lt;rene.kijewski@fu-berlin.de&gt;, Ryan Lopopolo &lt;rjl@hyperbo.la&gt;</author>
+      <name>iana-time-zone</name>
+      <version>0.1.65</version>
+      <description>get the IANA time zone for the current system</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">e31bc9ad994ba00e440a8aa5c9ef0ec67d5cb5e5cb0cc7f8b744a35b389cc470</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/iana-time-zone@0.1.65</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/strawlab/iana-time-zone</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#icu_collections@2.2.0">
+      <author>The ICU4X Project Developers</author>
+      <name>icu_collections</name>
+      <version>2.2.0</version>
+      <description>Collection of API for use in ICU libraries.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">2984d1cd16c883d7935b9e07e44071dca8d917fd52ecc02c04d5fa0b5a3f191c</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/icu_collections@2.2.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#icu_locale_core@2.2.0">
+      <author>The ICU4X Project Developers</author>
+      <name>icu_locale_core</name>
+      <version>2.2.0</version>
+      <description>API for managing Unicode Language and Locale Identifiers</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">92219b62b3e2b4d88ac5119f8904c10f8f61bf7e95b640d25ba3075e6cac2c29</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/icu_locale_core@2.2.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#icu_normalizer@2.2.0">
+      <author>The ICU4X Project Developers</author>
+      <name>icu_normalizer</name>
+      <version>2.2.0</version>
+      <description>API for normalizing text into Unicode Normalization Forms</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">c56e5ee99d6e3d33bd91c5d85458b6005a22140021cc324cea84dd0e72cff3b4</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/icu_normalizer@2.2.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#icu_normalizer_data@2.2.0">
+      <author>The ICU4X Project Developers</author>
+      <name>icu_normalizer_data</name>
+      <version>2.2.0</version>
+      <description>Data for the icu_normalizer crate</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">da3be0ae77ea334f4da67c12f149704f19f81d1adf7c51cf482943e84a2bad38</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/icu_normalizer_data@2.2.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#icu_properties@2.2.0">
+      <author>The ICU4X Project Developers</author>
+      <name>icu_properties</name>
+      <version>2.2.0</version>
+      <description>Definitions for Unicode properties</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">bee3b67d0ea5c2cca5003417989af8996f8604e34fb9ddf96208a033901e70de</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/icu_properties@2.2.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#icu_properties_data@2.2.0">
+      <author>The ICU4X Project Developers</author>
+      <name>icu_properties_data</name>
+      <version>2.2.0</version>
+      <description>Data for the icu_properties crate</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">8e2bbb201e0c04f7b4b3e14382af113e17ba4f63e2c9d2ee626b720cbce54a14</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/icu_properties_data@2.2.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#icu_provider@2.2.0">
+      <author>The ICU4X Project Developers</author>
+      <name>icu_provider</name>
+      <version>2.2.0</version>
+      <description>Trait and struct definitions for the ICU data provider</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">139c4cf31c8b5f33d7e199446eff9c1e02decfc2f0eec2c8d71f65befa45b421</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/icu_provider@2.2.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#idna@1.1.0">
+      <author>The rust-url developers</author>
+      <name>idna</name>
+      <version>1.1.0</version>
+      <description>IDNA (Internationalizing Domain Names in Applications) and Punycode.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">3b0875f23caa03898994f6ddc501886a45c7d3d62d04d2d90788d47be1b1e4de</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/idna@1.1.0</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/servo/rust-url/</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#idna_adapter@1.2.2">
+      <author>The rust-url developers</author>
+      <name>idna_adapter</name>
+      <version>1.2.2</version>
+      <description>Back end adapter for idna</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">cb68373c0d6620ef8105e855e7745e18b0d00d3bdb07fb532e434244cdb9a714</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/idna_adapter@1.2.2</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/idna_adapter/latest/idna_adapter/</url>
+        </reference>
+        <reference type="website">
+          <url>https://docs.rs/crate/idna_adapter/latest</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hsivonen/idna_adapter</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#indexmap@2.14.0">
+      <name>indexmap</name>
+      <version>2.14.0</version>
+      <description>A hash table with consistent order and fast iteration.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/indexmap@2.14.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/indexmap/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/indexmap-rs/indexmap</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#ipnet@2.12.0">
+      <author>Kris Price &lt;kris@krisprice.nz&gt;</author>
+      <name>ipnet</name>
+      <version>2.12.0</version>
+      <description>Provides types and useful methods for working with IPv4 and IPv6 network addresses, commonly called IP prefixes. The new `IpNet`, `Ipv4Net`, and `Ipv6Net` types build on the existing `IpAddr`, `Ipv4Addr`, and `Ipv6Addr` types already provided in Rust's standard library and align to their design to stay consistent. The module also provides useful traits that extend `Ipv4Addr` and `Ipv6Addr` with methods for `Add`, `Sub`, `BitAnd`, and `BitOr` operations. The module only uses stable feature so it is guaranteed to compile using the stable toolchain.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">d98f6fed1fde3f8c21bc40a1abb88dd75e67924f9cffc3ef95607bad8017f8e2</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/ipnet@2.12.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/ipnet</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/krisprice/ipnet</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>itoa</name>
+      <version>1.0.18</version>
+      <description>Fast integer primitive to string conversion</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/itoa@1.0.18</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/itoa</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/itoa</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#jobserver@0.1.35">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;</author>
+      <name>jobserver</name>
+      <version>0.1.35</version>
+      <description>An implementation of the GNU Make jobserver for Rust. </description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">1c00acbd29eabad4a2392fa0e921c874934dbbf4194312ad20f04a0ed67a3cb3</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/jobserver@0.1.35</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/jobserver</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/rust-lang/jobserver-rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/jobserver-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186">
+      <author>The Rust Project Developers</author>
+      <name>libc</name>
+      <version>0.2.186</version>
+      <description>Raw FFI bindings to platform libraries like libc.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/libc@0.2.186</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/libc</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#libm@0.2.16">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;, Amanieu d'Antras &lt;amanieu@gmail.com&gt;, Jorge Aparicio &lt;japaricious@gmail.com&gt;, Trevor Gross &lt;tg@trevorgross.com&gt;</author>
+      <name>libm</name>
+      <version>0.2.16</version>
+      <description>libm in pure Rust</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/libm@0.2.16</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/compiler-builtins</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#litemap@0.8.2">
+      <author>The ICU4X Project Developers</author>
+      <name>litemap</name>
+      <version>0.8.2</version>
+      <description>A key-value Map implementation based on a flat, sorted Vec.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/litemap@0.8.2</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/litemap</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#lock_api@0.4.14">
+      <author>Amanieu d'Antras &lt;amanieu@gmail.com&gt;</author>
+      <name>lock_api</name>
+      <version>0.4.14</version>
+      <description>Wrappers to create fully-featured Mutex and RwLock types. Compatible with no_std.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">224399e74b87b5f3557511d98dff8b14089b3dadafcab6bb93eab67d3aace965</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/lock_api@0.4.14</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/Amanieu/parking_lot</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#log@0.4.33">
+      <author>The Rust Project Developers</author>
+      <name>log</name>
+      <version>0.4.33</version>
+      <description>A lightweight logging facade for Rust </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/log@0.4.33</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/log</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/log</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#lru-slab@0.1.2">
+      <author>Benjamin Saunders &lt;ben.e.saunders@gmail.com&gt;</author>
+      <name>lru-slab</name>
+      <version>0.1.2</version>
+      <description>Pre-allocated storage with constant-time LRU tracking</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0 OR Zlib</expression>
+      </licenses>
+      <purl>pkg:cargo/lru-slab@0.1.2</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/Ralith/lru-slab</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3">
+      <author>Andrew Gallant &lt;jamslam@gmail.com&gt;, bluss</author>
+      <name>memchr</name>
+      <version>2.8.3</version>
+      <description>Provides extremely fast (uses SIMD on x86_64, aarch64 and wasm32) routines for 1, 2 or 3 byte search and single substring search. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98</hash>
+      </hashes>
+      <licenses>
+        <expression>Unlicense OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/memchr@2.8.3</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/memchr/</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/BurntSushi/memchr</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/BurntSushi/memchr</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#mime@0.3.17">
+      <author>Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>mime</name>
+      <version>0.3.17</version>
+      <description>Strongly Typed Mimes</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/mime@0.3.17</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/mime</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hyperium/mime</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#mio@1.2.2">
+      <author>Carl Lerche &lt;me@carllerche.com&gt;, Thomas de Zeeuw &lt;thomasdezeeuw@gmail.com&gt;, Tokio Contributors &lt;team@tokio.rs&gt;</author>
+      <name>mio</name>
+      <version>1.2.2</version>
+      <description>Lightweight non-blocking I/O.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">30d65c71f1ce40ab09135ce117d742b9f8a19ff91a41a8b57ed50bc2de59c427</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/mio@1.2.2</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://github.com/tokio-rs/mio</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/mio</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#num-traits@0.2.19">
+      <author>The Rust Project Developers</author>
+      <name>num-traits</name>
+      <version>0.2.19</version>
+      <description>Numeric traits for generic mathematics</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/num-traits@0.2.19</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/num-traits</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/rust-num/num-traits</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-num/num-traits</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#once_cell@1.21.4">
+      <author>Aleksey Kladov &lt;aleksey.kladov@gmail.com&gt;</author>
+      <name>once_cell</name>
+      <version>1.21.4</version>
+      <description>Single assignment cells and lazy values.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/once_cell@1.21.4</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/once_cell</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/matklad/once_cell</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#parking_lot@0.12.5">
+      <author>Amanieu d'Antras &lt;amanieu@gmail.com&gt;</author>
+      <name>parking_lot</name>
+      <version>0.12.5</version>
+      <description>More compact and efficient implementations of the standard synchronization primitives.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/parking_lot@0.12.5</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/Amanieu/parking_lot</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#parking_lot_core@0.9.12">
+      <author>Amanieu d'Antras &lt;amanieu@gmail.com&gt;</author>
+      <name>parking_lot_core</name>
+      <version>0.9.12</version>
+      <description>An advanced API for creating custom synchronization primitives.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/parking_lot_core@0.9.12</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/Amanieu/parking_lot</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#percent-encoding@2.3.2">
+      <author>The rust-url developers</author>
+      <name>percent-encoding</name>
+      <version>2.3.2</version>
+      <description>Percent encoding and decoding</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/percent-encoding@2.3.2</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/servo/rust-url/</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17">
+      <name>pin-project-lite</name>
+      <version>0.2.17</version>
+      <description>A lightweight version of pin-project written with declarative macros. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/pin-project-lite@0.2.17</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/taiki-e/pin-project-lite</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#pkg-config@0.3.33">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;</author>
+      <name>pkg-config</name>
+      <version>0.3.33</version>
+      <description>A library to run the pkg-config system tool at build time in order to be used in Cargo build scripts. </description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/pkg-config@0.3.33</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/pkg-config</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/pkg-config-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#potential_utf@0.1.5">
+      <author>The ICU4X Project Developers</author>
+      <name>potential_utf</name>
+      <version>0.1.5</version>
+      <description>Unvalidated string and character types</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">0103b1cef7ec0cf76490e969665504990193874ea05c85ff9bab8b911d0a0564</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/potential_utf@0.1.5</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;, Alex Crichton &lt;alex@alexcrichton.com&gt;</author>
+      <name>proc-macro2</name>
+      <version>1.0.106</version>
+      <description>A substitute implementation of the compiler's `proc_macro` API to decouple token-based libraries from the procedural macro use case.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/proc-macro2@1.0.106</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/proc-macro2</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/proc-macro2</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#quinn-proto@0.11.16">
+      <name>quinn-proto</name>
+      <version>0.11.16</version>
+      <description>State machine for the QUIC transport protocol</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">2f4bfc015262b9df63c8845072ce59068853ff5872180c2ce2f13038b970e560</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/quinn-proto@0.11.16</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/quinn-rs/quinn</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#quinn-udp@0.5.15">
+      <name>quinn-udp</name>
+      <version>0.5.15</version>
+      <description>UDP sockets with ECN information for the QUIC transport protocol</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">35a133f956daabe89a61a685c2649f13d82d5aa4bd5d12d1277e1072a21c0694</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/quinn-udp@0.5.15</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/quinn-rs/quinn</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#quinn@0.11.11">
+      <name>quinn</name>
+      <version>0.11.11</version>
+      <description>Versatile QUIC transport protocol implementation</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">0c1a41e437b6bbd489372cd4971de128e85c855f56c57f283d20ff016cf7c0a8</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/quinn@0.11.11</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/quinn-rs/quinn</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>quote</name>
+      <version>1.0.46</version>
+      <description>Quasi-quoting macro quote!(...)</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">dfbc457d0c7a0759a614551b11a6409e5951f6c7537be1f1b7682b9ae9230368</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/quote@1.0.46</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/quote/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/quote</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#rand@0.10.2">
+      <author>The Rand Project Developers, The Rust Project Developers</author>
+      <name>rand</name>
+      <version>0.10.2</version>
+      <description>Random number generators and other randomness functionality. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/rand@0.10.2</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/rand</url>
+        </reference>
+        <reference type="website">
+          <url>https://rust-random.github.io/book</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-random/rand</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1">
+      <author>The Rand Project Developers</author>
+      <name>rand_core</name>
+      <version>0.10.1</version>
+      <description>Core random number generation traits and tools for implementation.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/rand_core@0.10.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/rand_core</url>
+        </reference>
+        <reference type="website">
+          <url>https://rust-random.github.io/book</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-random/rand_core</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#rand_pcg@0.10.2">
+      <author>The Rand Project Developers</author>
+      <name>rand_pcg</name>
+      <version>0.10.2</version>
+      <description>Selected PCG random number generators</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">caa0f4137e1c0a72f4c651489402276c8e8e1cf081f3b0ba156d2cbeef09e86a</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/rand_pcg@0.10.2</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/rand_pcg</url>
+        </reference>
+        <reference type="website">
+          <url>https://rust-random.github.io/book</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-random/rngs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#reqwest@0.13.4">
+      <author>Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>reqwest</name>
+      <version>0.13.4</version>
+      <description>higher level HTTP client library</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">219c5811de6525e5416c7d5d53bb656d3afdbc6c5af816e0802bcfa42dbdc1c3</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/reqwest@0.13.4</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/reqwest</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/seanmonstar/reqwest</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#ring@0.17.14">
+      <name>ring</name>
+      <version>0.17.14</version>
+      <description>An experiment.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 AND ISC</expression>
+      </licenses>
+      <purl>pkg:cargo/ring@0.17.14</purl>
+      <externalReferences>
+        <reference type="other">
+          <url>ring_core_0_17_14_</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/briansmith/ring</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#rustc-hash@2.1.3">
+      <author>The Rust Project Developers</author>
+      <name>rustc-hash</name>
+      <version>2.1.3</version>
+      <description>A speedy, non-cryptographic hashing algorithm used by rustc</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/rustc-hash@2.1.3</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/rustc-hash</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#rustls-pki-types@1.15.0">
+      <name>rustls-pki-types</name>
+      <version>1.15.0</version>
+      <description>Shared types for the rustls PKI ecosystem</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">764899a24af3980067ee14bc143654f297b22eaebfe3c7b6b211920a5a59b046</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/rustls-pki-types@1.15.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/rustls-pki-types</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/rustls/pki-types</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rustls/pki-types</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#rustls-platform-verifier@0.7.0">
+      <name>rustls-platform-verifier</name>
+      <version>0.7.0</version>
+      <description>rustls-platform-verifier supports verifying TLS certificates in rustls with the operating system verifier</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">26d1e2536ce4f35f4846aa13bff16bd0ff40157cdb14cc056c7b14ba41233ba0</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/rustls-platform-verifier@0.7.0</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/rustls/rustls-platform-verifier</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#rustls-webpki@0.103.13">
+      <name>rustls-webpki</name>
+      <version>0.103.13</version>
+      <description>Web PKI X.509 Certificate Verification.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">61c429a8649f110dddef65e2a5ad240f747e85f7758a6bccc7e5777bd33f756e</hash>
+      </hashes>
+      <licenses>
+        <expression>ISC</expression>
+      </licenses>
+      <purl>pkg:cargo/rustls-webpki@0.103.13</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/rustls/webpki</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.42">
+      <name>rustls</name>
+      <version>0.23.42</version>
+      <description>Rustls is a modern TLS library written in Rust.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">3c54fcab019b409d04215d3a17cb438fd7fbf192ee61461f20f4fe18704bc138</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR ISC OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/rustls@0.23.42</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://github.com/rustls/rustls</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rustls/rustls</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#scopeguard@1.2.0">
+      <author>bluss</author>
+      <name>scopeguard</name>
+      <version>1.2.0</version>
+      <description>A RAII scope guard that will run a given closure when it goes out of scope, even if the code between panics (assuming unwinding panic).  Defines the macros `defer!`, `defer_on_unwind!`, `defer_on_success!` as shorthands for guards with one of the implemented strategies. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/scopeguard@1.2.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/scopeguard/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/bluss/scopeguard</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#security-framework-sys@2.17.0">
+      <author>Steven Fackler &lt;sfackler@gmail.com&gt;, Kornel &lt;kornel@geekhood.net&gt;</author>
+      <name>security-framework-sys</name>
+      <version>2.17.0</version>
+      <description>Apple `Security.framework` low-level FFI bindings</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">6ce2691df843ecc5d231c0b14ece2acc3efb62c0a398c7e1d875f3983ce020e3</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/security-framework-sys@2.17.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://lib.rs/crates/security-framework-sys</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/kornelski/rust-security-framework</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#security-framework@3.7.0">
+      <author>Steven Fackler &lt;sfackler@gmail.com&gt;, Kornel &lt;kornel@geekhood.net&gt;</author>
+      <name>security-framework</name>
+      <version>3.7.0</version>
+      <description>Security.framework bindings for macOS and iOS</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">b7f4bc775c73d9a02cde8bf7b2ec4c9d12743edf609006c7facc23998404cd1d</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/security-framework@3.7.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/security_framework</url>
+        </reference>
+        <reference type="website">
+          <url>https://lib.rs/crates/security_framework</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/kornelski/rust-security-framework</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228">
+      <author>Erick Tryzelaar &lt;erick.tryzelaar@gmail.com&gt;, David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>serde</name>
+      <version>1.0.228</version>
+      <description>A generic serialization/deserialization framework</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/serde@1.0.228</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/serde</url>
+        </reference>
+        <reference type="website">
+          <url>https://serde.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/serde-rs/serde</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228">
+      <author>Erick Tryzelaar &lt;erick.tryzelaar@gmail.com&gt;, David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>serde_core</name>
+      <version>1.0.228</version>
+      <description>Serde traits only, with no support for derive -- use the `serde` crate instead</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/serde_core@1.0.228</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/serde_core</url>
+        </reference>
+        <reference type="website">
+          <url>https://serde.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/serde-rs/serde</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.228">
+      <author>Erick Tryzelaar &lt;erick.tryzelaar@gmail.com&gt;, David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>serde_derive</name>
+      <version>1.0.228</version>
+      <description>Macros 1.1 implementation of #[derive(Serialize, Deserialize)]</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/serde_derive@1.0.228</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://serde.rs/derive.html</url>
+        </reference>
+        <reference type="website">
+          <url>https://serde.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/serde-rs/serde</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150">
+      <author>Erick Tryzelaar &lt;erick.tryzelaar@gmail.com&gt;, David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>serde_json</name>
+      <version>1.0.150</version>
+      <description>A JSON serialization file format</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/serde_json@1.0.150</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/serde_json</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/serde-rs/json</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#shlex@2.0.1">
+      <author>comex &lt;comexk@gmail.com&gt;, Fenhl &lt;fenhl@fenhl.net&gt;, Adrian Taylor &lt;adetaylor@chromium.org&gt;, Alex Touchet &lt;alextouchet@outlook.com&gt;, Daniel Parks &lt;dp+git@oxidized.org&gt;, Garrett Berg &lt;googberg@gmail.com&gt;</author>
+      <name>shlex</name>
+      <version>2.0.1</version>
+      <description>Split a string into shell words, like Python's shlex.</description>
+      <scope>excluded</scope>
+      <hashes>
+        <hash alg="SHA-256">f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/shlex@2.0.1</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/comex/rust-shlex</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#signal-hook-registry@1.4.8">
+      <author>Michal 'vorner' Vaner &lt;vorner@vorner.cz&gt;, Masaki Hara &lt;ackie.h.gmai@gmail.com&gt;</author>
+      <name>signal-hook-registry</name>
+      <version>1.4.8</version>
+      <description>Backend crate for signal-hook</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/signal-hook-registry@1.4.8</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/signal-hook-registry</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/vorner/signal-hook</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#slab@0.4.12">
+      <author>Carl Lerche &lt;me@carllerche.com&gt;</author>
+      <name>slab</name>
+      <version>0.4.12</version>
+      <description>Pre-allocated storage for a uniform data type</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/slab@0.4.12</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/slab</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#smallvec@1.15.2">
+      <author>The Servo Project Developers</author>
+      <name>smallvec</name>
+      <version>1.15.2</version>
+      <description>'Small vector' optimization: store up to a small number of items on the stack</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/smallvec@1.15.2</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/smallvec/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/servo/rust-smallvec</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#socket2@0.6.5">
+      <author>Alex Crichton &lt;alex@alexcrichton.com&gt;, Thomas de Zeeuw &lt;thomasdezeeuw@gmail.com&gt;</author>
+      <name>socket2</name>
+      <version>0.6.5</version>
+      <description>Utilities for handling networking sockets with a maximal amount of configuration possible intended. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/socket2@0.6.5</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/socket2</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/rust-lang/socket2</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rust-lang/socket2</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#stable_deref_trait@1.2.1">
+      <author>Robert Grosse &lt;n210241048576@gmail.com&gt;</author>
+      <name>stable_deref_trait</name>
+      <version>1.2.1</version>
+      <description>An unsafe marker trait for types like Box and Rc that dereference to a stable address even when moved, and hence can be used with libraries such as owning_ref and rental. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/stable_deref_trait@1.2.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/stable_deref_trait/1.2.1/stable_deref_trait</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/storyyeller/stable_deref_trait</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#subtle@2.6.1">
+      <author>Isis Lovecruft &lt;isis@patternsinthevoid.net&gt;, Henry de Valence &lt;hdevalence@hdevalence.ca&gt;</author>
+      <name>subtle</name>
+      <version>2.6.1</version>
+      <description>Pure-Rust traits and utilities for constant-time cryptographic implementations.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292</hash>
+      </hashes>
+      <licenses>
+        <expression>BSD-3-Clause</expression>
+      </licenses>
+      <purl>pkg:cargo/subtle@2.6.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/subtle</url>
+        </reference>
+        <reference type="website">
+          <url>https://dalek.rs/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dalek-cryptography/subtle</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>syn</name>
+      <version>2.0.118</version>
+      <description>Parser for Rust source code</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">1b9ae57f904213ebb649ce6895b8a66c66f0203b9319718f69a5612a065b1422</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/syn@2.0.118</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/syn</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/syn</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#sync_wrapper@1.0.2">
+      <author>Actyx AG &lt;developer@actyx.io&gt;</author>
+      <name>sync_wrapper</name>
+      <version>1.0.2</version>
+      <description>A tool for enlisting the compiler's help in proving the absence of concurrency</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/sync_wrapper@1.0.2</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/sync_wrapper</url>
+        </reference>
+        <reference type="website">
+          <url>https://docs.rs/sync_wrapper</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/Actyx/sync_wrapper</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#synstructure@0.13.2">
+      <author>Nika Layzell &lt;nika@thelayzells.com&gt;</author>
+      <name>synstructure</name>
+      <version>0.13.2</version>
+      <description>Helper methods and macros for custom derives</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">728a70f3dbaf5bab7f0c4b1ac8d7ae5ea60a4b5549c8a5914361c99147a709d2</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/synstructure@0.13.2</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/synstructure</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/mystor/synstructure</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#system-configuration-sys@0.6.0">
+      <author>Mullvad VPN</author>
+      <name>system-configuration-sys</name>
+      <version>0.6.0</version>
+      <description>Low level bindings to SystemConfiguration framework for macOS</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">8e1d1b10ced5ca923a1fcb8d03e96b8d3268065d724548c0211415ff6ac6bac4</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/system-configuration-sys@0.6.0</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/mullvad/system-configuration-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#system-configuration@0.7.0">
+      <author>Mullvad VPN</author>
+      <name>system-configuration</name>
+      <version>0.7.0</version>
+      <description>Bindings to SystemConfiguration framework for macOS</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">a13f3d0daba03132c0aa9767f98351b3488edc2c100cda2d2ec2b04f3d8d3c8b</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/system-configuration@0.7.0</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/mullvad/system-configuration-rs</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#thiserror-impl@2.0.18">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>thiserror-impl</name>
+      <version>2.0.18</version>
+      <description>Implementation detail of the `thiserror` crate</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/thiserror-impl@2.0.18</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/thiserror</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>thiserror</name>
+      <version>2.0.18</version>
+      <description>derive(Error)</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">4288b5bcbc7920c07a1149a35cf9590a2aa808e0bc1eafaade0b80947865fbc4</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/thiserror@2.0.18</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/thiserror</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/thiserror</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tinystr@0.8.3">
+      <author>The ICU4X Project Developers</author>
+      <name>tinystr</name>
+      <version>0.8.3</version>
+      <description>A small ASCII-only bounded length string representation.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">c8323304221c2a851516f22236c5722a72eaa19749016521d6dff0824447d96d</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/tinystr@0.8.3</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tinyvec@1.12.0">
+      <author>Lokathor &lt;zefria@gmail.com&gt;</author>
+      <name>tinyvec</name>
+      <version>1.12.0</version>
+      <description>`tinyvec` provides 100% safe vec-like data structures.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">bb4ebadaa0af04fab11ae01eb5f9fdb5f9c5b875506e210e71c07873528baa7f</hash>
+      </hashes>
+      <licenses>
+        <expression>Zlib OR Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tinyvec@1.12.0</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/Lokathor/tinyvec</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tinyvec_macros@0.1.1">
+      <author>Soveu &lt;marx.tomasz@gmail.com&gt;</author>
+      <name>tinyvec_macros</name>
+      <version>0.1.1</version>
+      <description>Some macros for tiny containers</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0 OR Zlib</expression>
+      </licenses>
+      <purl>pkg:cargo/tinyvec_macros@0.1.1</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/Soveu/tinyvec_macros</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tokio-macros@2.7.0">
+      <author>Tokio Contributors &lt;team@tokio.rs&gt;</author>
+      <name>tokio-macros</name>
+      <version>2.7.0</version>
+      <description>Tokio's proc macros. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">385a6cb71ab9ab790c5fe8d67f1645e6c450a7ce006a33de03daa956cf70a496</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tokio-macros@2.7.0</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://tokio.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/tokio</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tokio-rustls@0.26.4">
+      <name>tokio-rustls</name>
+      <version>0.26.4</version>
+      <description>Asynchronous TLS/SSL streams for Tokio using Rustls.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">1729aa945f29d91ba541258c8df89027d5792d85a8841fb65e8bf0f4ede4ef61</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/tokio-rustls@0.26.4</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/tokio-rustls</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/rustls/tokio-rustls</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/rustls/tokio-rustls</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tokio-util@0.7.18">
+      <author>Tokio Contributors &lt;team@tokio.rs&gt;</author>
+      <name>tokio-util</name>
+      <version>0.7.18</version>
+      <description>Additional utilities for working with Tokio. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tokio-util@0.7.18</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://tokio.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/tokio</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3">
+      <author>Tokio Contributors &lt;team@tokio.rs&gt;</author>
+      <name>tokio</name>
+      <version>1.52.3</version>
+      <description>An event-driven, non-blocking I/O platform for writing asynchronous I/O backed applications. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tokio@1.52.3</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://tokio.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/tokio</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11">
+      <author>Tower Maintainers &lt;team@tower-rs.com&gt;</author>
+      <name>tower-http</name>
+      <version>0.6.11</version>
+      <description>Tower middleware and utilities for HTTP clients and servers</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">4cfcf7e2740e6fc6d4d688b4ef00650406bb94adf4731e43c096c3a19fe40840</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tower-http@0.6.11</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://github.com/tower-rs/tower-http</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tower-rs/tower-http</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tower-layer@0.3.3">
+      <author>Tower Maintainers &lt;team@tower-rs.com&gt;</author>
+      <name>tower-layer</name>
+      <version>0.3.3</version>
+      <description>Decorates a `Service` to allow easy composition between `Service`s. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">121c2a6cda46980bb0fcd1647ffaf6cd3fc79a013de288782836f6df9c48780e</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tower-layer@0.3.3</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/tower-layer/0.3.3</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/tower-rs/tower</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tower-rs/tower</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3">
+      <author>Tower Maintainers &lt;team@tower-rs.com&gt;</author>
+      <name>tower-service</name>
+      <version>0.3.3</version>
+      <description>Trait representing an asynchronous, request / response based, client or server. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tower-service@0.3.3</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/tower-service/0.3.3</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/tower-rs/tower</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tower-rs/tower</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3">
+      <author>Tower Maintainers &lt;team@tower-rs.com&gt;</author>
+      <name>tower</name>
+      <version>0.5.3</version>
+      <description>Tower is a library of modular and reusable components for building robust clients and servers. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">ebe5ef63511595f1344e2d5cfa636d973292adc0eec1f0ad45fae9f0851ab1d4</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tower@0.5.3</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://github.com/tower-rs/tower</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tower-rs/tower</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tracing-attributes@0.1.31">
+      <author>Tokio Contributors &lt;team@tokio.rs&gt;, Eliza Weisman &lt;eliza@buoyant.io&gt;, David Barsky &lt;dbarsky@amazon.com&gt;</author>
+      <name>tracing-attributes</name>
+      <version>0.1.31</version>
+      <description>Procedural macro attributes for automatically instrumenting functions. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tracing-attributes@0.1.31</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://tokio.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/tracing</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tracing-core@0.1.36">
+      <author>Tokio Contributors &lt;team@tokio.rs&gt;</author>
+      <name>tracing-core</name>
+      <version>0.1.36</version>
+      <description>Core primitives for application-level tracing. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tracing-core@0.1.36</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://tokio.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/tracing</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44">
+      <author>Eliza Weisman &lt;eliza@buoyant.io&gt;, Tokio Contributors &lt;team@tokio.rs&gt;</author>
+      <name>tracing</name>
+      <version>0.1.44</version>
+      <description>Application-level tracing for Rust. </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/tracing@0.1.44</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://tokio.rs</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/tokio-rs/tracing</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#try-lock@0.2.5">
+      <author>Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>try-lock</name>
+      <version>0.2.5</version>
+      <description>A lightweight atomic lock.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/try-lock@0.2.5</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/try-lock</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/seanmonstar/try-lock</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/seanmonstar/try-lock</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#unicode-ident@1.0.24">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>unicode-ident</name>
+      <version>1.0.24</version>
+      <description>Determine whether characters have the XID_Start or XID_Continue properties according to Unicode Standard Annex #31</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75</hash>
+      </hashes>
+      <licenses>
+        <expression>(MIT OR Apache-2.0) AND Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/unicode-ident@1.0.24</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/unicode-ident</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/unicode-ident</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#untrusted@0.9.0">
+      <author>Brian Smith &lt;brian@briansmith.org&gt;</author>
+      <name>untrusted</name>
+      <version>0.9.0</version>
+      <description>Safe, fast, zero-panic, zero-crashing, zero-allocation parsing of untrusted inputs in Rust.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1</hash>
+      </hashes>
+      <licenses>
+        <expression>ISC</expression>
+      </licenses>
+      <purl>pkg:cargo/untrusted@0.9.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://briansmith.org/rustdoc/untrusted/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/briansmith/untrusted</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#url@2.5.8">
+      <author>The rust-url developers</author>
+      <name>url</name>
+      <version>2.5.8</version>
+      <description>URL library for Rust, based on the WHATWG URL Standard</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR Apache-2.0</expression>
+      </licenses>
+      <purl>pkg:cargo/url@2.5.8</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/url</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/servo/rust-url</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#utf8_iter@1.0.4">
+      <author>Henri Sivonen &lt;hsivonen@hsivonen.fi&gt;</author>
+      <name>utf8_iter</name>
+      <version>1.0.4</version>
+      <description>Iterator by char over potentially-invalid UTF-8 in &amp;[u8]</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/utf8_iter@1.0.4</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/utf8_iter/</url>
+        </reference>
+        <reference type="website">
+          <url>https://docs.rs/utf8_iter/</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/hsivonen/utf8_iter</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#uuid@1.23.5">
+      <author>Ashley Mannix&lt;ashleymannix@live.com.au&gt;, Dylan DPC&lt;dylan.dpc@gmail.com&gt;, Hunar Roop Kahlon&lt;hunar.roop@gmail.com&gt;</author>
+      <name>uuid</name>
+      <version>1.23.5</version>
+      <description>A library to generate and parse UUIDs.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">ea5fab0d6c3c01ae70085a09cb03d4c7a1d6314e2b3e075392783396d724ca0a</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/uuid@1.23.5</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/uuid</url>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/uuid-rs/uuid</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/uuid-rs/uuid</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#want@0.3.1">
+      <author>Sean McArthur &lt;sean@seanmonstar.com&gt;</author>
+      <name>want</name>
+      <version>0.3.1</version>
+      <description>Detect when another Future wants a result.</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/want@0.3.1</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/want</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/seanmonstar/want</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#writeable@0.6.3">
+      <author>The ICU4X Project Developers</author>
+      <name>writeable</name>
+      <version>0.6.3</version>
+      <description>A more efficient alternative to fmt::Display</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/writeable@0.6.3</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#yoke-derive@0.8.2">
+      <author>Manish Goregaokar &lt;manishsmail@gmail.com&gt;</author>
+      <name>yoke-derive</name>
+      <version>0.8.2</version>
+      <description>Custom derive for the yoke crate</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">de844c262c8848816172cef550288e7dc6c7b7814b4ee56b3e1553f275f1858e</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/yoke-derive@0.8.2</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#yoke@0.8.3">
+      <author>Manish Goregaokar &lt;manishsmail@gmail.com&gt;</author>
+      <name>yoke</name>
+      <version>0.8.3</version>
+      <description>Abstraction allowing borrowed data to be carried along with the backing data it borrows from</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">709fe23a0424b6a435d82152b1bd3fdfb0833487d5fa90d05d42762a9891fef5</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/yoke@0.8.3</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom-derive@0.1.7">
+      <author>Manish Goregaokar &lt;manishsmail@gmail.com&gt;</author>
+      <name>zerofrom-derive</name>
+      <version>0.1.7</version>
+      <description>Custom derive for the zerofrom crate</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">11532158c46691caf0f2593ea8358fed6bbf68a0315e80aae9bd41fbade684a1</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/zerofrom-derive@0.1.7</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom@0.1.8">
+      <author>The ICU4X Project Developers</author>
+      <name>zerofrom</name>
+      <version>0.1.8</version>
+      <description>ZeroFrom trait for constructing</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">0ec05a11813ea801ff6d75110ad09cd0824ddba17dfe17128ea0d5f68e6c5272</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/zerofrom@0.1.8</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0">
+      <author>The RustCrypto Project Developers</author>
+      <name>zeroize</name>
+      <version>1.9.0</version>
+      <description>Securely clear secrets from memory with a simple trait built on stable Rust primitives which guarantee memory is zeroed using an operation will not be 'optimized away' by the compiler. Uses a portable pure Rust implementation that works everywhere, even WASM! </description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/zeroize@1.9.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/zeroize</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/RustCrypto/utils</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#zeroize_derive@1.5.0">
+      <author>The RustCrypto Project Developers</author>
+      <name>zeroize_derive</name>
+      <version>1.5.0</version>
+      <description>Custom derive support for zeroize</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">3c50655cbb0fe3fc43170059e702f1ce5e19b84cec58dc87b037a09935c2f328</hash>
+      </hashes>
+      <licenses>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/zeroize_derive@1.5.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/zeroize_derive</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/RustCrypto/utils</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#zerotrie@0.2.4">
+      <author>The ICU4X Project Developers</author>
+      <name>zerotrie</name>
+      <version>0.2.4</version>
+      <description>A data structure that efficiently maps strings to integers</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">0f9152d31db0792fa83f70fb2f83148effb5c1f5b8c7686c3459e361d9bc20bf</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/zerotrie@0.2.4</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://icu4x.unicode.org</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#zerovec-derive@0.11.3">
+      <author>Manish Goregaokar &lt;manishsmail@gmail.com&gt;</author>
+      <name>zerovec-derive</name>
+      <version>0.11.3</version>
+      <description>Custom derive for the zerovec crate</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">625dc425cab0dca6dc3c3319506e6593dcb08a9f387ea3b284dbd52a92c40555</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/zerovec-derive@0.11.3</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6">
+      <author>The ICU4X Project Developers</author>
+      <name>zerovec</name>
+      <version>0.11.6</version>
+      <description>Zero-copy vector backed by a byte array</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">90f911cbc359ab6af17377d242225f4d75119aec87ea711a880987b18cd7b239</hash>
+      </hashes>
+      <licenses>
+        <expression>Unicode-3.0</expression>
+      </licenses>
+      <purl>pkg:cargo/zerovec@0.11.6</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/unicode-org/icu4x</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.23">
+      <author>David Tolnay &lt;dtolnay@gmail.com&gt;</author>
+      <name>zmij</name>
+      <version>1.0.23</version>
+      <description>A double-to-string conversion algorithm based on Schubfach and xjb</description>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT</expression>
+      </licenses>
+      <purl>pkg:cargo/zmij@1.0.23</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://docs.rs/zmij</url>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/dtolnay/zmij</url>
+        </reference>
+      </externalReferences>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="path+file:///Users/uzanto/projects/amos2026ss01-zero-downtime-linux-updates/git-amos/common#amos-common@0.1.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#anyhow@1.0.103" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#reqwest@0.13.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#uuid@1.23.5" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#anyhow@1.0.103" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#atomic-waker@1.1.2" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#autocfg@1.5.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#aws-lc-rs@1.17.1">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#aws-lc-sys@0.42.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#aws-lc-sys@0.42.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cc@1.2.67" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cmake@0.1.58" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#dunce@1.0.5" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#fs_extra@1.3.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pkg-config@0.3.33" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bitflags@2.13.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cc@1.2.67">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#find-msvc-tools@0.1.9" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#jobserver@0.1.35" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#shlex@2.0.1" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg_aliases@0.2.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#chacha20@0.10.1">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#iana-time-zone@0.1.65" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#num-traits@0.2.19" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cmake@0.1.58">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cc@1.2.67" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation@0.10.1">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation@0.9.4">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#dunce@1.0.5" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#encoding_rs@0.8.35">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#equivalent@1.0.2" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#errno@0.3.14">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#find-msvc-tools@0.1.9" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#fnv@1.0.7" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#form_urlencoded@1.2.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#percent-encoding@2.3.2" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#fs_extra@1.3.0" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-channel@0.3.32">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.32" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-io@0.3.32" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-macro@0.3.32">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.32" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-task@0.3.32" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-channel@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-io@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-macro@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-task@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#slab@0.4.12" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#h2@0.4.15">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#atomic-waker@1.1.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#fnv@1.0.7" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#indexmap@2.14.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#slab@0.4.12" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-util@0.7.18" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.17.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http-body-util@0.1.4">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#httparse@1.10.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#httpdate@1.0.3" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper-rustls@0.27.9">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper@1.10.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper-util@0.1.20" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.42" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-rustls@0.26.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper-util@0.1.20">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-channel@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper@1.10.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#ipnet@2.12.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#percent-encoding@2.3.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#socket2@0.6.5" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#system-configuration@0.7.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper@1.10.1">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#atomic-waker@1.1.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-channel@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#h2@0.4.15" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#httparse@1.10.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#httpdate@1.0.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#smallvec@1.15.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#want@0.3.1" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#iana-time-zone@0.1.65">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_collections@2.2.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#potential_utf@0.1.5" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#utf8_iter@1.0.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#yoke@0.8.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom@0.1.8" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_locale_core@2.2.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#litemap@0.8.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tinystr@0.8.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#writeable@0.6.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_normalizer@2.2.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_collections@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_normalizer_data@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_properties@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_provider@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#smallvec@1.15.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_normalizer_data@2.2.0" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_properties@2.2.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_collections@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_locale_core@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_properties_data@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_provider@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerotrie@0.2.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_properties_data@2.2.0" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_provider@2.2.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_locale_core@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#writeable@0.6.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#yoke@0.8.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom@0.1.8" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerotrie@0.2.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#idna@1.1.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#idna_adapter@1.2.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#smallvec@1.15.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#utf8_iter@1.0.4" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#idna_adapter@1.2.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_normalizer@2.2.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#icu_properties@2.2.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#indexmap@2.14.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#equivalent@1.0.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.17.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#ipnet@2.12.0" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#jobserver@0.1.35">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libm@0.2.16" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#litemap@0.8.2" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#lock_api@0.4.14">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#scopeguard@1.2.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#log@0.4.33" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#lru-slab@0.1.2" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#mime@0.3.17" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#mio@1.2.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#log@0.4.33" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#num-traits@0.2.19">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#autocfg@1.5.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libm@0.2.16" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#once_cell@1.21.4" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#parking_lot@0.12.5">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#lock_api@0.4.14" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#parking_lot_core@0.9.12" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#parking_lot_core@0.9.12">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#smallvec@1.15.2" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#percent-encoding@2.3.2" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pkg-config@0.3.33" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#potential_utf@0.1.5">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#unicode-ident@1.0.24" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quinn-proto@0.11.16">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#aws-lc-rs@1.17.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#lru-slab@0.1.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand@0.10.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand_pcg@0.10.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustc-hash@2.1.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.42" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#slab@0.4.12" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tinyvec@1.12.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quinn-udp@0.5.15">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg_aliases@0.2.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#socket2@0.6.5" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quinn@0.11.11">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg_aliases@0.2.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quinn-proto@0.11.16" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quinn-udp@0.5.15" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustc-hash@2.1.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.42" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#socket2@0.6.5" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand@0.10.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#chacha20@0.10.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand_pcg@0.10.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#reqwest@0.13.4">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#encoding_rs@0.8.35" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#h2@0.4.15" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http-body-util@0.1.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper@1.10.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper-rustls@0.27.9" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#hyper-util@0.1.20" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#log@0.4.33" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#mime@0.3.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#percent-encoding@2.3.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quinn@0.11.11" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.42" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls-pki-types@1.15.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls-platform-verifier@0.7.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#sync_wrapper@1.0.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-rustls@0.26.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-util@0.7.18" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#url@2.5.8" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#ring@0.17.14">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cc@1.2.67" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#untrusted@0.9.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustc-hash@2.1.3" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls-pki-types@1.15.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls-platform-verifier@0.7.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation@0.10.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#log@0.4.33" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.42" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#security-framework@3.7.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#security-framework-sys@2.17.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls-webpki@0.103.13">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#aws-lc-rs@1.17.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#ring@0.17.14" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls-pki-types@1.15.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#untrusted@0.9.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.42">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#aws-lc-rs@1.17.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#log@0.4.33" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#once_cell@1.21.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#ring@0.17.14" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls-pki-types@1.15.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls-webpki@0.103.13" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#subtle@2.6.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#scopeguard@1.2.0" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#security-framework-sys@2.17.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#security-framework@3.7.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bitflags@2.13.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation@0.10.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#security-framework-sys@2.17.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.228" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.228">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.150">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.23" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#shlex@2.0.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#signal-hook-registry@1.4.8">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#errno@0.3.14" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#slab@0.4.12" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#smallvec@1.15.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#socket2@0.6.5">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#stable_deref_trait@1.2.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#subtle@2.6.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#unicode-ident@1.0.24" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#sync_wrapper@1.0.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#synstructure@0.13.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#system-configuration-sys@0.6.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation-sys@0.8.7" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#system-configuration@0.7.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bitflags@2.13.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#core-foundation@0.9.4" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#system-configuration-sys@0.6.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#thiserror-impl@2.0.18">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.18">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#thiserror-impl@2.0.18" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tinystr@0.8.3">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tinyvec@1.12.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tinyvec_macros@0.1.1" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tinyvec_macros@0.1.1" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-macros@2.7.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-rustls@0.26.4">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.42" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-util@0.7.18">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#libc@0.2.186" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#mio@1.2.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#parking_lot@0.12.5" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#signal-hook-registry@1.4.8" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#socket2@0.6.5" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-macros@2.7.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bitflags@2.13.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http@1.4.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-layer@0.3.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#url@2.5.8" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-layer@0.3.3" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.32" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#indexmap@2.14.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#slab@0.4.12" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#sync_wrapper@1.0.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio@1.52.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tokio-util@0.7.18" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-layer@0.3.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing-attributes@0.1.31">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing-core@0.1.36">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#once_cell@1.21.4" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#log@0.4.33" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing-attributes@0.1.31" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#tracing-core@0.1.36" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#try-lock@0.2.5" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#unicode-ident@1.0.24" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#untrusted@0.9.0" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#url@2.5.8">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#form_urlencoded@1.2.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#idna@1.1.0" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#percent-encoding@2.3.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde@1.0.228" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.228" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#utf8_iter@1.0.4" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#uuid@1.23.5">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.228" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#want@0.3.1">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#try-lock@0.2.5" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#writeable@0.6.3" />
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#yoke-derive@0.8.2">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#synstructure@0.13.2" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#yoke@0.8.3">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#stable_deref_trait@1.2.1" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#yoke-derive@0.8.2" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom@0.1.8" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom-derive@0.1.7">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#synstructure@0.13.2" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom@0.1.8">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom-derive@0.1.7" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zeroize_derive@1.5.0" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zeroize_derive@1.5.0">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerotrie@0.2.4">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.6" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#yoke@0.8.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom@0.1.8" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec-derive@0.11.3">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.106" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#quote@1.0.46" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#syn@2.0.118" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.6">
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#yoke@0.8.3" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerofrom@0.1.8" />
+      <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zerovec-derive@0.11.3" />
+    </dependency>
+    <dependency ref="registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.23" />
+  </dependencies>
+</bom>
