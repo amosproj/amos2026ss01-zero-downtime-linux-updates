@@ -1,0 +1,36 @@
+Title	URL	Assignees	Status	Estimated size	Real size
+Final Demo	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/174	Beambamacrys, Lugga19, moritz-reinel, QW3RAT	In Progress	5	
+Fix: Signature Verifcation commented out	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/155	IFrey, Jerry1098	Awaiting Review	3	
+Create Final Demo in Cooperation with POs	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/119	moritz-reinel, uzantome	Awaiting Review	5	
+Cleanup Project	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/127	KathiAurina, uzantome	Awaiting Review	2	
+Add reboot options	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/156	IFrey	Awaiting Review	3	
+Finalize user, (technical) design, and build/deploy documentation	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/123	IFrey	Awaiting Review	3	
+Only log infos	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/173	patridu	Awaiting Review	2	
+Pings: Include uptime	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/172	Jerry1098	Awaiting Review	2	
+Bug: Assignments flood DB	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/180	Beambamacrys	Awaiting Review	2	
+Update SBOM and Legal Notice	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/124	KathiAurina, uzantome	Awaiting Review	1	
+Update Post-Booting Health checks	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/116	moritz-reinel	Feature Archive	3	3
+Create Demo day slide	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/114	KathiAurina	Feature Archive	2	2
+Create Demo video	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/115	Beambamacrys	Feature Archive	3	3
+API Design: Dedicated routes for device and user	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/138	KathiAurina, patridu	Feature Archive	8	8
+(Bugfix) Resolve API dependency	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/168	Jerry1098	Feature Archive	2	3
+API for uploading TPM/ID Pairs and first device registration	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/113	moritz-reinel	Feature Archive	3	3
+Get UUID from device	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/154	KathiAurina	Feature Archive	1	2
+Bugfix: Group and device application assignment	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/139	Beambamacrys	Feature Archive	2	2
+Bugfix: Healthpings	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/158	Beambamacrys	Feature Archive	2	1
+Hardware deployment	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/137	moritz-reinel, uzantome	Feature Archive	3	5
+Testing: Improve test setup so that changing binary in vm is easier	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/143	uzantome	Feature Archive	3	3
+Testing: Adapt Integration Testing so that TPM works with it	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/142	IFrey	Feature Archive	1	2
+Adapt database to support changelogs in UI	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/131	KathiAurina	Feature Archive	5	5
+Refactor Orchestrator	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/136	patridu	Feature Archive	2	3
+Store App Config in database	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/106	Jerry1098, moritz-reinel	Feature Archive	5	5
+Store device logs in database	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/90	Jerry1098	Feature Archive	2	3
+Store Podman logs in database	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/105	Beambamacrys	Feature Archive	3	3
+Log timestamp and user information for database changes	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/87	KathiAurina	Feature Archive	3	3
+Provide device logging function for storing logs in database	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/88	uzantome	Feature Archive	2	3
+Create Integration tests	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/85	IFrey, patridu	Feature Archive	5	5
+TPM-based Device Indentity Verification at Edge IPC-Cloud API	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/38	moritz-reinel	Feature Archive	5	8
+Create test setup	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/84	Beambamacrys, KathiAurina, uzantome	Feature Archive	8	8
+Create API for Time series database	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/103	Jerry1098	Feature Archive	3	5
+Monitor and Manage Podman Containers	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/104	patridu	Feature Archive	8	5
+Research: Solution for storing time sensitive data	https://github.com/amosproj/amos2026ss01-zero-downtime-linux-updates/issues/99	Jerry1098	Feature Archive	3	3
