@@ -37,3 +37,32 @@ To keep the SBOM up-to-date, the following command can be used to list all (top 
 ```bash
 cargo tree --depth 1 --prefix none --edges normal | grep -v '^amos' | grep -v '(*)$' | sort | uniq
 ```
+
+### Cargo tooling
+
+The SBOM and license deliverables (in `Deliverables/sprint-*/`) are generated with the following cargo tools:
+
+| Tool | Purpose | Output |
+| --- | --- | --- |
+| [`cargo-sbom`](https://github.com/psastras/sbom-rs) | Generate the SPDX SBOM | `sbom.spdx.json` |
+| [`cargo-cyclonedx`](https://github.com/cyclonedx/cyclonedx-rust-cargo) | Generate the CycloneDX SBOM (per crate) | `SBOM-cyclonedx/*.cdx.xml` |
+| [`cargo-about`](https://github.com/EmbarkStudios/cargo-about) | Collect dependency licenses (config: `about.toml`, template: `about.hbs`) | `license.html` |
+| [`cargo-deny`](https://github.com/EmbarkStudios/cargo-deny) | Lint dependencies for advisories, license and source policy (config: `deny.toml`) | — |
+
+Install and run them with:
+
+```bash
+cargo install cargo-sbom cargo-cyclonedx cargo-about cargo-deny
+
+# SPDX SBOM
+cargo sbom > sbom.spdx.json
+
+# CycloneDX SBOM (one file per crate)
+cargo cyclonedx
+
+# License report
+cargo about generate about.hbs > license.html
+
+# Dependency / license / advisory checks
+cargo deny check
+```
